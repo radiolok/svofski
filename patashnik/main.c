@@ -186,7 +186,7 @@ ISR(TIMER0_OVF_vect) {
 /// 02:00->03:00 on the last sunday of March
 /// 03:00->02:00 on the last sunday of October
 /// 
-/// And try to do this only once.
+/// And try to do this only once
 void update_daylight(uint16_t time) {
     static uint8_t daylight_adjusted = 0;
 
