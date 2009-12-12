@@ -1,0 +1,1 @@
+avrdude -p m8 -c pony-stk200 -P lpt1 -U flash:w:"als.hex":i -v -V -u
