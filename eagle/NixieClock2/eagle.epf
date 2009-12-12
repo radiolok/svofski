@@ -314,6 +314,12 @@ UsedLibrary="/Applications/EAGLE/lbr/svo/0_trafo-halo.lbr"
 UsedLibrary="/Applications/EAGLE/lbr/svo/0-ds3234.lbr"
 
 [Win_1]
+Type="Control Panel"
+Loc="242 71 1175 636"
+State=2
+Number=0
+
+[Win_2]
 Type="Board Editor"
 Loc="1 22 1280 773"
 State=2
@@ -352,19 +358,13 @@ AddLevel=2
 PadsSameType=0
 Layer=1
 
-[Win_2]
-Type="Control Panel"
-Loc="245 22 1123 596"
-State=2
-Number=0
-
 [Win_3]
 Type="Schematic Editor"
 Loc="0 22 1279 773"
 State=1
 Number=1
 File="nixie-2-mirr.sch"
-View="816558 -896246 4068112 2161796"
+View="816712 -896400 4068266 2161642"
 WireWidths=" 0 3048 6096 8128 10160 12700 14224 16764 17780 19304 21844 25400 38100 64516 4064 1524"
 PadDiameters=" 2540 3048 4064 6096 8128 10160 12700 14224 16764 17780 19304 21844 25400 38100 64516 0"
 PadDrills=" 5000 6000 7000 9000 10000 11000 12000 13000 14000 15000 16000 20000 22000 28000 32000 8000"
@@ -396,7 +396,7 @@ ArcDirection=0
 AddLevel=2
 PadsSameType=0
 Layer=97
-Views=" 1: 816558 -896246 4068112 2161796"
+Views=" 1: 816712 -896400 4068266 2161642"
 Sheet=1
 
 [Desktop]
