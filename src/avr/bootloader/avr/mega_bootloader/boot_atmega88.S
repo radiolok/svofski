@@ -1,8 +1,5 @@
 ;===================================================
 ;===================================================
-;=
-;=  Attempt to port to Mega168 ...
-;=
 ;=  A complete mess written by me for a Mega8
 ;=  Started out as a simple SPM test ...
 ;=  God knows where it will end ... bootloader maybe ...
@@ -38,16 +35,20 @@
 
 #include <avr/io.h>
 
-F_OSC    = 11059200
+#F_OSC    = 11059200
+#F_OSC 	 = 3686400
+#F_OSC 	 = 8666666
+F_OSC = 20000000
 B_1152   = (F_OSC/(16*115200))-1
 B_19200  = (F_OSC/(16*19200))-1
+
+B_RATE = B_19200
 
 #define flash_addr_l 4
 #define flash_addr_h 5
 
 #define tempreg      16
 #define spmcr_temp   17
-
 #define sysreg       18
 #define pollreg      19       /*<-- Used in uart tx&rx ...*/
 
@@ -73,9 +74,7 @@ main:
 
   rcall init_uart
 
-;
 ; Initial "handshake" ... AVR sends 'O', PC replies with 'S'
-;
 
   ldi   tempreg, 'O'
   rcall uart_tx_byte
@@ -89,10 +88,6 @@ main:
   ldi   tempreg, _BV(WDE)|_BV(WDP0)|_BV(WDP1)|_BV(WDP2)
   sts   _SFR_MEM_ADDR(WDTCSR), tempreg
 
-;
-; Wait for 'S'
-; 
-
 start_loop:
   lds   tempreg, _SFR_MEM_ADDR(UCSR0A)
   sbrs  tempreg, RXC0
@@ -100,10 +95,6 @@ start_loop:
   lds   tempreg, _SFR_MEM_ADDR(UDR0)
   cpi   tempreg, 'S'
   brne  start_loop
-
-;
-; So far, so good ...
-;
 
 ok_to_continue:
   clr   sysreg                ; bld_receive_page sets sysreg to 0x01 after last page
@@ -120,11 +111,7 @@ receive_page_loop:
 
 jump_to_application:
 
-;
 ; As a las token of gratitude, the PC sends us a 'G' ...
-;
-
-
 poll_stop_char:
   rcall uart_rx_byte
   cpi   tempreg, 'G'
@@ -144,9 +131,7 @@ bail_out:
   clr   tempreg
   sts   _SFR_MEM_ADDR(WDTCSR), tempreg
 
-;
 ; restore registers to 'power on reset' state
-;
 
   clr   r0
   clr   r1
@@ -154,20 +139,20 @@ bail_out:
   clr   flash_addr_l          
   clr   flash_addr_h
 
-  ldi   tempreg, _BV(TXC0)  
-  sts   _SFR_MEM_ADDR(UCSR0A), tempreg
-  clr   tempreg
-  sts   _SFR_MEM_ADDR(UCSR0B), tempreg
-  ldi   tempreg, 0x86
-  sts   _SFR_MEM_ADDR(UCSR0C), tempreg
-  clr   tempreg
-  sts   _SFR_MEM_ADDR(UBRR0H), tempreg
-  clr   tempreg
-  sts   _SFR_MEM_ADDR(UBRR0L), tempreg
-  clr   tempreg
-  out   _SFR_IO_ADDR(SPMCSR), tempreg
+;  ldi   tempreg, _BV(TXC0)  
+;  sts   _SFR_MEM_ADDR(UCSR0A), tempreg
+;  clr   tempreg
+;  sts   _SFR_MEM_ADDR(UCSR0B), tempreg
+;  ldi   tempreg, 0x86
+;  sts   _SFR_MEM_ADDR(UCSR0C), tempreg
+;  clr   tempreg
+;  sts   _SFR_MEM_ADDR(UBRR0H), tempreg
+;  clr   tempreg
+;  sts   _SFR_MEM_ADDR(UBRR0L), tempreg
+;  clr   tempreg
+;  out   _SFR_IO_ADDR(SPMCSR), tempreg
 
-  jmp   0x0000                          ; Lost in code space ...
+  rjmp   homebase                          ; Lost in code space ...
 
 main_loop:
   rjmp  main_loop
@@ -211,50 +196,34 @@ ret
 
 bld_receive_page:
 
-;
 ; Wait for 'OK to send page? char' ...
-;
-
   rcall    uart_rx_byte
   cpi      tempreg, 'P'
   brne     bld_receive_page
 
-;
 ; Transmit 'OK to send page char' ...
-;
-
   ldi   tempreg, 'p'
   rcall uart_tx_byte
-
-;  
+  
 ; High byte of address
-;
-
   rcall uart_rx_byte
   rcall uart_tx_byte
 
-;
 ; Check for address flash_addr_h = 0xFF
 ; if 0xFF then "bail out" ...
-;
 
   cpi   tempreg, 0xFF
   breq  bld_last_page_received
 
   mov   flash_addr_h, tempreg
 
-;
 ; Low byte of address
-;
-
   rcall uart_rx_byte
   rcall uart_tx_byte
   mov   flash_addr_l, tempreg
 
-;
 ; Data loop
 ; ie. Page Load ...
-;
 
   clr   ZL
   clr   ZH

@@ -37,11 +37,12 @@
 
 #F_OSC    = 11059200
 #F_OSC 	 = 3686400
-F_OSC 	 = 8000000
+#F_OSC 	 = 8666666
+F_OSC = 20000000
 B_1152   = (F_OSC/(16*115200))-1
 B_19200  = (F_OSC/(16*19200))-1
 
-B_RATE = B_19200
+B_RATE = B_1152
 
 #define flash_addr_l 4
 #define flash_addr_h 5
