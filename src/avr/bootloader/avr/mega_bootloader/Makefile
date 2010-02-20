@@ -1,4 +1,6 @@
-MCU_TARGET    = atmega8535
+#MCU_TARGET    = atmega8535
+#MCU_TARGET    = atmega8
+MCU_TARGET    = atmega88
 #MCU_TARGET     = atmega168
 #MCU_TARGET	= atmega644
 
@@ -15,6 +17,8 @@ else ifeq ($(MCU_TARGET), atmega644)
 else ifeq ($(MCU_TARGET), atmega8535)
   LDFLAGS        = --section-start .bootloader=0x1F00 --defsym homebase=0x00
 else ifeq ($(MCU_TARGET), atmega8)
+  LDFLAGS        = --section-start .bootloader=0x1F00 --defsym homebase=0x00
+else ifeq ($(MCU_TARGET), atmega88)
   LDFLAGS        = --section-start .bootloader=0x1F00 --defsym homebase=0x00
 else
   ($error unknown mcu_target $(MCU_TARGET))
