@@ -63,6 +63,12 @@ void initdisplay() {
     DDRMOTOR |= BV3(MOT1,MOT2,MOT3);
 }
 
+void extint_init() {
+    DDRD &= ~BV2(2,3);
+    EICRA = _BV(ISC01); // falling edge of INT0 
+    EIMSK = _BV(INT0);  // enable INT0
+}
+
 /// Return current BCD display value 
 inline uint16_t get_display_value() {
     return timef;
@@ -84,6 +90,7 @@ int16_t strobephase = 0;
 int16_t phase1 = 174, phase2 = 125, phase3 = 88, phase4 = 49, phase5 = 0;
 
 int16_t strobectr = -768/2;
+int16_t strobeindexmark = 32;
 
 uint16_t spintime = 352;
 uint16_t spinctr = 352;
@@ -143,7 +150,7 @@ ISR(TIMER0_OVF_vect) {
     }
 
     
-    if (spinned_up == SPIN_START && ((globalctr & 0xfff) == 0)) spintime-=4;
+    if (spinned_up == SPIN_START && ((globalctr & 0xfff) == 0)) spintime-=2;
 
     if (--spinctr == 0) {
         spinctr = spintime;
@@ -172,9 +179,6 @@ ISR(TIMER0_OVF_vect) {
     
     globalctr++;
     
-    //if ((globalctr & 0x1fff) == 0) {
-    //    time = bcd_increment(time>>8)<<8;
-    //}
     if (--time_ctr == 0) {
         time_ctr = TICKS_PER_SECOND;// 25511
         time.hhmm.mm = bcd_increment(time.hhmm.mm);
@@ -201,6 +205,19 @@ ISR(TIMER0_OVF_vect) {
                 break;
         }
     }
+}
+
+
+volatile uint8_t extintctr = 0;
+
+ISR(INT0_vect) {
+    int16_t error = strobectr - strobeindexmark;
+    if (abs(error) > 2) {
+        strobe_fullspin = 768+(error < 0 ? -2 : 2);  // seek
+    } else {
+        strobe_fullspin = 768;
+    }
+    extintctr++;
 }
 
 /// Calibrate blink counters to quarters of second
@@ -246,6 +263,7 @@ int main() {
     dotmode_set(DOT_OFF);
     rtc_init();
     buttons_init();
+    extint_init();
 
     
     for(i = 0;;i++) {
@@ -294,9 +312,9 @@ int main() {
                                     break;
                         case 'r':   motorduty_set++;
                                     break;
-                        case '1':   spintime--;
+                        case '1':   strobeindexmark--;
                                     break;
-                        case '2':   spintime++;
+                        case '2':   strobeindexmark++;
                                     break;
                         case 't':   time.time = 0;
                                     break;
@@ -311,9 +329,10 @@ int main() {
                             skip = 255;
                         }
                         
-                        printf_P(PSTR("time=%04x ph=%d,%d,%d,%d,%d fullspin=%d duty=%d spintime=%d\n"), 
+                        printf_P(PSTR("time=%04x ph=%d,%d,%d,%d,%d fullspin=%d duty=%d strobeinexmark=%d extint=%d\n"), 
                             time, phase1,phase2,phase3,phase4,phase5, 
-                            strobe_fullspin, motorduty_set, spintime);
+                            strobe_fullspin, motorduty_set, strobeindexmark,
+                            extintctr);
                         break;
             }
         }
