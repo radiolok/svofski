@@ -79,6 +79,9 @@ void timer0_init() {
     TIMSK0 |= _BV(TOIE0);    // enable Timer0 overflow interrupt
     TCNT0 = 256-TIMERCOUNT;
     TCCR0B = _BV(CS01);     // 20MHz/8
+
+//    TCCR2B = _BV(CS20);     // 20MHz
+//    TIMSK2 |= _BV(TOIE2);
 }
 
 #define TICKS_PER_SECOND 25511
@@ -86,8 +89,10 @@ void timer0_init() {
 
 uint16_t globalctr = 0;
 
-int16_t strobephase = 0;
-int16_t phase1 = 174, phase2 = 125, phase3 = 88, phase4 = 49, phase5 = 0;
+int16_t phase1 = 174-384, phase2 = 125-384, phase3 = 88-384, phase4 = 49-384, phase5 = 0-384;
+struct _phase_precalc {
+    int16_t p1, p2, p3, p4, p5;
+} phasepre;
 
 int16_t strobectr = -768/2;
 int16_t strobeindexmark = 32;
@@ -96,12 +101,13 @@ uint16_t spintime = 352;
 uint16_t spinctr = 352;
 
 uint8_t motorduty = 0;
+uint8_t mduty2 = 0;
+volatile uint8_t eightctr = 0;
 
 uint8_t motorduty_set = 40; // 48
 
-int16_t strobe_fullspin = 768;
-
-const uint8_t motorseq[] = {0x01, 0x02, 0x04};
+uint16_t strobe_fullspin = 768;
+uint16_t strobe_halfspin = 384;
 
 uint16_t time_ctr = 0;
 
@@ -114,78 +120,83 @@ enum _spinup {
 };
 uint8_t spinned_up;
 
+uint8_t motorbits = 1;
+
+uint8_t halfctr = 0;
+
 ISR(TIMER0_OVF_vect) {
     uint8_t yes;
     
-    TCNT0 = 256-TIMERCOUNT;
+    TCNT0 = 256-TIMERCOUNT/2;
     
-    if (abs(strobectr - (strobephase + phase1 + ((((time.time&0xf000)>>12))<<6)-384)) < 2) {
-        PORTSTROBE |= _BV(0);
-    } else {
-        PORTSTROBE &= ~_BV(0);
-    }
-    
-    if (abs(strobectr - (strobephase + phase2 + ((((time.time&0x0f00)>>8))<<6)-384)) < 2) {
-        PORTSTROBE |= _BV(1);
-    } else {
-        PORTSTROBE &= ~_BV(1);
+    ++halfctr;
+    //if ((halfctr & 3) != 0) {
+    if ((halfctr & 1) != 0) {
+        //if (spinned_up == SPIN_STABLE && ((motorduty_set - motorduty < 2) || (motorduty < 6)) )  PORTMOTOR &= ~BV3(MOT1,MOT2,MOT3);
+        return;
     }
 
-    if (time_ctr > TICKS_PER_SECOND/2 && abs(strobectr - (strobephase + phase3 + ((10<<6)-384))) < 2) {
-        PORTSTROBE |= _BV(2);
-    } else {
-        PORTSTROBE &= ~_BV(2);
+    yes = PORTSTROBE & ~BV5(0,1,2,3,4);
+    
+    if (abs(strobectr - phasepre.p1) < 2) {
+        yes |= _BV(0);
+    } 
+    
+    if (abs(strobectr - phasepre.p2) < 2) {
+        yes |= _BV(1);
+    } 
+
+    if ((blinktick & _BV(1)) && abs(strobectr - phasepre.p3) < 2) {
+        yes |= _BV(2);
     }
 
-    if (abs(strobectr - (strobephase + phase4 + ((((time.time&0x00f0)>>4))<<6)-384)) < 2) {
-        PORTSTROBE |= _BV(3);
-    } else {
-        PORTSTROBE &= ~_BV(3);
-    }
+    if (abs(strobectr - phasepre.p4) < 2) {
+        yes |= _BV(3);
+    } 
     
-    if (abs(strobectr - (strobephase + phase5 + ((((time.time&0x000f)>>0))<<6)-384)) < 2) {
-        PORTSTROBE |= _BV(4);
-    } else {
-        PORTSTROBE &= ~_BV(4);
-    }
-
+    if (abs(strobectr - phasepre.p5) < 2) {
+        yes |= _BV(4);
+    } 
     
-    if (spinned_up == SPIN_START && ((globalctr & 0xfff) == 0)) spintime-=2;
+    PORTSTROBE = yes;
+    
+    if (spinned_up == SPIN_START && ((globalctr & 0xfff) == 0)) {
+        spintime-=2;
+        if (spintime == 64) {
+            spinned_up = SPIN_SPUN;
+        }
+    }
 
     if (--spinctr == 0) {
         spinctr = spintime;
-        motorcoils++;
-        if (motorcoils == 3) motorcoils = 0;
-        
-        PORTMOTOR = (PORTMOTOR & ~BV3(MOT1,MOT2,MOT3)) | motorseq[motorcoils];
-
-        if (spinned_up == SPIN_START && spintime == 64) {
-            spinned_up = SPIN_SPUN;
+        motorbits <<= 1;
+        if (motorbits == 8) {
+            motorbits = 1;
         }
-        
-        motorduty = motorduty_set;//spinned_up ? motorduty_set : 40;
+
+        motorduty = motorduty_set;
     }
+    
+    yes = PORTMOTOR & ~BV3(MOT1,MOT2,MOT3);
     
     if (motorduty > 0) {
         --motorduty;
-    } else {
-        PORTMOTOR &= ~BV3(MOT1,MOT2,MOT3);
-    }
+
+        yes |= motorbits;
+    } 
+
+    PORTMOTOR = yes;
     
     strobectr++;
-    if (strobectr == strobe_fullspin/2) {
-        strobectr = -strobe_fullspin/2;
+    if (strobectr == strobe_halfspin) {
+        strobectr = -strobe_halfspin;
     }
     
     globalctr++;
     
     if (--time_ctr == 0) {
         time_ctr = TICKS_PER_SECOND;// 25511
-        time.hhmm.mm = bcd_increment(time.hhmm.mm);
-        if (time.hhmm.mm == 0x60) {
-            time.hhmm.mm = 0;
-            time.hhmm.hh = bcd_increment(time.hhmm.hh);
-        }
+        blinktick |= _BV(0);
     } 
     
     if ((globalctr & 0x1fff) == 0) {
@@ -197,7 +208,7 @@ ISR(TIMER0_OVF_vect) {
                 break;
             case SPIN_DUTYDOWN:
                 motorduty_set--;
-                if (motorduty_set == 11) {
+                if (motorduty_set == 12) {
                     spinned_up = SPIN_STABLE;
                 }
                 break;
@@ -208,16 +219,15 @@ ISR(TIMER0_OVF_vect) {
 }
 
 
-volatile uint8_t extintctr = 0;
-
 ISR(INT0_vect) {
     int16_t error = strobectr - strobeindexmark;
-    if (abs(error) > 2) {
+    if (abs(error) > 1) {
         strobe_fullspin = 768+(error < 0 ? -2 : 2);  // seek
+        strobe_halfspin = strobe_fullspin/2;
     } else {
         strobe_fullspin = 768;
+        strobe_halfspin = 384;
     }
-    extintctr++;
 }
 
 /// Calibrate blink counters to quarters of second
@@ -290,10 +300,6 @@ int main() {
                                         brightmode = 0;
                                     }
                                     break;
-                        case 'q':   strobephase--;
-                                    break;
-                        case 'w':   strobephase++;
-                                    break;
                         case 'd':   phase1--; break;
                         case 'D':   phase1++; break;
                         case 'f':   phase2--; break;
@@ -329,13 +335,36 @@ int main() {
                             skip = 255;
                         }
                         
-                        printf_P(PSTR("time=%04x ph=%d,%d,%d,%d,%d fullspin=%d duty=%d strobeinexmark=%d extint=%d\n"), 
+                        printf_P(PSTR("time=%04x ph=%d,%d,%d,%d,%d fullspin=%d duty=%d strobeinexmark=%d\n"), 
                             time, phase1,phase2,phase3,phase4,phase5, 
-                            strobe_fullspin, motorduty_set, strobeindexmark,
-                            extintctr);
+                            strobe_fullspin, motorduty_set, strobeindexmark
+                            );
                         break;
             }
         }
+
+        if (time_ctr > TICKS_PER_SECOND/2) {
+            blinktick |= _BV(1);
+        } else {
+            blinktick &= ~_BV(1);
+        }
+
+        if (blinktick & _BV(0) != 0) {
+            blinktick &= ~_BV(0);
+            time.hhmm.mm = bcd_increment(time.hhmm.mm);
+            if (time.hhmm.mm == 0x60) {
+                time.hhmm.mm = 0;
+                time.hhmm.hh = bcd_increment(time.hhmm.hh);
+            }
+            
+            phasepre.p1 = phase1 + ((((time.hhmm.hh&0xf0)>>4))<<6);
+            phasepre.p2 = phase2 + ((((time.hhmm.hh&0x0f)>>0))<<6);
+            phasepre.p3 = phase3 + (10<<6);
+            phasepre.p4 = phase4 + ((((time.hhmm.mm&0xf0)>>4))<<6);
+            phasepre.p5 = phase5 + ((((time.hhmm.mm&0x0f)>>0))<<6);  
+        }
+        
+        
         /*
         buttonry_tick();
     
