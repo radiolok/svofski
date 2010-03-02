@@ -31,11 +31,10 @@ extern volatile uint8_t dotmode;       //!< dot blinking mode \see _dotmode
 void dotmode_set(uint8_t mode);
 
 /// Display modes
-#define NDISPLAYMODES 3
+#define NDISPLAYMODES 2
 enum _displaymode {
     HHMM = 0,               //!< Normal mode, HH:MM
     MMSS,                   //!< Minutes:Seconds mode, set button resets seconds to zero
-    VOLTAGE                 //!< Voltmeter mode
 };
 
 void mode_next();
@@ -50,22 +49,9 @@ enum _blinkmode {
     BLINK_SUPPRESS = 0200,  //!< To be OR'ed with current mode
 };
 
-
 void blinkmode_set(uint8_t mode);
 
 uint8_t blinkmode_get();
-
-/// Saving modes
-enum _savinmode {
-    WASTE = 0,              //!< Full-on all the time
-    SAVE,                   //!< constantly preserve
-    SAVENIGHT,              //!< preserve 00:00-08:00
-};
-
-void savingmode_set(uint8_t s);
-uint8_t savingmode_get();
-void savingmode_next();
-
 
 
 #endif

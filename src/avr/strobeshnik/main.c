@@ -3,12 +3,11 @@
 ///
 ///\brief Strobeshnik
 ///
-/// \mainpage Strobeshnik strobes digits to display time
+/// \mainpage Strobeshnik strobes digits in a spinning disc to display time
 
 /// \section Files
 /// - main.c    main file
-/// - rtc.c     RTC-related stuff
-/// - util.c    Calendar and other utils
+/// - timekeep.c non-RTC-based timekeeping stuff
 ///
 
 #include <inttypes.h>
@@ -23,13 +22,10 @@
 #include <util/delay.h>
 
 #include "usrat.h"
-#include "rtc.h"
 #include "util.h"
 #include "buttonry.h"
 #include "modes.h"
-#include "cal.h"
-
-volatile timef;
+#include "timekeep.h"
 
 volatile union _timebcd {
     uint16_t time;
@@ -39,18 +35,7 @@ volatile union _timebcd {
     } hhmm;
 } time;
 
-volatile uint16_t bcq1,bcq2,bcq3,blinkctr;
 volatile uint8_t blinktick;
-
-typedef enum _brightmode {
-    BMODE_1 = 0,
-    BMODE_2,
-    BMODE_3,
-    BMODE_4
-} BrightMode;
-#define BrightModes 4
-
-volatile BrightMode brightmode;
 
 #define TIMERCOUNT 98
 
@@ -71,7 +56,7 @@ void extint_init() {
 
 /// Return current BCD display value 
 inline uint16_t get_display_value() {
-    return timef;
+    return time.time;
 }
 
 /// Start timer 0.
@@ -84,7 +69,7 @@ void timer0_init() {
 //    TIMSK2 |= _BV(TOIE2);
 }
 
-#define TICKS_PER_SECOND 25511
+#define TICKS_PER_SECOND 23200
 #define DIGITTIME 64
 
 uint16_t globalctr = 0;
@@ -97,7 +82,7 @@ struct _phase_precalc {
 int16_t strobectr = -768/2;
 int16_t strobeindexmark = 32;
 
-uint16_t spintime = 352;
+uint16_t spintime = 2048;// 2112; //2240;//400;//352;
 uint16_t spinctr = 352;
 
 uint8_t motorduty = 0;
@@ -109,7 +94,8 @@ uint8_t motorduty_set = 40; // 48
 uint16_t strobe_fullspin = 768;
 uint16_t strobe_halfspin = 384;
 
-uint16_t time_ctr = 0;
+volatile uint16_t time_ctr = 0;
+volatile uint16_t blinkctr = TICKS_PER_SECOND/4;
 
 
 enum _spinup {
@@ -137,31 +123,45 @@ ISR(TIMER0_OVF_vect) {
     }
 
     yes = PORTSTROBE & ~BV5(0,1,2,3,4);
-    
-    if (abs(strobectr - phasepre.p1) < 2) {
-        yes |= _BV(0);
-    } 
-    
-    if (abs(strobectr - phasepre.p2) < 2) {
-        yes |= _BV(1);
-    } 
 
-    if ((blinktick & _BV(1)) && abs(strobectr - phasepre.p3) < 2) {
+
+    do {
+        if (blinkmode_get() == BLINK_ALL && ((blinktick & _BV(1)) == 0)) break;
+        
+        if (blinkmode_get() != BLINK_HH || (blinktick & _BV(1))) {
+            if (abs(strobectr - phasepre.p1) < 2) {
+                yes |= _BV(0);
+            } 
+            
+            if (abs(strobectr - phasepre.p2) < 2) {
+                yes |= _BV(1);
+            } 
+        }
+    
+        if (blinkmode_get() != BLINK_MM || (blinktick & _BV(1))) {
+            if (abs(strobectr - phasepre.p4) < 2) {
+                yes |= _BV(3);
+            } 
+            
+            if (abs(strobectr - phasepre.p5) < 2) {
+                yes |= _BV(4);
+            } 
+        }
+    } while (0);
+
+    if (dotmode != DOT_OFF && ((blinktick & _BV(1)) || dotmode == DOT_ON) && abs(strobectr - phasepre.p3) < 2) {
         yes |= _BV(2);
     }
-
-    if (abs(strobectr - phasepre.p4) < 2) {
-        yes |= _BV(3);
-    } 
-    
-    if (abs(strobectr - phasepre.p5) < 2) {
-        yes |= _BV(4);
-    } 
     
     PORTSTROBE = yes;
+
     
     if (spinned_up == SPIN_START && ((globalctr & 0xfff) == 0)) {
-        spintime-=2;
+        if (spintime > 352) {
+            spintime -= 16;
+        } else {
+            spintime-=2;
+        }
         if (spintime == 64) {
             spinned_up = SPIN_SPUN;
         }
@@ -174,7 +174,7 @@ ISR(TIMER0_OVF_vect) {
             motorbits = 1;
         }
 
-        motorduty = motorduty_set;
+        motorduty = spintime > 300 ? 200 : motorduty_set;
     }
     
     yes = PORTMOTOR & ~BV3(MOT1,MOT2,MOT3);
@@ -198,6 +198,10 @@ ISR(TIMER0_OVF_vect) {
         time_ctr = TICKS_PER_SECOND;// 25511
         blinktick |= _BV(0);
     } 
+    
+    if (blinkctr > 0) {
+        blinkctr--;
+    }
     
     if ((globalctr & 0x1fff) == 0) {
         switch (spinned_up) {
@@ -230,29 +234,20 @@ ISR(INT0_vect) {
     }
 }
 
-/// Calibrate blink counters to quarters of second
-void calibrate_blinking() {
-    bcq1 = bcq2 = bcq3 = 65535;
-    for(bcq1 = rtc_gettime(1); bcq1 == rtc_gettime(1););
-    blinkctr = 0; 
-    for(bcq1 = rtc_gettime(1); bcq1 == rtc_gettime(1););
-    cli();
-    bcq1 = blinkctr/4;
-    bcq2 = 2*blinkctr/4;
-    bcq3 = 3*blinkctr/4;
-    sei();
-}
-
 /// Start fading time to given value.
 /// Transition is performed in TIMER0_OVF_vect and takes FADETIME cycles.
 void fadeto(uint16_t t) {
-    timef = t;
+    time.time = t;
+    phasepre.p1 = phase1 + ((((time.hhmm.hh&0xf0)>>4))<<6);
+    phasepre.p2 = phase2 + ((((time.hhmm.hh&0x0f)>>0))<<6);
+    phasepre.p3 = phase3 + (10<<6);
+    phasepre.p4 = phase4 + ((((time.hhmm.mm&0xf0)>>4))<<6);
+    phasepre.p5 = phase5 + ((((time.hhmm.mm&0x0f)>>0))<<6);  
 }
 
 /// Program main
 int main() {
     uint8_t i;
-    uint16_t rtime;
     uint8_t byte;
     volatile uint16_t skip = 0;
     uint8_t uart_enabled = 0;
@@ -270,8 +265,7 @@ int main() {
     timer0_init();
 
     initdisplay();
-    dotmode_set(DOT_OFF);
-    rtc_init();
+    dotmode_set(DOT_BLINK);
     buttons_init();
     extint_init();
 
@@ -295,11 +289,6 @@ int main() {
                         break;
                 case 2:
                         switch (byte) { 
-                        case 'b':   brightmode += 1; 
-                                    if (brightmode > BrightModes-1) {
-                                        brightmode = 0;
-                                    }
-                                    break;
                         case 'd':   phase1--; break;
                         case 'D':   phase1++; break;
                         case 'f':   phase2--; break;
@@ -343,75 +332,48 @@ int main() {
             }
         }
 
+
+        buttonry_tick();
+
+        if (blinktick & _BV(0) != 0) {
+            blinktick &= ~_BV(0);
+
+            time_nextsecond();
+        }
+        
+        switch (mode_get()) {
+            case HHMM:
+                fadeto(time_get_hhmm());
+                break;
+            default:
+            case MMSS:
+                fadeto(time_get_mmss());
+                break;
+        }
+
+        if (blinkctr == 0) {
+            cli();
+            blinkctr = TICKS_PER_SECOND/4;
+            sei();
+            if (blinkhandler != NULL) {
+                blinkhandler(1);
+            }
+        }
+
+    
         if (time_ctr > TICKS_PER_SECOND/2) {
             blinktick |= _BV(1);
         } else {
             blinktick &= ~_BV(1);
         }
+        
+        _delay_ms(100);
 
-        if (blinktick & _BV(0) != 0) {
-            blinktick &= ~_BV(0);
-            time.hhmm.mm = bcd_increment(time.hhmm.mm);
-            if (time.hhmm.mm == 0x60) {
-                time.hhmm.mm = 0;
-                time.hhmm.hh = bcd_increment(time.hhmm.hh);
-            }
-            
-            phasepre.p1 = phase1 + ((((time.hhmm.hh&0xf0)>>4))<<6);
-            phasepre.p2 = phase2 + ((((time.hhmm.hh&0x0f)>>0))<<6);
-            phasepre.p3 = phase3 + (10<<6);
-            phasepre.p4 = phase4 + ((((time.hhmm.mm&0xf0)>>4))<<6);
-            phasepre.p5 = phase5 + ((((time.hhmm.mm&0x0f)>>0))<<6);  
-        }
-        
-        
-        /*
-        buttonry_tick();
-    
-        if ((blinktick & _BV(1)) != 0) {        
-            blinktick &= ~_BV(1);
-            if (blinkhandler != NULL) {
-                blinkhandler(1);
-            }
-        }
-        
-        if (skip != 0) {
-            skip--;
-        } else {
-            mmss = rtc_gettime(1);
-            if (!is_setting() && mmss != mmss1) {
-                mmss1 = mmss;
-                cli(); blinkctr = 0; sei();
-            }
-            
-            rtime = rtc_gettime(0);
-            
-            update_daylight(rtime);
-            
-            switch (mode_get()) {
-                case HHMM:
-                    rtime = rtc_gettime(0);
-                    break;
-                case MMSS:
-                    rtime = mmss;
-                    break;
-                case VOLTAGE:
-                    rtime = 0x1234;
-                    break;
-            }
-            
-            if (!is_setting() && rtime != time && rtime != timef) {
-                fadeto(rtime);
-            }     
-        }
-        
         // just waste time
-        while((blinktick & _BV(2)) == 0) {
-            sleep_enable();
-            sleep_cpu();
-        }
-        blinktick &= ~_BV(2);
-        */
+        //while((blinktick & _BV(2)) == 0) {
+        //    sleep_enable();
+        //    sleep_cpu();
+        //}
     }
 }
 

@@ -59,9 +59,6 @@ void mode_next() {
         case MMSS:  fade_set(FADE_ON);
                     dotmode_set(DOT_BLINK);
                     break;
-        case VOLTAGE: fade_set(FADE_OFF);
-                    dotmode_set(DOT_OFF);
-                    break;
     }
 }
 
@@ -80,22 +77,5 @@ void blinkmode_set(uint8_t mode) {
 
 inline uint8_t blinkmode_get() { return blinkmode; }
 
-
-////
-//// Saving mode
-////
-
-static volatile uint8_t savingmode;    //!< nixe preservation mode
-
-
-void savingmode_set(uint8_t s) {
-    savingmode = s; 
-}
-
-inline uint8_t savingmode_get() { return savingmode; }
-
-void savingmode_next() {
-    savingmode_set((savingmode_get() + 1) % 3);
-}
 
 

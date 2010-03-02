@@ -1,6 +1,6 @@
 VERSION		   = 0.1
 PRG            = strobeshnik
-OBJ            = main.o modes.o usrat.o rtc.o util.o buttonry.o cal.o
+OBJ            = main.o modes.o usrat.o util.o buttonry.o timekeep.o
 MCU_TARGET     = atmega88
 OPTIMIZE       = -Os
 BUILDNUM       = $(shell cat buildnum)
