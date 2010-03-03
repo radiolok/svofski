@@ -127,10 +127,6 @@ void button2_handler(uint8_t on) {
                     //fadeto(maketime(rtc_time.hour, rtc_time.minute));
                     fadeto(time_get_hhmm());
                     break;
-                case VOLTAGE:
-                    //savingmode_next();
-                    //set_voltage_dot();
-                    break;
                 default:
                     break;
                 }
