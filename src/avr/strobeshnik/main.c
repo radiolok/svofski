@@ -20,12 +20,15 @@
 #include <stdlib.h>
 
 #include <util/delay.h>
+#include <util/atomic.h>
 
 #include "usrat.h"
 #include "util.h"
 #include "buttonry.h"
 #include "modes.h"
 #include "timekeep.h"
+
+#define atomic(x) { cli(); x; sei(); }
 
 volatile union _timebcd {
     uint16_t time;
@@ -37,7 +40,12 @@ volatile union _timebcd {
 
 volatile uint8_t blinktick;
 
-#define TIMERCOUNT 98
+//#define TIMERCOUNT 98
+#define TIMERCOUNT 104
+#define SPINUP_TIME 2048+256
+#define MOTORDUTY_LONG   200
+#define MOTORDUTY_MIDDLE 48
+#define MOTORDUTY_END    12
 
 volatile uint8_t motorcoils = 1;
 
@@ -65,14 +73,13 @@ void timer0_init() {
     TCNT0 = 256-TIMERCOUNT;
     TCCR0B = _BV(CS01);     // 20MHz/8
 
-//    TCCR2B = _BV(CS20);     // 20MHz
-//    TIMSK2 |= _BV(TOIE2);
 }
 
 #define TICKS_PER_SECOND 23200
 #define DIGITTIME 64
 
-uint16_t globalctr = 0;
+uint16_t counter1 = 0xfff;
+uint16_t counter2 = 0x1fff;
 
 int16_t phase1 = 174-384, phase2 = 125-384, phase3 = 88-384, phase4 = 49-384, phase5 = 0-384;
 struct _phase_precalc {
@@ -82,14 +89,13 @@ struct _phase_precalc {
 int16_t strobectr = -768/2;
 int16_t strobeindexmark = 32;
 
-uint16_t spintime = 2048;// 2112; //2240;//400;//352;
-uint16_t spinctr = 352;
+uint16_t spintime = SPINUP_TIME;
+uint16_t spinctr = SPINUP_TIME;
 
 uint8_t motorduty = 0;
-uint8_t mduty2 = 0;
 volatile uint8_t eightctr = 0;
 
-uint8_t motorduty_set = 40; // 48
+uint8_t motorduty_set; 
 
 uint16_t strobe_fullspin = 768;
 uint16_t strobe_halfspin = 384;
@@ -102,28 +108,21 @@ enum _spinup {
     SPIN_START = 0,
     SPIN_SPUN,
     SPIN_DUTYDOWN,
-    SPIN_STABLE
+    SPIN_STABLE,
+    SPIN_STOP,
 };
 uint8_t spinned_up;
 
 uint8_t motorbits = 1;
 
-uint8_t halfctr = 0;
+uint8_t halfctr;
 
 ISR(TIMER0_OVF_vect) {
     uint8_t yes;
     
-    TCNT0 = 256-TIMERCOUNT/2;
-    
-    ++halfctr;
-    //if ((halfctr & 3) != 0) {
-    if ((halfctr & 1) != 0) {
-        //if (spinned_up == SPIN_STABLE && ((motorduty_set - motorduty < 2) || (motorduty < 6)) )  PORTMOTOR &= ~BV3(MOT1,MOT2,MOT3);
-        return;
-    }
+    TCNT0 = 256-TIMERCOUNT;
 
     yes = PORTSTROBE & ~BV5(0,1,2,3,4);
-
 
     do {
         if (blinkmode_get() == BLINK_ALL && ((blinktick & _BV(1)) == 0)) break;
@@ -156,17 +155,6 @@ ISR(TIMER0_OVF_vect) {
     PORTSTROBE = yes;
 
     
-    if (spinned_up == SPIN_START && ((globalctr & 0xfff) == 0)) {
-        if (spintime > 352) {
-            spintime -= 16;
-        } else {
-            spintime-=2;
-        }
-        if (spintime == 64) {
-            spinned_up = SPIN_SPUN;
-        }
-    }
-
     if (--spinctr == 0) {
         spinctr = spintime;
         motorbits <<= 1;
@@ -174,12 +162,12 @@ ISR(TIMER0_OVF_vect) {
             motorbits = 1;
         }
 
-        motorduty = spintime > 300 ? 200 : motorduty_set;
+        motorduty = spintime > 128 ? MOTORDUTY_LONG : motorduty_set;
     }
     
     yes = PORTMOTOR & ~BV3(MOT1,MOT2,MOT3);
     
-    if (motorduty > 0) {
+    if (spinned_up != SPIN_STOP && motorduty > 0) {
         --motorduty;
 
         yes |= motorbits;
@@ -192,36 +180,61 @@ ISR(TIMER0_OVF_vect) {
         strobectr = -strobe_halfspin;
     }
     
-    globalctr++;
+    if (counter1 > 0) --counter1;
+    if (counter2 > 0) --counter2;
+    if (blinkctr > 0) --blinkctr;
     
     if (--time_ctr == 0) {
         time_ctr = TICKS_PER_SECOND;// 25511
         blinktick |= _BV(0);
     } 
     
-    if (blinkctr > 0) {
-        blinkctr--;
+}
+
+void update_parameters() {
+    if (counter1 == 0) {
+        atomic(counter1 = 0xfff);
+        if (spinned_up == SPIN_START) {
+            if (spintime > 352+512) {
+                atomic(spintime -= 64);
+            } else
+            if (spintime > 352 + 256) { 
+                atomic(spintime -= 32);
+            } else
+            if (spintime > 96) {
+                atomic(spintime -= 8);
+            } else {
+                atomic(spintime-=2);
+            }
+            if (spintime == 64) {
+                atomic(spinned_up = SPIN_SPUN);
+            }
+        }
     }
     
-    if ((globalctr & 0x1fff) == 0) {
+    if (counter2 == 0) {
+        atomic(counter2 = 0x7ff);
         switch (spinned_up) {
             case SPIN_START:
                 break;
             case SPIN_SPUN:
-                spinned_up = SPIN_DUTYDOWN;
+                atomic(spinned_up = SPIN_DUTYDOWN);
                 break;
             case SPIN_DUTYDOWN:
-                motorduty_set--;
-                if (motorduty_set == 12) {
-                    spinned_up = SPIN_STABLE;
+                atomic(motorduty_set--);
+                if (motorduty_set == MOTORDUTY_END) {
+                    atomic(spinned_up = SPIN_STABLE);
                 }
                 break;
             case SPIN_STABLE:
                 break;
         }
+        
     }
 }
 
+int8_t indexctr = 0;
+int8_t rps = 0;
 
 ISR(INT0_vect) {
     int16_t error = strobectr - strobeindexmark;
@@ -232,6 +245,22 @@ ISR(INT0_vect) {
         strobe_fullspin = 768;
         strobe_halfspin = 384;
     }
+    indexctr++;
+}
+
+uint8_t stall_detect() {
+//    if (spinned_up != SPIN_START && rot_per_sec - indexctr > 4) {
+//        printf_P(PSTR("rps=%d i=%d\n"), rot_per_sec, indexctr)
+
+    rps = indexctr;
+    
+    if (spinned_up == SPIN_STABLE && indexctr < 20) {
+        printf_P(PSTR("i=%d\n"), indexctr);
+        return 1;
+    }
+    
+    atomic(indexctr = 0);
+    return 0;
 }
 
 /// Start fading time to given value.
@@ -245,20 +274,40 @@ void fadeto(uint16_t t) {
     phasepre.p5 = phase5 + ((((time.hhmm.mm&0x0f)>>0))<<6);  
 }
 
+void spinup_setup() {
+    spinned_up = SPIN_START;
+    spintime = SPINUP_TIME;
+    spinctr = SPINUP_TIME;
+    motorduty_set = MOTORDUTY_MIDDLE;
+    
+    atomic(motorbits = 0);
+    PORTSTROBE &= ~BV5(0,1,2,3,4);
+    _delay_ms(500);
+}
+
+void spin_enable() {
+    spinned_up = SPIN_START;
+    atomic(motorbits = 1);
+}
+
+void spin_disable() {
+    spinned_up = SPIN_STOP;
+    atomic(motorbits = 0);
+}
+
 /// Program main
 int main() {
     uint8_t i;
     uint8_t byte;
     volatile uint16_t skip = 0;
     uint8_t uart_enabled = 0;
-    volatile uint16_t mmss, mmss1;
 
     usart_init(F_CPU/16/19200-1);
     
     printf_P(PSTR("\033[2J\033[HB%s CAN WE MAKE IT BACK TO EARTH? %02x\n"), BUILDNUM, MCUCR);
 
 
-    spinned_up = SPIN_START;
+    spinup_setup();
     
     sei();
 
@@ -269,6 +318,7 @@ int main() {
     buttons_init();
     extint_init();
 
+    spin_enable();
     
     for(i = 0;;i++) {
         wdt_reset();
@@ -324,14 +374,16 @@ int main() {
                             skip = 255;
                         }
                         
-                        printf_P(PSTR("time=%04x ph=%d,%d,%d,%d,%d fullspin=%d duty=%d strobeinexmark=%d\n"), 
+                        printf_P(PSTR("time=%04x ph=%d,%d,%d,%d,%d fullspin=%d duty=%d strobeinexmark=%d spintime=%d spinned_up=%d\n"), 
                             time, phase1,phase2,phase3,phase4,phase5, 
-                            strobe_fullspin, motorduty_set, strobeindexmark
+                            strobe_fullspin, motorduty_set, strobeindexmark,
+                            spintime, spinned_up
                             );
                         break;
             }
         }
 
+        update_parameters();
 
         buttonry_tick();
 
@@ -339,6 +391,16 @@ int main() {
             blinktick &= ~_BV(0);
 
             time_nextsecond();
+            if (stall_detect()) {
+                spinup_setup();
+                spin_disable();
+                printf_P(PSTR("STALL\n"));
+            }
+            
+            if (rps == 0 && spinned_up == SPIN_STOP) {
+                printf_P(PSTR("RESTART\n"));
+                spin_enable();
+            }
         }
         
         switch (mode_get()) {
