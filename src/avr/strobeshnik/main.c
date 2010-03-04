@@ -44,7 +44,7 @@ volatile uint8_t blinktick;
 #define TIMERCOUNT 104
 #define SPINUP_TIME 2048+256
 #define MOTORDUTY_LONG   200
-#define MOTORDUTY_MIDDLE 48
+#define MOTORDUTY_MIDDLE 60
 #define MOTORDUTY_END    12
 
 volatile uint8_t motorcoils = 1;
@@ -166,12 +166,12 @@ ISR(TIMER0_OVF_vect) {
     }
     
     yes = PORTMOTOR & ~BV3(MOT1,MOT2,MOT3);
-    
-    if (spinned_up != SPIN_STOP && motorduty > 0) {
-        --motorduty;
-
-        yes |= motorbits;
-    } 
+    if (spinned_up != SPIN_STOP) {
+        if (motorduty > 0) {
+            --motorduty;
+            yes |= motorbits;
+        }
+    }
 
     PORTMOTOR = yes;
     
@@ -249,15 +249,12 @@ ISR(INT0_vect) {
 }
 
 uint8_t stall_detect() {
-//    if (spinned_up != SPIN_START && rot_per_sec - indexctr > 4) {
-//        printf_P(PSTR("rps=%d i=%d\n"), rot_per_sec, indexctr)
-
     rps = indexctr;
     
-    if (spinned_up == SPIN_STABLE && indexctr < 20) {
+    if ((spinned_up == SPIN_STABLE && indexctr < 20) || (spintime < 1024 && indexctr < 2)) {
         printf_P(PSTR("i=%d\n"), indexctr);
         return 1;
-    }
+    } 
     
     atomic(indexctr = 0);
     return 0;
