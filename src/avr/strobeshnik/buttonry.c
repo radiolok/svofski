@@ -122,9 +122,6 @@ void button2_handler(uint8_t on) {
                     fade_set(FADE_OFF);
                     dotmode_set(DOT_ON);
                     
-                    //rtc_time.hour = rtc_xhour(-1);
-                    //rtc_time.minute = rtc_xminute(-1); 
-                    //fadeto(maketime(rtc_time.hour, rtc_time.minute));
                     fadeto(time_get_hhmm());
                     break;
                 default:
