@@ -28,6 +28,57 @@
 #include "modes.h"
 #include "timekeep.h"
 
+#define TICKS_PER_SECOND 25 //23200
+#define DIGITTIME 64
+
+uint8_t counter1 = 0;
+
+int16_t phase1 = 174-384, phase2 = 125-384, phase3 = 88-384, phase4 = 49-384, phase5 = 0-384;
+struct _phase_precalc {
+    int16_t p1, p2, p3, p4, p5;
+} phasepre;
+
+int16_t strobectr = -768/2;
+int16_t strobeindexmark = 32;
+
+uint8_t motorduty = 0;
+volatile uint8_t eightctr = 0;
+
+uint8_t motorduty_set; 
+
+uint16_t strobe_fullspin = 768;
+uint16_t strobe_halfspin = 384;
+
+volatile uint8_t time_ctr = 1;
+volatile uint8_t blinkctr = TICKS_PER_SECOND/4;
+
+volatile uint8_t blinktick;
+
+#define TIMERCOUNT 92 //104
+#define SPINUP_TIME 2048+256
+#define MOTORDUTY_LONG   200
+#define MOTORDUTY_MIDDLE 60
+#define MOTORDUTY_END    59
+
+volatile uint8_t motorcoils = 1;
+
+uint16_t spintime = SPINUP_TIME;
+uint16_t spinctr = SPINUP_TIME;
+
+uint8_t timercount = TIMERCOUNT;
+
+
+enum _spinup {
+    SPIN_START = 0,
+    SPIN_SPUN,
+    SPIN_DUTYDOWN,
+    SPIN_STABLE,
+    SPIN_STOP,
+};
+uint8_t spinned_up;
+
+uint8_t motorbits = 1;
+
 #define atomic(x) { cli(); x; sei(); }
 
 volatile union _timebcd {
@@ -38,16 +89,6 @@ volatile union _timebcd {
     } hhmm;
 } time;
 
-volatile uint8_t blinktick;
-
-//#define TIMERCOUNT 98
-#define TIMERCOUNT 104
-#define SPINUP_TIME 2048+256
-#define MOTORDUTY_LONG   200
-#define MOTORDUTY_MIDDLE 60
-#define MOTORDUTY_END    12
-
-volatile uint8_t motorcoils = 1;
 
 /// Init display-related DDRs.
 void initdisplay() {
@@ -57,7 +98,7 @@ void initdisplay() {
 }
 
 void extint_init() {
-    DDRD &= ~BV2(2,3);
+    DDRD &= _BV(2);
     EICRA = _BV(ISC01); // falling edge of INT0 
     EIMSK = _BV(INT0);  // enable INT0
 }
@@ -72,55 +113,56 @@ void timer0_init() {
     TIMSK0 |= _BV(TOIE0);    // enable Timer0 overflow interrupt
     TCNT0 = 256-TIMERCOUNT;
     TCCR0B = _BV(CS01);     // 20MHz/8
-
 }
 
-#define TICKS_PER_SECOND 23200
-#define DIGITTIME 64
+void timer1_init() {
+    TIMSK1 |= _BV(TOIE1);
+    TCNT1 = 65536-3125;
+    TCCR1B = _BV(CS12);     // 20MHz/256 -> /3125 => 25 ticks/s
+}
 
-uint16_t counter1 = 0xfff;
-uint16_t counter2 = 0x1fff;
+ISR(TIMER1_OVF_vect, ISR_NOBLOCK) {
+    TCNT1 = 65536-3125;
+    if (--time_ctr == 0) {
+        time_ctr = TICKS_PER_SECOND;// 25511
+        blinktick |= _BV(0);
+    } 
 
-int16_t phase1 = 174-384, phase2 = 125-384, phase3 = 88-384, phase4 = 49-384, phase5 = 0-384;
-struct _phase_precalc {
-    int16_t p1, p2, p3, p4, p5;
-} phasepre;
-
-int16_t strobectr = -768/2;
-int16_t strobeindexmark = 32;
-
-uint16_t spintime = SPINUP_TIME;
-uint16_t spinctr = SPINUP_TIME;
-
-uint8_t motorduty = 0;
-volatile uint8_t eightctr = 0;
-
-uint8_t motorduty_set; 
-
-uint16_t strobe_fullspin = 768;
-uint16_t strobe_halfspin = 384;
-
-volatile uint16_t time_ctr = 0;
-volatile uint16_t blinkctr = TICKS_PER_SECOND/4;
+    if (counter1 > 0) --counter1;
+    if (blinkctr > 0) --blinkctr;
+}
 
 
-enum _spinup {
-    SPIN_START = 0,
-    SPIN_SPUN,
-    SPIN_DUTYDOWN,
-    SPIN_STABLE,
-    SPIN_STOP,
-};
-uint8_t spinned_up;
+uint8_t pwm_enabled;
 
-uint8_t motorbits = 1;
+void pwm_enable(uint8_t enable) {
+    DDRB |= _BV(3); // MOSI = OC2
+    DDRD |= _BV(3); // MOSI = OC2
+    pwm_enabled = enable;
+    if (enable) {
+        PORTB &= ~_BV(3);
+        PORTD &= ~_BV(3);
+        TCCR2A = BV3(WGM20,WGM21,COM2B1);    // fast PWM, clear OC2A on compare match, set OC2B at bottom
+                                            // TOP = 255, BOTTOM = 0; OC2A = ...
+        TCCR2B = BV2(WGM22,CS21);                 // 20MHz/8
+        OCR2A = 32;
+        OCR2B = 5;
+    } else {
+        TCCR2A = 0;
+        TCCR2B = 0;
+        PORTB |= _BV(3);
+        PORTD |= _BV(3);
+    }
+}
 
-uint8_t halfctr;
+void pwm_setduty(uint8_t d) {
+    OCR2B = d;
+}
 
 ISR(TIMER0_OVF_vect) {
     uint8_t yes;
     
-    TCNT0 = 256-TIMERCOUNT;
+    TCNT0 = 256-timercount;//TIMERCOUNT;
 
     yes = PORTSTROBE & ~BV5(0,1,2,3,4);
 
@@ -167,11 +209,12 @@ ISR(TIMER0_OVF_vect) {
     
     yes = PORTMOTOR & ~BV3(MOT1,MOT2,MOT3);
     if (spinned_up != SPIN_STOP) {
-        if (motorduty > 0) {
+        if (pwm_enabled || motorduty > 0) { // fast pwm in stable mode
             --motorduty;
             yes |= motorbits;
         }
     }
+    
 
     PORTMOTOR = yes;
     
@@ -179,62 +222,36 @@ ISR(TIMER0_OVF_vect) {
     if (strobectr == strobe_halfspin) {
         strobectr = -strobe_halfspin;
     }
-    
-    if (counter1 > 0) --counter1;
-    if (counter2 > 0) --counter2;
-    if (blinkctr > 0) --blinkctr;
-    
-    if (--time_ctr == 0) {
-        time_ctr = TICKS_PER_SECOND;// 25511
-        blinktick |= _BV(0);
-    } 
-    
-}
-
-void update_parameters() {
-    if (counter1 == 0) {
-        atomic(counter1 = 0xfff);
-        if (spinned_up == SPIN_START) {
-            if (spintime > 352+512) {
-                atomic(spintime -= 64);
-            } else
-            if (spintime > 352 + 256) { 
-                atomic(spintime -= 32);
-            } else
-            if (spintime > 96) {
-                atomic(spintime -= 8);
-            } else {
-                atomic(spintime-=2);
-            }
-            if (spintime == 64) {
-                atomic(spinned_up = SPIN_SPUN);
-            }
-        }
-    }
-    
-    if (counter2 == 0) {
-        atomic(counter2 = 0x7ff);
-        switch (spinned_up) {
-            case SPIN_START:
-                break;
-            case SPIN_SPUN:
-                atomic(spinned_up = SPIN_DUTYDOWN);
-                break;
-            case SPIN_DUTYDOWN:
-                atomic(motorduty_set--);
-                if (motorduty_set == MOTORDUTY_END) {
-                    atomic(spinned_up = SPIN_STABLE);
-                }
-                break;
-            case SPIN_STABLE:
-                break;
-        }
-        
-    }
 }
 
 int8_t indexctr = 0;
 int8_t rps = 0;
+uint8_t lastrps = 0;
+
+void update_parameters() {
+    if (counter1 == 0) {
+        atomic(counter1 = 0x1);
+        if (spinned_up == SPIN_START) {
+            if (spintime > 352 + 256) { 
+                atomic(spintime -= 64);
+            } else {
+                if (rps > 0) {
+                    pwm_enable(1);
+                    
+                    if (spintime > 192) {
+                        atomic(spintime -= 16);
+                    } else {
+                        atomic(spintime-=4);
+                    }
+                }
+            }
+            if (spintime <= 64) {
+                atomic(spintime = 64);
+                atomic(spinned_up = SPIN_STABLE);
+            }
+        }
+    }
+}
 
 ISR(INT0_vect) {
     int16_t error = strobectr - strobeindexmark;
@@ -249,14 +266,14 @@ ISR(INT0_vect) {
 }
 
 uint8_t stall_detect() {
-    rps = indexctr;
+    //rps = indexctr;
+    atomic(rps = indexctr; indexctr = 0);
     
-    if ((spinned_up == SPIN_STABLE && indexctr < 20) || (spintime < 1024 && indexctr < 2)) {
-        printf_P(PSTR("i=%d\n"), indexctr);
+    if ((spinned_up == SPIN_STABLE && rps < 20) || (spintime < 1024 && rps < 2)) {
+        printf_P(PSTR("i=%d\n"), rps);
         return 1;
     } 
     
-    atomic(indexctr = 0);
     return 0;
 }
 
@@ -290,6 +307,7 @@ void spin_enable() {
 void spin_disable() {
     spinned_up = SPIN_STOP;
     atomic(motorbits = 0);
+    pwm_enable(0);
 }
 
 /// Program main
@@ -309,7 +327,9 @@ int main() {
     sei();
 
     timer0_init();
-
+    timer1_init();
+    pwm_enable(0);
+    
     initdisplay();
     dotmode_set(DOT_BLINK);
     buttons_init();
@@ -350,16 +370,21 @@ int main() {
                                     break;
                         case 's':   strobe_fullspin++;
                                     break;
-                        case 'e':   motorduty_set--;
+                        case 'e':   OCR2A--;//motorduty_set--;
                                     break;
-                        case 'r':   motorduty_set++;
+                        case 'E':   OCR2B--;
+                                    break;            
+                        case 'r':   OCR2A++;//motorduty_set++;
                                     break;
-                        case '1':   strobeindexmark--;
+                        case 'R':   OCR2B++;
                                     break;
-                        case '2':   strobeindexmark++;
+                        case '1':   timercount--;
+                                    break;
+                        case '2':   timercount++;
                                     break;
                         case 't':   time.time = 0;
                                     break;
+                        case 'p':   pwm_enable(!pwm_enabled);
                         case '.':   break;
                         default:
                                     break;
@@ -371,10 +396,10 @@ int main() {
                             skip = 255;
                         }
                         
-                        printf_P(PSTR("time=%04x ph=%d,%d,%d,%d,%d fullspin=%d duty=%d strobeinexmark=%d spintime=%d spinned_up=%d\n"), 
-                            time, phase1,phase2,phase3,phase4,phase5, 
-                            strobe_fullspin, motorduty_set, strobeindexmark,
-                            spintime, spinned_up
+                        printf_P(PSTR("timercount=%d ph=%d,%d,%d,%d,%d fullspin=%d duty=%d OC2A,B=%d,%d strobeinexmark=%d spintime=%d spinned_up=%d rps=%d\n"), 
+                            timercount, phase1,phase2,phase3,phase4,phase5, 
+                            strobe_fullspin, motorduty_set, OCR2A, OCR2B, strobeindexmark,
+                            spintime, spinned_up, rps
                             );
                         break;
             }
@@ -388,6 +413,7 @@ int main() {
             blinktick &= ~_BV(0);
 
             time_nextsecond();
+#if 1             
             if (stall_detect()) {
                 spinup_setup();
                 spin_disable();
@@ -398,6 +424,7 @@ int main() {
                 printf_P(PSTR("RESTART\n"));
                 spin_enable();
             }
+#endif
         }
         
         switch (mode_get()) {
