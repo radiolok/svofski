@@ -45,10 +45,9 @@ struct _phase_precalc {
 int16_t strobectr = -768/2;
 int16_t strobeindexmark = 32;
 
-uint8_t motorduty = 0;
-volatile uint8_t eightctr = 0;
+uint8_t motorduty = 0;              //!< for non-pwm mode, coil duty cycle time counter
 
-uint8_t motorduty_set; 
+uint8_t motorduty_set;              //!< for non-pwm mode, coil duty cycle set time
 
 uint16_t strobe_fullspin = 768;
 uint16_t strobe_halfspin = 384;
@@ -180,6 +179,8 @@ ISR(TIMER0_OVF_vect) {
     
     TCNT0 = 256-timercount;
 
+    // strobe the lights
+    
     yes = PORTSTROBE & ~BV5(0,1,2,3,4);
 
     do {
@@ -211,8 +212,10 @@ ISR(TIMER0_OVF_vect) {
     }
     
     PORTSTROBE = yes;
-
     
+    // ---------------
+
+    // cycle the coils
     if (--spinctr == 0) {
         spinctr = spintime;
         motorbits <<= 1;
@@ -224,6 +227,7 @@ ISR(TIMER0_OVF_vect) {
     }
     
     yes = PORTMOTOR & ~BV3(MOT1,MOT2,MOT3);
+    
     if (spinned_up != SPIN_STOP) {
         // if pwm_enabled, low side is always-on
         if (pwm_enabled || motorduty > 0) {
@@ -232,8 +236,9 @@ ISR(TIMER0_OVF_vect) {
         }
     }
     
-
     PORTMOTOR = yes;
+    
+    // ----------------
     
     strobectr++;
     if (strobectr == strobe_halfspin) {
