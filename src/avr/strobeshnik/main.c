@@ -28,12 +28,16 @@
 #include "modes.h"
 #include "timekeep.h"
 
-#define TICKS_PER_SECOND 25 //23200
-#define DIGITTIME 64
+#define TICKS_PER_SECOND 25         //!< for timekeeping, Timer1 ticks 25 times per second
+
+#define BLINKCTR_LOAD    6          //!< Blink counter expires approx 4 times per second
 
 uint8_t counter1 = 0;
 
+// precalculated phases of every character position
 int16_t phase1 = 174-384, phase2 = 125-384, phase3 = 88-384, phase4 = 49-384, phase5 = 0-384;
+
+// precalculated absolute phase values for characters at their places
 struct _phase_precalc {
     int16_t p1, p2, p3, p4, p5;
 } phasepre;
@@ -50,22 +54,25 @@ uint16_t strobe_fullspin = 768;
 uint16_t strobe_halfspin = 384;
 
 volatile uint8_t time_ctr = 1;
-volatile uint8_t blinkctr = TICKS_PER_SECOND/4;
 
-volatile uint8_t blinktick;
+volatile uint8_t blinkctr = BLINKCTR_LOAD; //!< blinkctr == 0 every 1/5th of a second
 
-#define TIMERCOUNT 92 //104
-#define SPINUP_TIME 2048+256
-#define MOTORDUTY_LONG   200
-#define MOTORDUTY_MIDDLE 60
-#define MOTORDUTY_END    59
+volatile uint8_t blinktick;         //!< bit flags for sync
 
-volatile uint8_t motorcoils = 1;
+#define TIMERCOUNT 96               
+#define SPINUP_TIME 2048            //!< initial spintime
+#define MOTORDUTY_LONG   200        //!< non-pwm mode duty at start
+#define MOTORDUTY_MIDDLE 60         //!< non-pwm mode duty at spinup
+#define MOTORDUTY_END    59         //!< non-pwm mode duty that says spinup is over
 
-uint16_t spintime = SPINUP_TIME;
-uint16_t spinctr = SPINUP_TIME;
+#define DUTY_FREQ   56
+#define DUTY_START  45
+#define DUTY_STABLE 14
 
-uint8_t timercount = TIMERCOUNT;
+uint16_t spintime = SPINUP_TIME;    //!< this many counts between coil rotation
+uint16_t spinctr = SPINUP_TIME;     //!< current counter
+
+uint8_t timercount = TIMERCOUNT;    //!< this many timer ticks per count: global scale can be changed by this
 
 
 enum _spinup {
@@ -75,9 +82,16 @@ enum _spinup {
     SPIN_STABLE,
     SPIN_STOP,
 };
-uint8_t spinned_up;
+uint8_t spinned_up;                 //!< spinup state 
 
-uint8_t motorbits = 1;
+uint8_t motorbits = 1;              //!< motor coils: 001->010->100
+
+int8_t indexctr = 0;                //!< index ticks count
+int8_t rps = 0;                     //!< rotations per blinktick (quarter-second)
+uint8_t pwmduty;                    //!< duty cycle * 2 during end of spinup
+
+volatile uint8_t pwm_enabled;       //!< 1 when pwm control is enabled
+
 
 #define atomic(x) { cli(); x; sei(); }
 
@@ -108,19 +122,22 @@ inline uint16_t get_display_value() {
     return time.time;
 }
 
-/// Start timer 0.
+/// Start timer 0
 void timer0_init() {
     TIMSK0 |= _BV(TOIE0);    // enable Timer0 overflow interrupt
     TCNT0 = 256-TIMERCOUNT;
     TCCR0B = _BV(CS01);     // 20MHz/8
 }
 
+/// Start timer 1
 void timer1_init() {
     TIMSK1 |= _BV(TOIE1);
     TCNT1 = 65536-3125;
     TCCR1B = _BV(CS12);     // 20MHz/256 -> /3125 => 25 ticks/s
 }
 
+
+/// Update time-related counters
 ISR(TIMER1_OVF_vect, ISR_NOBLOCK) {
     TCNT1 = 65536-3125;
     if (--time_ctr == 0) {
@@ -132,29 +149,28 @@ ISR(TIMER1_OVF_vect, ISR_NOBLOCK) {
     if (blinkctr > 0) --blinkctr;
 }
 
-
-uint8_t pwm_enabled;
-
+/// Enable/disable high-side PWM control.
+/// When enabled, Timer2 is invoked in fast PWM mode with
+/// counter period in OCR2A, OCR2B is the PWM value.
+/// OC2B (PORTD.3) is PWM-output.
+///
+/// Default OCR2A/B values are not loaded
 void pwm_enable(uint8_t enable) {
-    DDRB |= _BV(3); // MOSI = OC2
-    DDRD |= _BV(3); // MOSI = OC2
+    DDRD |= _BV(3); 
     pwm_enabled = enable;
     if (enable) {
-        PORTB &= ~_BV(3);
         PORTD &= ~_BV(3);
-        TCCR2A = BV3(WGM20,WGM21,COM2B1);    // fast PWM, clear OC2A on compare match, set OC2B at bottom
-                                            // TOP = 255, BOTTOM = 0; OC2A = ...
-        TCCR2B = BV2(WGM22,CS21);                 // 20MHz/8
-        OCR2A = 32;
-        OCR2B = 5;
+        TCCR2A = BV4(WGM20,WGM21,COM2B1,COM2B0);    // fast PWM, OCR2A defines period, OCR2B toggles
+        TCCR2B = BV2(WGM22,CS20);                   // 20MHz
     } else {
         TCCR2A = 0;
         TCCR2B = 0;
-        PORTB |= _BV(3);
-        PORTD |= _BV(3);
+        PORTD &= ~_BV(3);
     }
 }
 
+
+/// Set PWM duty cycle (load OCR2B).
 void pwm_setduty(uint8_t d) {
     OCR2B = d;
 }
@@ -162,7 +178,7 @@ void pwm_setduty(uint8_t d) {
 ISR(TIMER0_OVF_vect) {
     uint8_t yes;
     
-    TCNT0 = 256-timercount;//TIMERCOUNT;
+    TCNT0 = 256-timercount;
 
     yes = PORTSTROBE & ~BV5(0,1,2,3,4);
 
@@ -209,7 +225,8 @@ ISR(TIMER0_OVF_vect) {
     
     yes = PORTMOTOR & ~BV3(MOT1,MOT2,MOT3);
     if (spinned_up != SPIN_STOP) {
-        if (pwm_enabled || motorduty > 0) { // fast pwm in stable mode
+        // if pwm_enabled, low side is always-on
+        if (pwm_enabled || motorduty > 0) {
             --motorduty;
             yes |= motorbits;
         }
@@ -224,35 +241,97 @@ ISR(TIMER0_OVF_vect) {
     }
 }
 
-int8_t indexctr = 0;
-int8_t rps = 0;
-uint8_t lastrps = 0;
+
+/// Initialize spinup variables
+void spinup_setup() {
+    spinned_up = SPIN_START;
+    spintime = SPINUP_TIME;
+    spinctr = SPINUP_TIME;
+    motorduty_set = MOTORDUTY_MIDDLE;
+    
+    atomic(motorbits = 0);
+    PORTSTROBE &= ~BV5(0,1,2,3,4);
+    _delay_ms(500);
+}
+
+
+/// Enable spinup
+void spin_enable() {
+    spinned_up = SPIN_START;
+    pwm_setduty(DUTY_START);
+    atomic(motorbits = 1);
+    pwm_enable(1);
+}
+
+
+/// Stop spinning
+void spin_disable() {
+    spinned_up = SPIN_STOP;
+    atomic(motorbits = 0);
+    pwm_enable(0);
+}
+
+/// Spinup control. Open-loop except for rotation index mark feedback.
+/// Start slowly, then if the platter seems to be spinning, switch
+/// into more aggressive mode, reach up top speed slower, then
+/// reduce PWM rate down to DUTY_STABLE.
 
 void update_parameters() {
     if (counter1 == 0) {
         atomic(counter1 = 0x1);
-        if (spinned_up == SPIN_START) {
-            if (spintime > 352 + 256) { 
+        switch (spinned_up) {
+        case SPIN_START:
+            if (spintime > 1024) {
+                atomic(spintime -= 256);
+            } else if (spintime > 608) { 
                 atomic(spintime -= 64);
             } else {
-                if (rps > 0) {
-                    pwm_enable(1);
-                    
-                    if (spintime > 192) {
-                        atomic(spintime -= 16);
+                if (rps == 0) {
+                    // something went wrong, restart again
+                    spinup_setup();
+                    spin_enable();
+                } else {
+                    if (spintime > 256) {
+                        atomic(spintime -= 32);
                     } else {
                         atomic(spintime-=4);
                     }
                 }
             }
+            
             if (spintime <= 64) {
                 atomic(spintime = 64);
+                spinned_up = SPIN_SPUN;
+                pwmduty = 25;
+            }
+            break;
+        case SPIN_SPUN:
+            if (--pwmduty == 0) {
+                pwmduty = DUTY_START<<1;
+                spinned_up = SPIN_DUTYDOWN;
+            }
+            break;
+        case SPIN_DUTYDOWN:
+            if ((pwmduty>>1) > DUTY_STABLE) {
+                pwmduty--;
+                pwm_setduty(pwmduty>>1);
+            } else {
+                pwm_setduty(DUTY_STABLE);
                 atomic(spinned_up = SPIN_STABLE);
             }
+            break;
+            
+        default:
+            // stable spin, do nothing
+            break;
         }
     }
 }
 
+
+//! External interrupt. Closed-loop control of disk phase. 
+//! If |strobectr-strobeindexmark| < sigma, change full spin count and
+//! wait until error becomes negligible.
 ISR(INT0_vect) {
     int16_t error = strobectr - strobeindexmark;
     if (abs(error) > 1) {
@@ -265,11 +344,12 @@ ISR(INT0_vect) {
     indexctr++;
 }
 
+//! Update rps variable and detect stall situation.
+//! \returns 1 when stall is detected
 uint8_t stall_detect() {
-    //rps = indexctr;
     atomic(rps = indexctr; indexctr = 0);
     
-    if ((spinned_up == SPIN_STABLE && rps < 20) || (spintime < 1024 && rps < 2)) {
+    if (spinned_up != SPIN_START && rps < 6) {
         printf_P(PSTR("i=%d\n"), rps);
         return 1;
     } 
@@ -286,28 +366,6 @@ void fadeto(uint16_t t) {
     phasepre.p3 = phase3 + (10<<6);
     phasepre.p4 = phase4 + ((((time.hhmm.mm&0xf0)>>4))<<6);
     phasepre.p5 = phase5 + ((((time.hhmm.mm&0x0f)>>0))<<6);  
-}
-
-void spinup_setup() {
-    spinned_up = SPIN_START;
-    spintime = SPINUP_TIME;
-    spinctr = SPINUP_TIME;
-    motorduty_set = MOTORDUTY_MIDDLE;
-    
-    atomic(motorbits = 0);
-    PORTSTROBE &= ~BV5(0,1,2,3,4);
-    _delay_ms(500);
-}
-
-void spin_enable() {
-    spinned_up = SPIN_START;
-    atomic(motorbits = 1);
-}
-
-void spin_disable() {
-    spinned_up = SPIN_STOP;
-    atomic(motorbits = 0);
-    pwm_enable(0);
 }
 
 /// Program main
@@ -328,6 +386,10 @@ int main() {
 
     timer0_init();
     timer1_init();
+    
+    OCR2A = DUTY_FREQ;
+    OCR2B = DUTY_START;
+    
     pwm_enable(0);
     
     initdisplay();
@@ -413,18 +475,6 @@ int main() {
             blinktick &= ~_BV(0);
 
             time_nextsecond();
-#if 1             
-            if (stall_detect()) {
-                spinup_setup();
-                spin_disable();
-                printf_P(PSTR("STALL\n"));
-            }
-            
-            if (rps == 0 && spinned_up == SPIN_STOP) {
-                printf_P(PSTR("RESTART\n"));
-                spin_enable();
-            }
-#endif
         }
         
         switch (mode_get()) {
@@ -439,11 +489,26 @@ int main() {
 
         if (blinkctr == 0) {
             cli();
-            blinkctr = TICKS_PER_SECOND/4;
+            blinkctr = BLINKCTR_LOAD; 
             sei();
             if (blinkhandler != NULL) {
                 blinkhandler(1);
             }
+
+#if 1            
+            if (stall_detect()) {
+                spinup_setup();
+                spin_disable();
+                printf_P(PSTR("STALL\n"));
+            }
+            
+            if (rps == 0 && spinned_up == SPIN_STOP) {
+                printf_P(PSTR("RESTART\n"));
+                spin_enable();
+            }
+#else 
+            rps = 30;
+#endif
         }
 
     
@@ -454,12 +519,6 @@ int main() {
         }
         
         _delay_ms(100);
-
-        // just waste time
-        //while((blinktick & _BV(2)) == 0) {
-        //    sleep_enable();
-        //    sleep_cpu();
-        //}
     }
 }
 
