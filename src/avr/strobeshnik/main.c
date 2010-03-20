@@ -32,6 +32,9 @@
 
 #define BLINKCTR_LOAD    6          //!< Blink counter expires approx 4 times per second
 
+// no pwm by default
+#define PWM 0
+
 uint8_t counter1 = 0;
 
 // precalculated phases of every character position
@@ -61,17 +64,20 @@ volatile uint8_t blinktick;         //!< bit flags for sync
 #define TIMERCOUNT 96               
 #define SPINUP_TIME 2048            //!< initial spintime
 #define MOTORDUTY_LONG   200        //!< non-pwm mode duty at start
-#define MOTORDUTY_MIDDLE 60         //!< non-pwm mode duty at spinup
-#define MOTORDUTY_END    59         //!< non-pwm mode duty that says spinup is over
+#define MOTORDUTY_MIDDLE 64         //!< non-pwm mode duty at spinup
+#define MOTORDUTY_END    11         //!< non-pwm mode duty that says spinup is over
 
 #define DUTY_FREQ   56
 #define DUTY_START  45
-#define DUTY_STABLE 14
+#define DUTY_STABLE 15
 
 uint16_t spintime = SPINUP_TIME;    //!< this many counts between coil rotation
 uint16_t spinctr = SPINUP_TIME;     //!< current counter
 
 uint8_t timercount = TIMERCOUNT;    //!< this many timer ticks per count: global scale can be changed by this
+
+int16_t error = 0;                    //!< phase error between current and needed index mark position
+
 
 
 enum _spinup {
@@ -223,7 +229,7 @@ ISR(TIMER0_OVF_vect) {
             motorbits = 1;
         }
 
-        motorduty = spintime > 128 ? MOTORDUTY_LONG : motorduty_set;
+        motorduty = spintime > 64 ? MOTORDUTY_LONG : (motorduty_set>>1);
     }
     
     yes = PORTMOTOR & ~BV3(MOT1,MOT2,MOT3);
@@ -252,7 +258,7 @@ void spinup_setup() {
     spinned_up = SPIN_START;
     spintime = SPINUP_TIME;
     spinctr = SPINUP_TIME;
-    motorduty_set = MOTORDUTY_MIDDLE;
+    motorduty_set = MOTORDUTY_MIDDLE<<1;
     
     atomic(motorbits = 0);
     PORTSTROBE &= ~BV5(0,1,2,3,4);
@@ -265,7 +271,7 @@ void spin_enable() {
     spinned_up = SPIN_START;
     pwm_setduty(DUTY_START);
     atomic(motorbits = 1);
-    pwm_enable(1);
+    pwm_enable(PWM ? 1 : 0);
 }
 
 
@@ -276,25 +282,28 @@ void spin_disable() {
     pwm_enable(0);
 }
 
+void respin() {
+    spinup_setup();
+    spin_enable();
+}
+
 /// Spinup control. Open-loop except for rotation index mark feedback.
 /// Start slowly, then if the platter seems to be spinning, switch
 /// into more aggressive mode, reach up top speed slower, then
 /// reduce PWM rate down to DUTY_STABLE.
-
 void update_parameters() {
     if (counter1 == 0) {
         atomic(counter1 = 0x1);
         switch (spinned_up) {
         case SPIN_START:
             if (spintime > 1024) {
-                atomic(spintime -= 256);
+                atomic(spintime -= 128);
             } else if (spintime > 608) { 
                 atomic(spintime -= 64);
             } else {
                 if (rps == 0) {
                     // something went wrong, restart again
-                    spinup_setup();
-                    spin_enable();
+                    respin();
                 } else {
                     if (spintime > 256) {
                         atomic(spintime -= 32);
@@ -317,12 +326,24 @@ void update_parameters() {
             }
             break;
         case SPIN_DUTYDOWN:
+            if (PWM) {
             if ((pwmduty>>1) > DUTY_STABLE) {
-                pwmduty--;
-                pwm_setduty(pwmduty>>1);
+                if ((pwmduty>>1) > (DUTY_STABLE + (DUTY_START-DUTY_STABLE)/4) || abs(error) < 2) {
+                    pwmduty--;
+                    pwm_setduty(pwmduty>>1);
+                }
             } else {
                 pwm_setduty(DUTY_STABLE);
-                atomic(spinned_up = SPIN_STABLE);
+                spinned_up = SPIN_STABLE;
+            }
+            } else {
+                if (abs(error) < 2) {
+                    if ((motorduty_set>>1) > MOTORDUTY_END) {
+                        motorduty_set--;
+                    } else {
+                        spinned_up = SPIN_STABLE;
+                    }
+                }
             }
             break;
             
@@ -338,7 +359,7 @@ void update_parameters() {
 //! If |strobectr-strobeindexmark| < sigma, change full spin count and
 //! wait until error becomes negligible.
 ISR(INT0_vect) {
-    int16_t error = strobectr - strobeindexmark;
+    error = strobectr - strobeindexmark;
     if (abs(error) > 1) {
         strobe_fullspin = 768+(error < 0 ? -2 : 2);  // seek
         strobe_halfspin = strobe_fullspin/2;
@@ -354,7 +375,7 @@ ISR(INT0_vect) {
 uint8_t stall_detect() {
     atomic(rps = indexctr; indexctr = 0);
     
-    if (spinned_up != SPIN_START && rps < 6) {
+    if ((spinned_up == SPIN_STABLE || spinned_up == SPIN_DUTYDOWN) && rps < 6) {
         printf_P(PSTR("i=%d\n"), rps);
         return 1;
     } 
@@ -476,7 +497,7 @@ int main() {
 
         buttonry_tick();
 
-        if (blinktick & _BV(0) != 0) {
+        if ((blinktick & _BV(0)) != 0) {
             blinktick &= ~_BV(0);
 
             time_nextsecond();
