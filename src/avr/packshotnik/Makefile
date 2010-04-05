@@ -1,6 +1,6 @@
 VERSION		   = 0.1
 PRG            = packshotnik
-OBJ            = main.o usrat.o
+OBJ            = main.o usrat.o hcms3966.o util.o lobo.o charrom.o
 MCU_TARGET     = atmega8
 OPTIMIZE       = -Os
 BUILDNUM       = $(shell cat buildnum)
