@@ -21,6 +21,13 @@
 #include <util/delay.h>
 
 #include "usrat.h"
+#include "hcms3966.h"
+#include "lobo.h"
+
+ISR(INT0_vect) {
+    lobo_index();
+}
+
 
 /// Program main
 int main() {
@@ -35,9 +42,18 @@ int main() {
 
     sei();
 
-    wdt_enable(WDTO_250MS);
     
     set_sleep_mode(SLEEP_MODE_IDLE);
+    
+    lobo_init();
+    
+    hcms_init();
+    
+    hcms_boo();
+    
+    hcms_quad("WOPR");
+
+    wdt_enable(WDTO_250MS);
     
     for(i = 0;;i++) {
         wdt_reset();
@@ -58,11 +74,23 @@ int main() {
                         break;
                 case 2:
                         switch (byte) { 
+                        case 'm':
+                            //lobo_run(!lobo_is_running());
+                            lobo_reset_pulsecount();
+                            while(lobo_get_pulsecount() < 2) {
+                                lobo_run(1);
+                                wdt_reset();
+                                _delay_us(50);
+                                lobo_run(0);
+                                wdt_reset();                                
+                                _delay_us(100);
+                            }
+                            lobo_run(0);
+                            break;
                         default:
-                                    break;
+                            break;
                         }
-            
-                        printf_P(PSTR("OCR1A=%d ICR1=%d\n"), OCR1A, ICR1);
+                        printf_P(PSTR("PulseCount=%d, PC=%02x PD=%02x\n"), lobo_get_pulsecount(), PORTC, PORTD);
                         break;
             }
         }
