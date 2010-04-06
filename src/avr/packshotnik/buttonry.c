@@ -37,6 +37,14 @@ static PGM_P currentModeText;
 #define PINBU2       PINB
 #define BUTTON2      7
 
+static const prog_char P_FRMS[] = "FRMS";
+static const prog_char P_TORQ[] = "TORQ";
+static const prog_char P_PACE[] = "PACE";
+static const prog_char P_GO_[]  = "GO  ";
+static const prog_char P__GO[]  = "  GO";
+static const prog_char P_OK[]   = " OK ";
+
+
 
 void blinker(uint8_t);
 
@@ -53,6 +61,12 @@ void debounce(uint8_t port, uint8_t* state, void (*handler)(uint8_t)) {
                             }
 
 
+static void swState(uint8_t state, PGM_P text) {
+    currentModeText = text;
+    set_state = state;
+}
+
+
 /// Initialize ports and variables
 void buttons_init() {
     DDRBU1 &= ~_BV(BUTTON1);
@@ -62,12 +76,9 @@ void buttons_init() {
     PORTBU2 |= _BV(BUTTON2);
     button1_state = button2_state = 0;
     
-    set_state = SET_NONE;
-    
-    currentModeText = PSTR(" OK ");
+    swState(SET_NONE, P_OK);
     set_blinkhandler(blinker);
 }
-
 
 /// Handler for button 1: "SET"
 void button1_handler(uint8_t on) {
@@ -85,28 +96,23 @@ void button1_handler(uint8_t on) {
         
         switch (set_state) {
             case SET_NONE:
-                currentModeText = PSTR("STEP");
-                set_state = SET_STEP;
+                swState(SET_STEP, P_FRMS);
                 break;
                 
             case SET_STEP:
-                currentModeText = PSTR("TORQ");
-                set_state = SET_TORQ;
+                swState(SET_TORQ, P_TORQ);
                 break;
                 
             case SET_TORQ:
-                currentModeText = PSTR("PACE");
-                set_state = SET_PACE;
+                swState(SET_PACE, P_PACE);
                 break;
                 
             case SET_PACE:
-                currentModeText = PSTR("  GO");
-                set_state = SET_GO;
+                swState(SET_GO, P__GO);
                 break;     
                        
             case SET_GO:
-                currentModeText = PSTR(" OK ");
-                set_state = SET_NONE;
+                swState(SET_NONE, P_OK);
                 break;
         }
         blink_haste();
@@ -138,7 +144,7 @@ void blinker(uint8_t on) {
             break;
         case SET_GO:
             if (blink) {
-                display_ps(PSTR("GO  "));
+                display_ps(P_GO_);
             }
             break;
         default:
@@ -152,6 +158,9 @@ void blinker(uint8_t on) {
 void button2_handler(uint8_t on) {
     if (on) {
         switch (set_state) {
+            case SET_NONE:
+                swState(SET_GO, P__GO);
+                break;
             case SET_STEP:
                 stepmode_next();
                 break;

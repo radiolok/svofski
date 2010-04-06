@@ -36,9 +36,6 @@ void blink_haste() {
     cli(); blinkctr = 0; sei();
 }
 
-ISR(INT0_vect) {
-    lobo_index();
-}
 
 ISR(TIMER0_OVF_vect) {
     if (blinkctr > 0) blinkctr--;
@@ -50,81 +47,8 @@ void timers_init() {
     TIMSK |= _BV(TOIE0);
 }
 
-uint8_t run_lobo_run(uint8_t flag) {
-    static int8_t count;
-    static uint8_t state = 10;
-    
-    if (flag == 255) {
-        return state == 10;
-    } else if (flag == 254) {
-        state = 10;
-    } else if (flag == 1) {
-        lobo_reset_pulsecount();
-        count = 100;
-        state = 0;
-    }
-
-    if (state == 10) {
-        return 0;
-    }
-    
-    if (count > 0) count--;
-    
-    lobo_run(1);
-    
-    switch (state) {
-        case 0:
-            _delay_us(40);
-            if (count == 0) {
-                count = 100;
-                state = 1;
-            }
-            break;
-        case 1:
-            _delay_us(60);
-            if (count == 0) {
-                count = 100;
-                state = 2;
-            }
-            break;
-        case 2:
-            _delay_us(80);
-            break;
-        case 3:
-            _delay_us(60);
-            if (count == 0) {
-                state = 4;
-                count = -1;
-            }
-            break;
-        case 4:
-            _delay_us(40);
-            break;
-    }
-    
-    switch (state) {
-        case 0:
-        case 1:
-        case 2:
-            if (flag == 2) {
-                count = 10;
-                state = 3;
-            }
-            break;
-    }
-    
-    lobo_run(0);
-    switch (torquemode_get()) {
-        case TORQ_PUNY:
-            _delay_us(100);
-            break;
-        case TORQ_FULL:
-            _delay_us(60);
-            break;
-    }
-    
-    return 0;
-}
+#define FULL_CIRCLE     610U
+#define SCALE           100
 
 typedef enum _psstate {
     PS_BEGIN1,
@@ -136,20 +60,45 @@ typedef enum _psstate {
 } PSState;
 
 
-uint8_t ps_state = PS_END;
-uint8_t ps_ctr = 0;
-uint8_t ps_pace = 15;
+PSState  ps_state = PS_END;
+uint16_t ps_ctr = 0;
+uint16_t ps_pace = 15;
 
-volatile uint8_t brakethresh = 0;
-volatile uint8_t steppulses = 0;
-uint16_t revsteps = 0;
+volatile uint16_t framecount = 0;
 
+volatile uint16_t   lobo_thresh;
+volatile uint16_t   lobo_pulse;
+
+typedef enum {
+    LOBO_STOP,
+    LOBO_RUN,
+    LOBO_PAUSE,
+} LoboState;
+
+volatile LoboState    lobo_state = LOBO_STOP;
+
+ISR(INT0_vect) {
+    lobo_index();
+    lobo_pulse += SCALE;
+    if (lobo_pulse > lobo_thresh) {
+        lobo_pulse -= lobo_thresh;
+        lobo_state = LOBO_PAUSE;
+    }    
+}
 
 void lobo_step() {
-    if (lobo_get_pulsecount() < steppulses) {
-        run_lobo_run((lobo_get_pulsecount() >= brakethresh) ? 2 : 0);
-    } else {
-        run_lobo_run(254);
+    if (lobo_state == LOBO_RUN) {
+        lobo_run(1);
+        _delay_us(60);
+    }
+    lobo_run(0);
+    switch (torquemode_get()) {
+        case TORQ_PUNY:
+            _delay_us(100);
+            break;
+        case TORQ_FULL:
+            _delay_us(60);
+            break;
     }
 }
 
@@ -159,17 +108,23 @@ void packshot_start() {
     ps_ctr = 20;
     
     switch (stepmode_get()) {
-        case STEP_TINY: steppulses = 2;  brakethresh = 1;   revsteps = 305;    break;
-        case STEP_NORM: steppulses = 10; brakethresh = 8;   revsteps = 61;    break;
-        case STEP_HUGE: steppulses = 18; brakethresh = 16;  revsteps = 34;     break;
-        case STEP_LOBO: steppulses = 38; brakethresh = 34;  revsteps = 16;     break;
+        case STEP_TINY: framecount = 120; break;
+        case STEP_NORM: framecount = 60;  break;
+        case STEP_HUGE: framecount = 30;  break;
+        case STEP_LOBO: framecount = 10;   break;
     }
     
     switch (pacemode_get()) {
-        case PACE_SLOW: ps_pace = 64;   break;
-        case PACE_NORM: ps_pace = 32;   break;
-        case PACE_FAST: ps_pace = 16;    break;
+        case PACE_1: ps_pace = 15;   break;
+        case PACE_2: ps_pace = 30;   break;
+        case PACE_3: ps_pace = 90;   break;
+        case PACE_4: ps_pace = 150;  break;
+        case PACE_5: ps_pace = 300;  break;
+        case PACE_6: ps_pace = 600;  break;
     }
+    
+    lobo_thresh = FULL_CIRCLE*SCALE/framecount;
+    lobo_pulse = 0;
 }
 
 void packshot_do() {
@@ -178,25 +133,26 @@ void packshot_do() {
     if (ps_ctr == 0) {
         switch (ps_state) {
             case PS_BEGIN1:
-                display_ps(PSTR("GO 3"));
+                display_ps(PSTR("\001  3"));
                 ps_ctr = 15;
                 ps_state = PS_BEGIN2;
                 break;
             case PS_BEGIN2:        
-                display_ps(PSTR("GO 2"));
+                display_ps(PSTR("\001  2"));
                 ps_ctr = 15;
                 ps_state = PS_BEGIN3;
                 break;
             case PS_BEGIN3:
-                display_ps(PSTR("GO 1"));
+                display_ps(PSTR("\001  1"));
                 ps_ctr = 15;
                 ps_state = PS_STEP;
                 break;
             case PS_STEP:
-                display_ps(PSTR("----"));
-                if (revsteps > 0) {
-                    --revsteps;
-                    run_lobo_run(1);
+                hcms_loadcw(0x44);
+                display_u(framecount);
+                if (framecount > 0) {
+                    --framecount;
+                    lobo_state = LOBO_RUN;
                     ps_state = PS_PACE;
                 } else {
                     ps_state = PS_END;
@@ -205,8 +161,9 @@ void packshot_do() {
                 }
                 break;
             case PS_PACE:
-                if (run_lobo_run(255)) {
-                    printf_P(PSTR("RS%03d PC%03d\n"), revsteps, lobo_get_pulsecount());
+                if (lobo_state == LOBO_PAUSE) {
+                    hcms_loadcw(0x40);
+                    printf_P(PSTR("FC%03d PC%03d\n"), framecount, lobo_pulse);
                     ps_ctr = ps_pace;
                     ps_state = PS_STEP;
                 }
@@ -233,13 +190,11 @@ int main() {
     
     set_sleep_mode(SLEEP_MODE_IDLE);
 
-    
     lobo_init();
     
     hcms_init();
-    
     hcms_boo();
-    
+    _delay_ms(50);
     display_ps(PSTR("WOPR"));
     _delay_ms(250);
 
@@ -249,7 +204,7 @@ int main() {
 
     wdt_enable(WDTO_250MS);
     
-    run_lobo_run(254);
+    //run_lobo_run(254);
     
     for(i = 0;;i++) {
         wdt_reset();
@@ -272,9 +227,9 @@ int main() {
                         switch (byte) { 
                         case 'm':
                             steps = 0;
-                            if (run_lobo_run(255)) {
-                                run_lobo_run(1);
-                            }
+                            //if (run_lobo_run(255)) {
+                            //   run_lobo_run(1);
+                            //}
                             
                             break;
                         default:
@@ -285,9 +240,11 @@ int main() {
             }
         }
         
-        if (!run_lobo_run(255)) {
-            lobo_step();
-        }
+        //if (!run_lobo_run(255)) {
+        //    lobo_step();
+        //}
+        
+        lobo_step();
         
         if (blinkbits & _BV(7)) {
             blinkbits &= ~_BV(7);

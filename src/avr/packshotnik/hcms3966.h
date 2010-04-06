@@ -21,9 +21,11 @@
 
 void hcms_init();
 void hcms_loadcw(uint8_t w);
-void hcms_quad(PGM_P msg);
+void hcms_quad(PGM_P msg, char *rmsg);
 void hcms_boo();
 
 void display_ps(PGM_P msg);
+void display_s(char* msg);
+void display_u(uint16_t u);
 
 #endif

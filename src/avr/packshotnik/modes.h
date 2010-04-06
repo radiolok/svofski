@@ -42,12 +42,15 @@ PGM_P torquemode_gettext();
 
 /// Pace
 typedef enum _pacemode {
-    PACE_SLOW = 0,
-    PACE_NORM = 1,
-    PACE_FAST = 2,
+    PACE_1 = 0,
+    PACE_2,
+    PACE_3,
+    PACE_4,
+    PACE_5,
+    PACE_6,
     
-    PACE_FIRST = PACE_SLOW,
-    PACE_LAST = PACE_FAST
+    PACE_FIRST = PACE_1,
+    PACE_LAST = PACE_6
 } PaceMode;
 
 void pacemode_next();
