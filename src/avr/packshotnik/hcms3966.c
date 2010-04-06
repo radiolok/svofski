@@ -28,7 +28,11 @@ void hcms_init() {
     D;
 }
 
-void hcms_quad(uint8_t* msg) {
+void display_ps(PGM_P msg) {
+    return hcms_quad(msg);
+}
+
+void hcms_quad(PGM_P msg) {
     uint16_t glyphofs;
     int8_t col;
     uint8_t bits;
@@ -40,11 +44,9 @@ void hcms_quad(uint8_t* msg) {
     D;
     
     for (t8 = 0; t8 < 4; t8++) {
-        glyphofs = msg[t8] * 5;
-        printf_P(PSTR("c=%x(%c) ofs=%d "), msg[t8], msg[t8], glyphofs);
+        glyphofs = pgm_read_byte(&msg[t8]) * 5;
         for (col = 0; col < 5; col++) {
             bits = pgm_read_byte(&charrom[glyphofs + col]) << 1;
-            printf_P(PSTR(" bits=%02x "), bits);
             hcms_octshift(bits, 1);
         }
     }
