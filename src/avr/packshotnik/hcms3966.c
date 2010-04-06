@@ -12,7 +12,7 @@ extern const prog_uint8_t charrom[];
 static uint8_t t8;
 
 //#define D _delay_us(1)
-#define D
+#define D _delay_us(1)
 
 void hcms_octshift(uint8_t w, uint8_t right);
 
@@ -29,10 +29,20 @@ void hcms_init() {
 }
 
 void display_ps(PGM_P msg) {
-    return hcms_quad(msg);
+    return hcms_quad(msg, NULL);
 }
 
-void hcms_quad(PGM_P msg) {
+void display_s(char* msg) {
+    return hcms_quad(NULL, msg);
+}
+
+void display_u(uint16_t u) {
+    char mesg[5];
+    sprintf(mesg, "%4d", u);
+    display_s(mesg);
+}
+
+void hcms_quad(PGM_P msg, char *ramsg) {
     uint16_t glyphofs;
     int8_t col;
     uint8_t bits;
@@ -44,7 +54,12 @@ void hcms_quad(PGM_P msg) {
     D;
     
     for (t8 = 0; t8 < 4; t8++) {
-        glyphofs = pgm_read_byte(&msg[t8]) * 5;
+        if (msg != NULL) {
+            bc = pgm_read_byte(&msg[t8]);
+        } else {
+            bc = ramsg[t8];
+        }
+        glyphofs = bc * 5;
         for (col = 0; col < 5; col++) {
             bits = pgm_read_byte(&charrom[glyphofs + col]) << 1;
             hcms_octshift(bits, 1);
