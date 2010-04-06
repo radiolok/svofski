@@ -17,7 +17,10 @@ uint8_t lobo_get_pulsecount();
 
 void lobo_reset_pulsecount();
 
-void lobo_index();
+void lobo_step();
 
+void packshot_start();
+
+void packshot_do();
 
 #endif
