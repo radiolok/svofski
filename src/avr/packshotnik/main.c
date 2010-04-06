@@ -140,13 +140,14 @@ uint8_t ps_state = PS_END;
 uint8_t ps_ctr = 0;
 uint8_t ps_pace = 15;
 
+volatile uint8_t brakethresh = 0;
 volatile uint8_t steppulses = 0;
 uint16_t revsteps = 0;
 
 
 void lobo_step() {
     if (lobo_get_pulsecount() < steppulses) {
-        run_lobo_run((lobo_get_pulsecount() >= (steppulses-steppulses/4)) ? 2 : 0);
+        run_lobo_run((lobo_get_pulsecount() >= brakethresh) ? 2 : 0);
     } else {
         run_lobo_run(254);
     }
@@ -158,10 +159,10 @@ void packshot_start() {
     ps_ctr = 20;
     
     switch (stepmode_get()) {
-        case STEP_TINY: steppulses = 2;  revsteps = 305;    break;
-        case STEP_NORM: steppulses = 8;  revsteps = 76;    break;
-        case STEP_HUGE: steppulses = 16; revsteps = 38;     break;
-        case STEP_LOBO: steppulses = 32; revsteps = 19;     break;
+        case STEP_TINY: steppulses = 2;  brakethresh = 1;   revsteps = 305;    break;
+        case STEP_NORM: steppulses = 10; brakethresh = 8;   revsteps = 61;    break;
+        case STEP_HUGE: steppulses = 18; brakethresh = 16;  revsteps = 34;     break;
+        case STEP_LOBO: steppulses = 38; brakethresh = 34;  revsteps = 16;     break;
     }
     
     switch (pacemode_get()) {
@@ -177,17 +178,17 @@ void packshot_do() {
     if (ps_ctr == 0) {
         switch (ps_state) {
             case PS_BEGIN1:
-                display_ps(PSTR("   3"));
+                display_ps(PSTR("GO 3"));
                 ps_ctr = 15;
                 ps_state = PS_BEGIN2;
                 break;
             case PS_BEGIN2:        
-                display_ps(PSTR("   2"));
+                display_ps(PSTR("GO 2"));
                 ps_ctr = 15;
                 ps_state = PS_BEGIN3;
                 break;
             case PS_BEGIN3:
-                display_ps(PSTR("   1"));
+                display_ps(PSTR("GO 1"));
                 ps_ctr = 15;
                 ps_state = PS_STEP;
                 break;
