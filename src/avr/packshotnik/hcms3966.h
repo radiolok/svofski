@@ -1,6 +1,7 @@
 #ifndef HCMS_
 #define HCMS_
 
+#include <avr/pgmspace.h>
 #include "util.h"
 
 #define P_BLANK PORTB
@@ -19,9 +20,10 @@
 
 
 void hcms_init();
-
 void hcms_loadcw(uint8_t w);
-
+void hcms_quad(PGM_P msg);
 void hcms_boo();
+
+void display_ps(PGM_P msg);
 
 #endif
