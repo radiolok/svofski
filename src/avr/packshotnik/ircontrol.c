@@ -20,21 +20,21 @@
 #include "ircontrol.h"
 
 #define CARRIER_FREQ    (8000000/244)  // 32787Hz
-#define ON_COUNT        18
-#define OFF_COUNT       239
+#define ON_COUNT        32
+//#define OFF_COUNT       480
+volatile uint16_t off_count = 480;
 
 static volatile uint8_t repeats;
-static volatile uint8_t count;
+static volatile uint16_t count;
 static volatile uint8_t state;
 
-
-static inline void carrier(uint8_t on) {
+inline void carrier(uint8_t on) {
     TCCR1A = on ? _BV(COM1A0) : 0;               // toggle OC1A on compare match
 }
 
 void irc_init() {
     TCCR1B = _BV(WGM12) | _BV(CS10);    // CTC1: OCR1A = TOP
-    OCR1A = 244-1;    // ~= 32787 hz
+    OCR1A = 126;    // ~= 32787 hz
     DDRB |= _BV(1);
     PORTB &= ~_BV(1);
 }
@@ -47,8 +47,7 @@ void irc_shutter() {
     TIMSK |= _BV(OCIE1A);
     state = 2;
     count = ON_COUNT;
-    printf_P(PSTR("Shutter: on %d off %d"), ON_COUNT, OFF_COUNT);
-    repeats = 17;
+    repeats = 3;
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -59,7 +58,7 @@ ISR(TIMER1_COMPA_vect) {
                 case 1:
                     state = 2;
                     carrier(0);
-                    count = OFF_COUNT;
+                    count = off_count;//OFF_COUNT;
                     break;
                 case 2:
                     if (--repeats > 0) {
