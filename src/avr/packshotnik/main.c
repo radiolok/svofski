@@ -47,6 +47,8 @@ void timers_init() {
     TIMSK |= _BV(TOIE0);
 }
 
+void carrier(uint8_t);
+extern uint16_t off_count;
 
 /// Program main
 int main() {
@@ -102,12 +104,27 @@ int main() {
                 case 2:
                         switch (byte) { 
                         case 'm':
-                            steps = 0;
+                            carrier(1);
+                            break;
+                        case '1':
+                            OCR1A--;
+                            break;
+                        case '2':
+                            OCR1A++;
+                            break;
+                        case 'q':
+                            off_count--;
+                            break;
+                        case 'w':
+                            off_count++;
+                            break;
+                        case 's':
+                            irc_shutter();
                             break;
                         default:
                             break;
                         }
-                        printf_P(PSTR("PiB=%02x PiD=%02x PB=%02x PC=%02x PD=%02x steps=%d\n"), PINB, PIND, PORTB, PORTC, PORTD, steps);
+                        printf_P(PSTR("PiB=%02x PiD=%02x PB=%02x PC=%02x PD=%02x OCR1A=%d off=%d\n"), PINB, PIND, PORTB, PORTC, PORTD, OCR1A, off_count);
                         break;
             }
         }
