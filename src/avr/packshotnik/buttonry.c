@@ -9,6 +9,7 @@
 #include "common.h"
 #include "modes.h"
 #include "hcms3966.h"
+#include "lobo.h"
 
 enum _setstates {
     SET_NONE = 0,
@@ -172,7 +173,11 @@ void button2_handler(uint8_t on) {
                 break;
             case SET_GO:
                 set_blinkhandler(NULL);
-                packshot_start();
+                if (packshot_isactive()) {
+                    packshot_stop();
+                } else {
+                    packshot_start();
+                }
                 break;
         }
         blink = 1;

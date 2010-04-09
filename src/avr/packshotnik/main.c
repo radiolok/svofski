@@ -48,7 +48,7 @@ void timers_init() {
 }
 
 void carrier(uint8_t);
-extern uint16_t off_count;
+//extern uint16_t FULL_CIRCLE;
 
 /// Program main
 int main() {
@@ -71,8 +71,8 @@ int main() {
     hcms_init();
     hcms_boo();
     _delay_ms(50);
-    display_ps(PSTR("WOPR"));
-    _delay_ms(250);
+    display_ps(PSTR("\xc1\xce\xd0\xd9"));
+    _delay_ms(750);
 
     buttons_init();
     
@@ -107,16 +107,10 @@ int main() {
                             carrier(1);
                             break;
                         case '1':
-                            OCR1A--;
+                            //FULL_CIRCLE--;
                             break;
                         case '2':
-                            OCR1A++;
-                            break;
-                        case 'q':
-                            off_count--;
-                            break;
-                        case 'w':
-                            off_count++;
+                            //FULL_CIRCLE++;
                             break;
                         case 's':
                             irc_shutter();
@@ -124,7 +118,7 @@ int main() {
                         default:
                             break;
                         }
-                        printf_P(PSTR("PiB=%02x PiD=%02x PB=%02x PC=%02x PD=%02x OCR1A=%d off=%d\n"), PINB, PIND, PORTB, PORTC, PORTD, OCR1A, off_count);
+                        printf_P(PSTR("PiB=%02x PiD=%02x PB=%02x PC=%02x PD=%02x FC=%d\n"), PINB, PIND, PORTB, PORTC, PORTD, 0);
                         break;
             }
         }

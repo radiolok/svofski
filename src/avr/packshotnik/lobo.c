@@ -10,10 +10,40 @@
 #include "buttonry.h"
 #include "ircontrol.h"
 
+#define FULL_CIRCLE     522
+#define SCALE           65536/FULL_CIRCLE
+
+typedef enum _psstate {
+    PS_BEGIN1,
+    PS_BEGIN2,
+    PS_BEGIN3,
+    PS_STEP,
+    PS_PACE,
+    PS_PACE2,
+    PS_END
+} PSState;
+
+typedef enum {
+    LOBO_STOP,
+    LOBO_RUN,
+    LOBO_PAUSE,
+} LoboState;
+
+
+PSState  ps_state = PS_END;
+uint16_t ps_ctr = 0;
+uint16_t ps_pace = 15;
+
+volatile uint16_t framecount = 0;
+
+volatile uint16_t   lobo_thresh;
+volatile uint16_t   lobo_pulse;
+
+volatile LoboState    lobo_state = LOBO_STOP;
+
 void lobo_init() {
     DDRD &= _BV(2);     // PORTD.2 is input, INT0
     
-    //MCUCR |= BV2(ISC01,ISC00);  // rising edge generates request
     MCUCR |= _BV(ISC00);  // any logical change generates request
     GICR |= _BV(INT0);
     
@@ -33,38 +63,6 @@ uint8_t lobo_is_running() {
     return (P_LOBO & _BV(BMOTOR)) != 0;
 }
 
-#define FULL_CIRCLE     610U
-#define SCALE           100
-
-typedef enum _psstate {
-    PS_BEGIN1,
-    PS_BEGIN2,
-    PS_BEGIN3,
-    PS_STEP,
-    PS_PACE,
-    PS_END
-} PSState;
-
-
-
-
-PSState  ps_state = PS_END;
-uint16_t ps_ctr = 0;
-uint16_t ps_pace = 15;
-
-volatile uint16_t framecount = 0;
-
-volatile uint16_t   lobo_thresh;
-volatile uint16_t   lobo_pulse;
-
-typedef enum {
-    LOBO_STOP,
-    LOBO_RUN,
-    LOBO_PAUSE,
-} LoboState;
-
-volatile LoboState    lobo_state = LOBO_STOP;
-
 ISR(INT0_vect) {
     lobo_pulse += SCALE;
     if (lobo_pulse > lobo_thresh) {
@@ -80,8 +78,8 @@ void lobo_step() {
     }
     lobo_run(0);
     switch (torquemode_get()) {
-        case TORQ_PUNY:
-            _delay_us(100);
+        case TORQ_WEAK:
+            _delay_us(160);
             break;
         case TORQ_FULL:
             _delay_us(60);
@@ -95,6 +93,7 @@ void packshot_start() {
     ps_ctr = 20;
     
     switch (stepmode_get()) {
+        case STEP_NANO: framecount = 240; break;
         case STEP_TINY: framecount = 120; break;
         case STEP_NORM: framecount = 60;  break;
         case STEP_HUGE: framecount = 30;  break;
@@ -112,6 +111,14 @@ void packshot_start() {
     
     lobo_thresh = FULL_CIRCLE*SCALE/framecount;
     lobo_pulse = 0;
+}
+
+uint8_t packshot_isactive() {
+    return ps_state != PS_END;
+}
+
+void packshot_stop() {
+    framecount = 0;
 }
 
 void packshot_do() {
@@ -149,12 +156,17 @@ void packshot_do() {
                 break;
             case PS_PACE:
                 if (lobo_state == LOBO_PAUSE) {
-                    // blank the display and release the shutter
-                    hcms_loadcw(0x40);
-                    ps_ctr = ps_pace;
-                    ps_state = PS_STEP;
-                    irc_shutter();
+                    // wait until oscillations stop
+                    ps_ctr = 15;
+                    ps_state = PS_PACE2;
                 }
+                break;
+            case PS_PACE2:
+                // subdue the display and release the shutter
+                hcms_loadcw(0x41);
+                ps_ctr = ps_pace;
+                ps_state = PS_STEP;
+                irc_shutter();
                 break;
             case PS_END:
                 break;

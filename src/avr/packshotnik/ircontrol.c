@@ -21,10 +21,10 @@
 
 #define CARRIER_FREQ    (8000000/244)  // 32787Hz
 #define ON_COUNT        32
-//#define OFF_COUNT       480
-volatile uint16_t off_count = 480;
+#define OFF_COUNT       480
 
 static volatile uint8_t repeats;
+static volatile uint8_t retries;
 static volatile uint16_t count;
 static volatile uint8_t state;
 
@@ -47,7 +47,8 @@ void irc_shutter() {
     TIMSK |= _BV(OCIE1A);
     state = 2;
     count = ON_COUNT;
-    repeats = 3;
+    repeats = 2;
+    retries = 1;
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -58,18 +59,30 @@ ISR(TIMER1_COMPA_vect) {
                 case 1:
                     state = 2;
                     carrier(0);
-                    count = off_count;//OFF_COUNT;
+                    count = OFF_COUNT;
                     break;
                 case 2:
-                    if (--repeats > 0) {
+                    if (repeats-- > 0) {
                         state = 1;
                         carrier(1);
                         count = ON_COUNT;
                     } else {
-                        state = 0;
-                        carrier(0);
-                        TIMSK &= ~_BV(OCIE1A);
+                        if (retries == 0) {
+                            state = 0;
+                            carrier(0);
+                            TIMSK &= ~_BV(OCIE1A);
+                        } else {
+                            retries--;
+                            count = 65000;
+                            carrier(0);
+                            state = 3;
+                        }
                     }
+                    break;
+                case 3:
+                    // fire again
+                    state = 2;
+                    repeats = 2;
                     break;
                 default:
                     break;
