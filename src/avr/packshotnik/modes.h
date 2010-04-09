@@ -16,11 +16,13 @@ uint8_t blinkmode_get();
 
 /// Step modes
 typedef enum _stepmode {
-    STEP_TINY = 0,
+    STEP_NANO = 0,
+    STEP_TINY,
     STEP_NORM,
     STEP_HUGE,
     STEP_LOBO,
-    STEP_LAST = STEP_LOBO
+    STEP_LAST = STEP_LOBO,
+    STEP_FIRST = STEP_NANO,
 } StepMode;
 
 void stepmode_next();
@@ -29,10 +31,10 @@ PGM_P stepmode_gettext();
 
 /// Torque
 typedef enum _torquemode {
-    TORQ_PUNY = 0,
+    TORQ_WEAK = 0,
     TORQ_FULL,
     
-    TORQ_FIRST = TORQ_PUNY,
+    TORQ_FIRST = TORQ_WEAK,
     TORQ_LAST = TORQ_FULL,
 } TorqueMode;
 

@@ -23,4 +23,8 @@ void packshot_start();
 
 void packshot_do();
 
+void packshot_stop();
+
+uint8_t packshot_isactive();
+
 #endif

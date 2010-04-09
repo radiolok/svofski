@@ -13,16 +13,13 @@ void blinkmode_set(uint8_t mode) {
 
 inline uint8_t blinkmode_get() { return blinkmode; }
 
-
-
-
 /// -- stepmodes
 static volatile uint8_t stepmode = STEP_LOBO;
 
 void stepmode_next() {
     stepmode ++;
     if (stepmode > STEP_LAST) {
-        stepmode = STEP_TINY;
+        stepmode = STEP_FIRST;
     }
 }
 
@@ -32,6 +29,7 @@ inline StepMode stepmode_get() {
 
 PGM_P stepmode_gettext() {
     switch (stepmode) {
+    case STEP_NANO: return PSTR(" 240");
     case STEP_TINY: return PSTR(" 120");
     case STEP_NORM: return PSTR("  60");
     case STEP_HUGE: return PSTR("  30");
@@ -41,7 +39,7 @@ PGM_P stepmode_gettext() {
 }
 
 /// -- torque modes
-static volatile TorqueMode torquemode = TORQ_FULL;
+static volatile TorqueMode torquemode = TORQ_WEAK;
 
 void torquemode_next() {
     torquemode++;
@@ -56,14 +54,14 @@ inline TorqueMode torquemode_get() {
 
 PGM_P torquemode_gettext() {
     switch (torquemode) {
-        case TORQ_PUNY: return PSTR("weak");
+        case TORQ_WEAK: return PSTR("weak");
         case TORQ_FULL: return PSTR("good");
     }
     return 0;
 }
 
 /// -- pace modes
-static volatile PaceMode pacemode = PACE_1;
+static volatile PaceMode pacemode = PACE_3;
 
 void pacemode_next() {
     pacemode++;
