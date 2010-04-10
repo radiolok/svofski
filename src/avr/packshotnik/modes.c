@@ -14,7 +14,7 @@ void blinkmode_set(uint8_t mode) {
 inline uint8_t blinkmode_get() { return blinkmode; }
 
 /// -- stepmodes
-static volatile uint8_t stepmode = STEP_LOBO;
+static volatile uint8_t stepmode = STEP_TEST;
 
 void stepmode_next() {
     stepmode ++;
@@ -34,6 +34,7 @@ PGM_P stepmode_gettext() {
     case STEP_NORM: return PSTR("  60");
     case STEP_HUGE: return PSTR("  30");
     case STEP_LOBO: return PSTR("  10");
+    case STEP_TEST: return PSTR("test");
     }
     return 0;
 }

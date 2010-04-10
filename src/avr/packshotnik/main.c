@@ -36,7 +36,6 @@ void blink_haste() {
     cli(); blinkctr = 0; sei();
 }
 
-
 ISR(TIMER0_OVF_vect) {
     if (blinkctr > 0) blinkctr--;
     blinkbits |= _BV(7);
@@ -48,7 +47,6 @@ void timers_init() {
 }
 
 void carrier(uint8_t);
-//extern uint16_t FULL_CIRCLE;
 
 /// Program main
 int main() {
@@ -62,7 +60,6 @@ int main() {
     printf_P(PSTR("\033[2J\033[HB%s DO COSMONAUTY %02x\n"), BUILDNUM, MCUCSR);
 
     sei();
-
     
     set_sleep_mode(SLEEP_MODE_IDLE);
 
@@ -106,12 +103,6 @@ int main() {
                         case 'm':
                             carrier(1);
                             break;
-                        case '1':
-                            //FULL_CIRCLE--;
-                            break;
-                        case '2':
-                            //FULL_CIRCLE++;
-                            break;
                         case 's':
                             irc_shutter();
                             break;
@@ -123,7 +114,9 @@ int main() {
             }
         }
         
-        lobo_step();
+        if (!lobo_step()) {
+            packshot_fail();
+        }
         
         if (blinkbits & _BV(7)) {
             blinkbits &= ~_BV(7);

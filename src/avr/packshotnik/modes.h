@@ -16,13 +16,14 @@ uint8_t blinkmode_get();
 
 /// Step modes
 typedef enum _stepmode {
-    STEP_NANO = 0,
-    STEP_TINY,
-    STEP_NORM,
-    STEP_HUGE,
+    STEP_TEST = 0,
     STEP_LOBO,
-    STEP_LAST = STEP_LOBO,
-    STEP_FIRST = STEP_NANO,
+    STEP_HUGE,
+    STEP_NORM,
+    STEP_TINY,
+    STEP_NANO,
+    STEP_LAST = STEP_NANO,
+    STEP_FIRST = STEP_TEST,
 } StepMode;
 
 void stepmode_next();
