@@ -9,21 +9,21 @@
 
 void lobo_init();
 
-void lobo_run(uint8_t run);
-
-uint8_t lobo_is_running();
+void lobo_ctrl(uint8_t run);
 
 uint8_t lobo_get_pulsecount();
 
 void lobo_reset_pulsecount();
 
-void lobo_step();
+uint8_t lobo_step();
 
 void packshot_start();
 
 void packshot_do();
 
 void packshot_stop();
+
+void packshot_fail();
 
 uint8_t packshot_isactive();
 

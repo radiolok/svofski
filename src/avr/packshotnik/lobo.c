@@ -10,14 +10,16 @@
 #include "buttonry.h"
 #include "ircontrol.h"
 
-#define FULL_CIRCLE     522
+#define FULL_CIRCLE     518
 #define SCALE           65536/FULL_CIRCLE
+
+#define LWD 600
 
 typedef enum _psstate {
     PS_BEGIN1,
     PS_BEGIN2,
     PS_BEGIN3,
-    PS_STEP,
+    PS_TURN,
     PS_PACE,
     PS_PACE2,
     PS_END
@@ -38,9 +40,11 @@ volatile uint16_t framecount = 0;
 
 volatile uint16_t   lobo_thresh;
 volatile uint16_t   lobo_pulse;
+volatile uint16_t    lobo_watchdog;
 
 volatile LoboState    lobo_state = LOBO_STOP;
 
+/// Init Lobo
 void lobo_init() {
     DDRD &= _BV(2);     // PORTD.2 is input, INT0
     
@@ -48,10 +52,11 @@ void lobo_init() {
     GICR |= _BV(INT0);
     
     D_LOBO |= _BV(BMOTOR);
-    lobo_run(0);
+    lobo_ctrl(0);
 }
 
-void lobo_run(uint8_t on) {
+/// Run or stop the motor
+void lobo_ctrl(uint8_t on) {
     if (on) {
         P_LOBO |= _BV(BMOTOR);
     } else {
@@ -59,35 +64,55 @@ void lobo_run(uint8_t on) {
     } 
 }
 
-uint8_t lobo_is_running() {
-    return (P_LOBO & _BV(BMOTOR)) != 0;
+/// Set motor turning state: RUN/PAUSE/STOP. 
+void lobo_setstate(LoboState s) {
+    cli();
+    lobo_state = s;
+    sei();
+    if (s == LOBO_RUN) {
+        lobo_watchdog = LWD;
+    }
 }
 
+
+/// Optical encoder interrupt
 ISR(INT0_vect) {
     lobo_pulse += SCALE;
+    lobo_watchdog = LWD;
     if (lobo_pulse > lobo_thresh) {
         lobo_pulse -= lobo_thresh;
-        lobo_state = LOBO_PAUSE;
+        lobo_setstate(LOBO_PAUSE);
     }    
 }
 
-void lobo_step() {
+/// Loop routine: a primitive PWM driver. Called from the main loop continuously.
+/// On-cycle is always 60us, off-cycle is variable
+uint8_t lobo_step() {
     if (lobo_state == LOBO_RUN) {
-        lobo_run(1);
+        lobo_ctrl(1);
         _delay_us(60);
+        if (--lobo_watchdog == 0) {
+            // motor appears to be stuck
+            lobo_ctrl(0);
+            lobo_setstate(LOBO_STOP);
+            return 0;
+        }
     }
-    lobo_run(0);
+    lobo_ctrl(0);
     switch (torquemode_get()) {
         case TORQ_WEAK:
-            _delay_us(160);
+             // longer off-cycles are possible but this seems to be the reasonable limit
+            _delay_us(140);
             break;
         case TORQ_FULL:
             _delay_us(60);
             break;
     }
+    
+    return 1;
 }
 
-
+/// Begin the shooting
 void packshot_start() {
     ps_state = PS_BEGIN1;
     ps_ctr = 20;
@@ -97,7 +122,8 @@ void packshot_start() {
         case STEP_TINY: framecount = 120; break;
         case STEP_NORM: framecount = 60;  break;
         case STEP_HUGE: framecount = 30;  break;
-        case STEP_LOBO: framecount = 10;   break;
+        case STEP_LOBO: framecount = 10;  break;
+        case STEP_TEST: framecount = 0;   break;
     }
     
     switch (pacemode_get()) {
@@ -113,40 +139,56 @@ void packshot_start() {
     lobo_pulse = 0;
 }
 
-uint8_t packshot_isactive() {
+/// true if shooting is in progress
+inline uint8_t packshot_isactive() {
     return ps_state != PS_END;
 }
 
+
+/// Peacefully terminate shooting: assume current frame to be the final frame
 void packshot_stop() {
     framecount = 0;
 }
 
+/// Fail with drama
+void packshot_fail() {
+    display_ps(PSTR("FAIL"));
+    framecount = 0;
+    lobo_setstate(LOBO_STOP);
+    ps_state = PS_END;
+    buttons_init();
+}
+
+/// Higher-level loop routine. Called on blinkbit (some 30 times/sec).
 void packshot_do() {
     if (ps_ctr > 0) --ps_ctr;
     
     if (ps_ctr == 0) {
         switch (ps_state) {
             case PS_BEGIN1:
-                display_ps(PSTR("\001  3"));
+                display_ps(PSTR("\0013  "));
                 ps_ctr = 15;
                 ps_state = PS_BEGIN2;
                 break;
             case PS_BEGIN2:        
-                display_ps(PSTR("\001  2"));
+                display_ps(PSTR("\001 2 "));
                 ps_ctr = 15;
                 ps_state = PS_BEGIN3;
                 break;
             case PS_BEGIN3:
                 display_ps(PSTR("\001  1"));
                 ps_ctr = 15;
-                ps_state = PS_STEP;
+                lobo_setstate(LOBO_PAUSE);
+                ps_state = PS_PACE;
                 break;
-            case PS_STEP:
+            case PS_TURN:
+                // full brightness display while turning
                 hcms_loadcw(0x44);
                 display_u(framecount);
+                
                 if (framecount > 0) {
                     --framecount;
-                    lobo_state = LOBO_RUN;
+                    lobo_setstate(LOBO_RUN);
                     ps_state = PS_PACE;
                 } else {
                     ps_state = PS_END;
@@ -165,7 +207,7 @@ void packshot_do() {
                 // subdue the display and release the shutter
                 hcms_loadcw(0x41);
                 ps_ctr = ps_pace;
-                ps_state = PS_STEP;
+                ps_state = PS_TURN;
                 irc_shutter();
                 break;
             case PS_END:
