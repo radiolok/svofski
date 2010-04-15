@@ -29,7 +29,7 @@ inline StepMode stepmode_get() {
 
 PGM_P stepmode_gettext() {
     switch (stepmode) {
-    case STEP_NANO: return PSTR(" 240");
+    case STEP_NANO: return PSTR(" MAX");
     case STEP_TINY: return PSTR(" 120");
     case STEP_NORM: return PSTR("  60");
     case STEP_HUGE: return PSTR("  30");
@@ -47,6 +47,10 @@ void torquemode_next() {
     if (torquemode > TORQ_LAST) {
         torquemode = TORQ_FIRST;
     }
+}
+
+void torquemode_set(TorqueMode tm) {
+    torquemode = tm;
 }
 
 inline TorqueMode torquemode_get() {
