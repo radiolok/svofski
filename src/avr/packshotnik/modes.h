@@ -40,6 +40,7 @@ typedef enum _torquemode {
 } TorqueMode;
 
 void torquemode_next();
+void torquemode_set(TorqueMode tm);
 TorqueMode torquemode_get();
 PGM_P torquemode_gettext();
 

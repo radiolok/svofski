@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <stdio.h>
 
 #include "util.h"
 #include "lobo.h"
@@ -11,7 +12,7 @@
 #include "ircontrol.h"
 
 #define FULL_CIRCLE     518
-#define SCALE           65536/FULL_CIRCLE
+#define SCALE           125 //65536/FULL_CIRCLE
 
 #define LWD 600
 
@@ -79,7 +80,7 @@ void lobo_setstate(LoboState s) {
 ISR(INT0_vect) {
     lobo_pulse += SCALE;
     lobo_watchdog = LWD;
-    if (lobo_pulse > lobo_thresh) {
+    if (lobo_pulse >= lobo_thresh) {
         lobo_pulse -= lobo_thresh;
         lobo_setstate(LOBO_PAUSE);
     }    
@@ -116,9 +117,15 @@ uint8_t lobo_step() {
 void packshot_start() {
     ps_state = PS_BEGIN1;
     ps_ctr = 20;
-    
+}
+
+void p(uint8_t x) {
+    printf_P(PSTR("%d: thresh=%d pulse=%d\n"), x, lobo_thresh, lobo_pulse);
+}
+
+static void packshot_calc() {
     switch (stepmode_get()) {
-        case STEP_NANO: framecount = 240; break;
+        case STEP_NANO: framecount = 259; break;
         case STEP_TINY: framecount = 120; break;
         case STEP_NORM: framecount = 60;  break;
         case STEP_HUGE: framecount = 30;  break;
@@ -179,6 +186,9 @@ void packshot_do() {
                 display_ps(PSTR("\001  1"));
                 ps_ctr = 15;
                 lobo_setstate(LOBO_PAUSE);
+
+                packshot_calc();
+                p(0);
                 ps_state = PS_PACE;
                 break;
             case PS_TURN:
@@ -198,6 +208,7 @@ void packshot_do() {
                 break;
             case PS_PACE:
                 if (lobo_state == LOBO_PAUSE) {
+                    p(1);
                     // wait until oscillations stop
                     ps_ctr = 15;
                     ps_state = PS_PACE2;
@@ -205,6 +216,7 @@ void packshot_do() {
                 break;
             case PS_PACE2:
                 // subdue the display and release the shutter
+                p(2);
                 hcms_loadcw(0x41);
                 ps_ctr = ps_pace;
                 ps_state = PS_TURN;
