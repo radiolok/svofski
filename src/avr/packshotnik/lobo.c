@@ -120,7 +120,9 @@ void packshot_start() {
 }
 
 void p(uint8_t x) {
+#if 0
     printf_P(PSTR("%d: thresh=%d pulse=%d\n"), x, lobo_thresh, lobo_pulse);
+#endif
 }
 
 static void packshot_calc() {
