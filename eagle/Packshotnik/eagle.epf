@@ -300,12 +300,6 @@ UsedLibrary="/Users/svo/eagle/lbr/DodoMicroR3.lbr"
 UsedLibrary="/Users/svo/eagle/lbr/svo/0-display-hcms.lbr"
 
 [Win_1]
-Type="Control Panel"
-Loc="340 198 939 597"
-State=2
-Number=0
-
-[Win_2]
 Type="Schematic Editor"
 Loc="0 24 1279 775"
 State=2
@@ -346,7 +340,7 @@ Layer=91
 Views=" 1: 1538217 -622876 2629897 430612"
 Sheet=1
 
-[Win_3]
+[Win_2]
 Type="Board Editor"
 Loc="0 22 1279 773"
 State=1
@@ -384,6 +378,12 @@ ArcDirection=0
 AddLevel=2
 PadsSameType=0
 Layer=1
+
+[Win_3]
+Type="Control Panel"
+Loc="340 198 939 597"
+State=2
+Number=0
 
 [Desktop]
 Screen="1280 800"
