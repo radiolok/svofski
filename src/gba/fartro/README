@@ -1,0 +1,12 @@
+GBA FARTRO
+~~~~~~~~~~
+
+This is an intro I wrote for GameBoy Advance in June of 2005.
+
+It compiles with present-day devkitpro, but uses crutches to achieve the goal.
+
+For music playing it relies on F.R.A.S., GBA hardware functions handled by TONClib.
+
+--
+Viacheslav Slavinsky
+June 2010
