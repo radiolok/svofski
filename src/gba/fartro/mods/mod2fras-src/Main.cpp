@@ -4,6 +4,8 @@
 
 #include "Mod.h"
 
+#define stricmp strcasecmp
+
 bool showInfo=false;
 
 int main(int argc, char *argv[]){

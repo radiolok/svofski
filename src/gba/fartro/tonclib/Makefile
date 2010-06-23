@@ -1,4 +1,15 @@
-CC=gcc
+#---------------------------------------------------------------------------------
+# Clear the implicit built in rules
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+#---------------------------------------------------------------------------------
+ifeq ($(strip $(DEVKITARM)),)
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM)
+endif
+include $(DEVKITARM)/gba_rules
+
+DEPSDIR=.
+
 CFLAGS=-Wall -mthumb -mthumb-interwork -ffreestanding -funroll-loops -mtune=arm7tdmi -O3 -Itonclib -Iboyscout -Isongs
 ASFLAGS=-mthumb-interwork -mthumb
 
