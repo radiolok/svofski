@@ -532,3 +532,7 @@ void AgbMain() {
 	do_stuff();
 }
 
+int main() {
+    AgbMain();
+    return 0;
+}
