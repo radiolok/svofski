@@ -127,18 +127,18 @@ int main(void) {
     joyInit();
     dudeInit();
 
-	// the vblank interrupt must be enabled for VBlankIntrWait() to work
-	// since the default dispatcher handles the bios flags no vblank handler
-	// is required
-	irqInit();
+    // the vblank interrupt must be enabled for VBlankIntrWait() to work
+    // since the default dispatcher handles the bios flags no vblank handler
+    // is required
+    irqInit();
     irqSet(IRQ_VBLANK, vblankHandler);
-	irqEnable(IRQ_VBLANK);
+    irqEnable(IRQ_VBLANK);
 
-	consoleDemoInit();
+    consoleDemoInit();
 
     drawField();
 
-	while (1) {
+    while (1) {
         joyUpdate();
         if (joy.dir != O) {
             iprintf("\033[%d;%dH ", dude.y, dude.x);
@@ -146,8 +146,8 @@ int main(void) {
             drawField();
             joyHandled();
         }
-		VBlankIntrWait();
-	}
+        VBlankIntrWait();
+    }
 }
 
 
