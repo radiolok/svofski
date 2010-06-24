@@ -9,7 +9,7 @@ MODFILES=pkunk.o
 OBJFILES=pkunk.o
 CFILES=pkunk.c pkunk.h
 
-all:	Mod2Fras $(OBJFILES)
+all:	$(OBJFILES)
 
 Mod2Fras:
 	echo Please build Mod2Fras manually
