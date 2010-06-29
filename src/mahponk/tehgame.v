@@ -1,3 +1,39 @@
+// ====================================================================
+//                              MAH PONK
+//
+// Copyright (C) 2007, Viacheslav Slavinsky
+// This design and core is distributed under modified BSD license. 
+// For complete licensing information see LICENSE.TXT.
+// -------------------------------------------------------------------- 
+// An open table tennis game for VGA displays.
+//
+// Author: Viacheslav Slavinsky, http://sensi.org/~svo
+// 
+// Game logic unit. What happens here:
+//	-- game phases, before start, start, score keeping, endgame
+//	-- sound generation
+//	-- LED1 blinking
+//	All game-related units are instantated here, namely:
+// 		ballscan
+//		paddlescan
+//		deflector
+//		soundnik
+//		scores
+//		ballmover
+//
+// Pins description:
+//	clk			input 	master clock
+//	clkdiv8		input	slow clock
+//	gamereset	input	game reset pulse
+//	hsync		input	vga horizontal sync (passed to scores.v)
+//	realx,realy	input 	x,y screen coordinates
+//	paddleA_y	input	paddle A y-coordinate
+// 	paddleB_y	input	paddle B y-coordinate
+// 	ballAdvance	input	ball clock
+//	scans[2:0]	output	{ball_scan, paddle_scan, score_scan}
+//	ball_y		output 	ball_y coordinate for Robo-Hand!
+//	sound		output	now with 3 sounds!
+// 	led			output 	game status led
 module tehgame(clk, clkdiv8, reset, gamereset, hsync, realx, realy, paddleA_y, paddleB_y, ballAdvance, scans, ball_y, sound, led);
 
 parameter SCREENWIDTH = 10'd640;
@@ -19,14 +55,17 @@ output [9:0] ball_y;
 output sound;
 output led;
 
-reg [3:0] sfx; // which sound to play
-reg keydown;   // initiate sound
-reg [3:0] sdur; // sound duration in whatevers
 reg [7:0] ledcounter;
 reg 	  ledled;
 
 assign led = ledled;
 
+// 
+// All sound is here. 
+//
+reg [3:0] sfx; 		// which sound to play
+reg keydown;   		// initiate sound
+reg [3:0] sdur; 	// sound duration in whatevers
 always @(posedge clk) begin
 	keydown = !reset & (collide | wallbounce | outA | outB);
 	if (keydown) begin
@@ -40,27 +79,28 @@ always @(posedge clk) begin
 	end
 end
 soundnik canhassound(clkdiv8, sound, keydown, sfx, sdur);
+// - if there was more sound related stuff, it should've been above this line
+
 
 parameter state0 = 0, state1 = 1, state2 = 2, state3 = 3, state4 = 4, state5 = 5, state6 = 6, state7 = 7;
 
+// Game state, top-level.. Not started, started.. 
 reg[3:0] state;
 
-
-
-
-//reg score_addA, score_addB;
-reg ball_reset;
-reg service_side;	// 0 = ball served from left part
-reg score_reset; // form reset pulse for score counter
-reg [11:0] pause;
-wire[9:0] ball_x;
+reg ball_reset;				// reset line for ballmover
+reg service_side;			// 0 = ball served from left part
+reg score_reset; 			// form reset pulse for score counter
+reg [11:0] pause;			// delay timer/counter
+wire[9:0] ball_x;			// ball x/y
 wire[9:0] ball_y;
 
+// Main state machine. Ph33r it.
 always @(posedge ballAdvance or posedge reset or posedge gamereset) begin
 	if (reset) state <= state5;
-	else if (gamereset) state <= state0;
+	else if (gamereset) state <= state0;	// this is done by start button
 	else begin
 		case (state) 
+				// init game
 		state0: begin
 				score_reset <= 1;
 				service_side <= 0;
@@ -69,14 +109,14 @@ always @(posedge ballAdvance or posedge reset or posedge gamereset) begin
 				//score_addB <= 0;
 				state <= state1;
 			end
+				// set ball and wait before the service
 		state1: begin 
-				// ball set and pause
 				score_reset <= 0;
-				//service_side <= 0;
 				ball_reset <= 1;
 				pause <= 1024;
 				state <= state2;
 			end
+				// pacing before state3 as defined by state1...
 		state2: begin 
 				if (pause == 0) begin
 					ball_reset <= 0;
@@ -85,9 +125,11 @@ always @(posedge ballAdvance or posedge reset or posedge gamereset) begin
 					pause <= pause - 1;
 				end
 			end
+				// game itself, just check for out situations
 		state3: begin 
 				if (outA | outB) begin
 					service_side <= outB;
+					// if score is up, endgame; otherwise new ball
 					if (scoreA == 8'h21 || scoreB == 8'h21) begin
 						pause <= 4095;
 						ball_reset <= 1;
@@ -97,18 +139,13 @@ always @(posedge ballAdvance or posedge reset or posedge gamereset) begin
 					end
 				end
 			end
+				// endgame, no exit state except for gamereset
 		state4: begin
-				// endgame
-				// resets by reset button
-				//if (pause == 0) begin
-				//	state <= state0;
-				//end else begin
-				//	pause <= pause - 1;
-				//end
 				ledcounter <= ledcounter - 1;
 				if (ledcounter == 0) ledled = !ledled;
 			end
-		state5: begin
+				// power-on setup
+		state5: begin				
 				ball_reset <= 1;
 				state <= state4;
 			end
@@ -121,14 +158,15 @@ always @(posedge ballAdvance or posedge reset or posedge gamereset) begin
 end
 
 
+// Paddle data:
+// 	_top 	top y
+//	_bot	bottom y
+// Exact coordinates are calculated to avoid complex 
+// comparisons in screen scanner (see paddlescan.v)
 reg[9:0] paddleA_top;
 reg[9:0] paddleA_bot;
 reg[9:0] paddleB_top;
 reg[9:0] paddleB_bot;
-reg[9:0] paddleA_ctop;
-reg[9:0] paddleA_cbot;
-reg[9:0] paddleB_ctop;
-reg[9:0] paddleB_cbot;
 always @(posedge clk) begin
 	paddleA_top <= paddleA_y - PADDLESIZE/2;
 	paddleA_bot <= paddleA_y + PADDLESIZE/2;
@@ -136,16 +174,23 @@ always @(posedge clk) begin
 	paddleB_bot <= paddleB_y + PADDLESIZE/2;
 end
 
+scores scorekeeper(clk, hsync, realx, realy, outB, outA, score_reset, scoreA, scoreB, scans[0]);
+
+
+//
+// Ball movement, collision, deflection
+//
 wire collideA;
 wire collideB;
-wire collide = collideA | collideB;
-wire[9:0] deflectA;
-wire[9:0] deflectB;
-wire collisionreset;
-wire [7:0] scoreA;
-wire [7:0] scoreB;
+wire collide = collideA | collideB;		// paddle collision
 
-scores scorekeeper(clk, hsync, realx, realy, outB, outA, score_reset, scoreA, scoreB, scans[0]);
+wire[9:0] deflectA;						// deflect angles
+wire[9:0] deflectB;
+
+wire collisionreset;					// collision reset wire
+
+wire [7:0] scoreA;						// scores
+wire [7:0] scoreB;
 
 collider #(15, 16) 		colliderA(ballAdvance, ball_x, ball_y, paddleA_top, paddleA_bot, collisionreset, collideA);
 collider #(640-32, 16) 	colliderB(ballAdvance, ball_x, ball_y, paddleB_top, paddleB_bot, collisionreset, collideB);
@@ -168,5 +213,6 @@ paddlescan #(PADDLESIZE, 640-32) 	paddlescanB(clk, paddleB_top, paddleB_bot, rea
 
 ballscan #(BALLSIZE) ballscan(clk, realx, realy, ball_x, ball_y, scans[2]);
 
-
 endmodule
+
+// $Id: tehgame.v,v 1.13 2007/08/27 22:14:52 svo Exp $

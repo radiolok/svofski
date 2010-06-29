@@ -1,3 +1,41 @@
+// ====================================================================
+//                              MAH PONK
+//
+// Copyright (C) 2007, Viacheslav Slavinsky
+// This design and core is distributed under modified BSD license. 
+// For complete licensing information see LICENSE.TXT.
+// -------------------------------------------------------------------- 
+// An open table tennis game for VGA displays.
+//
+// Author: Viacheslav Slavinsky, http://sensi.org/~svo
+// 
+// Design File: scores2.v
+// Score keeper and character generator.
+//
+// Pins description:
+//	clk			input	master clock
+//	neglineclk	input	line clock (hsync)
+//	realx		input	x-coordinate
+// 	realy		input	y-coordinate
+//	score_addA	input	left score increment
+//	score_addB	input	right score increment
+//	score_reset	input	score reset
+//	scoreA		output	left score bcd value
+// 	scoreB		output	right score bcd value
+// 	score_scan	output 	score scan
+//
+// Contains additional modules:
+// module bcdcounterx(reset, c, cout, q);
+// module unicounter(c, r, en, q1, q2, q3);
+// module mux2x4(sel, d0, d1, d2, d3, q);    -- can be used instead of scorecopymux macro
+// module textramx(clk, d, a, q);
+// module charrom(clk, char, line, q);
+// module digit(scanline, pixels);
+// module counter_mod4(c, r, q, cout);
+// module counter_mod8(c, r, q, cout);
+
+
+
 module scores(clk, neglineclk, realx, realy, score_addA, score_addB, score_reset, scoreA, scoreB, score_scan);
 input clk;
 input neglineclk;
@@ -294,3 +332,5 @@ module counter_mod4(c, r, q, cout);
 		else
 			{cout, q} <= q + 1'b1;
 endmodule
+
+// $Id: scores2.v,v 1.9 2007/08/27 22:14:51 svo Exp $

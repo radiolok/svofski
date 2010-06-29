@@ -1,3 +1,30 @@
+// ====================================================================
+//                              MAH PONK
+//
+// Copyright (C) 2007, Viacheslav Slavinsky
+// This design and core is distributed under modified BSD license. 
+// For complete licensing information see LICENSE.TXT.
+// -------------------------------------------------------------------- 
+// An open table tennis game for VGA displays.
+//
+// Author: Viacheslav Slavinsky, http://sensi.org/~svo
+// 
+// This is the main design unit.
+// Pins description:
+//     	clk		in		master clock input, assign to dedicated input 
+//						when possible. Clock should be 25.178MHz
+//						for proper 60Hz	VGA display
+//		LED1	out		LED1 used to display game status
+//		LED2	out		LED2 used to display player 2 mode
+// 		VSYNC, HSYNC, RED, GREEN, BLUE outputs are VGA signals
+//		MISO	in		SPI master input
+//		MOSI	out		SPI master output
+//		SCK		out		SPI clock
+//		SCS		out		SPI slave chip select for ADC
+//		SOUND	out		1-bit sound output
+//		BATON1 	input	active low, START button
+//		BATON2	input	active low, ROBO-HAND button
+
 module vga(clk, LED1, LED2, VSYNC, HSYNC, RED, GREEN, BLUE, MISO, MOSI, SCK, SCS, SOUND, BATON1, BATON2);
 input clk;
 
@@ -26,32 +53,31 @@ parameter SCREENHEIGHT = 10'd480;
 parameter PADDLESIZE = 10'd64;
 parameter BALLSIZE = 8;
 
-//reg [26:0] cnt;
-//always @(posedge clk) cnt <= cnt + 1'b1;
-//assign LED1 = cnt[25] == 1;
-
 // instantiate paddles
 wire paddle_scan;
 wire ball_scan;
 
-wire[9:0] paddleA_y;
-wire[9:0] paddleB_y_manual;
-wire[9:0] paddleB_y_robot;
-reg [9:0] paddleB_y;
-reg playerBswitch;
+wire[9:0] paddleA_y;			// paddle A y-coordinate
+wire[9:0] paddleB_y_manual;		// paddle B y-coordinate as per ADC input
+wire[9:0] paddleB_y_robot;		// paddle B y-coordinate as per Robo-Hand
+reg [9:0] paddleB_y;			// paddle B y-coordinate result
+reg playerBswitch;				// 1 == paddle B is played by hunam
 
 //
-// make clocks
+// clkdiv8 is an additional, slower clock
 //
-reg clkdiv8;
+reg clkdiv8;					
 reg [6:0] clkdiv8_cnt;
 always @(posedge clk) begin
 	if (clkdiv8_cnt == 0)
 		clkdiv8 <= !clkdiv8;
 	clkdiv8_cnt <= clkdiv8_cnt - 1'b1;
 end
-	
-reg [7:0] paddle_cnt;
+
+//
+// paddle clock for robo-hand and ball clocks	
+//
+reg [7:0] paddle_cnt;				
 reg [6:0] ball_cnt;
 reg paddleAdvance;
 reg ballAdvance;
@@ -65,14 +91,15 @@ always @(posedge clk) paddleAdvance = paddle_cnt == 0;
 always @(posedge clk) ballAdvance = ball_cnt == 0;
 
 //
-// instantiate reset generator
+// Reset Generator and button debouncers
 //
-wire resetpulse;
-wire gamereset;
-resetgen resetgen(clk, resetpulse, 1);
+wire resetpulse;			// initial set pulse
+wire gamereset;				// start game
+resetgen resetgen(clk, resetpulse, 1);	
 button2 #(8192) gameresetter(clkdiv8, gamereset, BATON1);
 button2 #(8192) button2(clkdiv8, playerBbutton, BATON2);
 
+// Handle player B Hunam/Robo-Hand switch
 always @(posedge playerBbutton or posedge resetpulse) begin
 	if (resetpulse) 
 		playerBswitch <= 1;
@@ -81,23 +108,18 @@ always @(posedge playerBbutton or posedge resetpulse) begin
 end
 
 
-
-//assign LED1 = !resetpulse;
+// LED2 simply shows if human player is active. 
+// For LED1 driver see tehgame.v
 assign LED2 = playerBswitch;
 
-// VGA is here
-wire[9:0] realx;
-wire[9:0] realy;
-wire videoActive;
-wire xscanstart, xscanend;
+// VGA scan instantiated here
+wire[9:0] realx;				// user area X coordinate
+wire[9:0] realy;				// user area Y coordinate
+wire videoActive;				// 1 == beam in user area
+wire xscanstart, xscanend;		// helper signals used for border scan
 vgascan vgascan(clk, HSYNC, VSYNC, realx, realy, videoActive, xscanstart, xscanend);
 
-
-//assign LED1 = collide;	
-
-
-
-
+// Analog input for player paddles
 analinput #(PADDLESIZE, SCREENHEIGHT) analinput(clkdiv8, paddleA_y, paddleB_y_manual, MISO, MOSI, SCS, SCK);
 
 wire[9:0] ball_y;
@@ -191,77 +213,5 @@ module collider(cclk, bx, by, ptop, pbot, reset, collide);
 	end
 endmodule
 
-module deflector(collide, ball_y, paddle_y, deflect);
-	input collide;
-	input [9:0] ball_y;
-	input [9:0] paddle_y;
-	output reg[9:0] deflect;
-	
-	always @(posedge collide) begin
-		deflect = ball_y - paddle_y;
-		if (deflect[9]) 
-			deflect[8:0] = ~deflect[8:0] + 1;
-	end
-endmodule
 
-
-//
-// ball scan magic
-//
-module ballscan(clk, screenx, screeny, ball_x, ball_y, ball_scan);
-	parameter BALLSIZE=8;
-	input clk;
-	input [9:0] screenx;
-	input [9:0] screeny;
-	input [9:0] ball_x;
-	input [9:0] ball_y;
-	output ball_scan;
-
-	reg [3:0] ballscanX;
-	reg 	  ballscanY;
-
-	always @(posedge clk) begin
-		if (screenx == ball_x-BALLSIZE/2)
-			ballscanX = 12;
-		if (ballscanX > 0)
-			ballscanX = ballscanX - 1'b1;
-	end
-	always @(posedge clk) begin
-		if (screeny == ball_y-BALLSIZE/2)
-			ballscanY = 1;
-		if (screeny == ball_y+BALLSIZE/2)
-			ballscanY = 0;
-	end
-	assign ball_scan = ballscanX != 0 && ballscanY;
-endmodule
-
-
-module paddlescan(clk, ptop, pbot, x, y, scan);
-	parameter H = 0;
-	parameter X = 0;
-	input clk;
-	input [9:0] ptop;
-	input [9:0] pbot;
-	input [9:0] x;
-	input [9:0] y;
-	output scan;
-
-	reg [4:0] scanX;
-	reg scanY;
-	
-	always @(posedge clk) begin
-		if (x == X) 
-			scanX = 16;
-		if (scanX > 0)
-			scanX = scanX - 1'b1;
-	end
-	always @(posedge clk) begin
-		if (y == ptop)
-			scanY = 1;
-		if (y >= pbot)
-			scanY = 0;
-	end
-	assign scan = scanX != 0 && scanY;
-endmodule
-
- 
+// $Id: vga.v,v 1.27 2007/08/27 22:12:30 svo Exp $
