@@ -1,3 +1,14 @@
+// ====================================================================
+//                              MAH PONK
+//
+// Copyright (C) 2007, Viacheslav Slavinsky
+// This design and core is distributed under modified BSD license. 
+// For complete licensing information see LICENSE.TXT.
+// -------------------------------------------------------------------- 
+// An open table tennis game for VGA displays.
+//
+// Author: Viacheslav Slavinsky, http://sensi.org/~svo
+
 module robohand(reset, advance, ball_y, paddle_y);
 	// paddle Y location (0-480)
 	parameter PADDLESIZE   = 10'd0;
@@ -45,3 +56,5 @@ module robohand(reset, advance, ball_y, paddle_y);
 	
 endmodule
 
+
+// $Id: robohand.v,v 1.4 2007/08/27 22:14:50 svo Exp $

@@ -1,3 +1,26 @@
+// ====================================================================
+//                              MAH PONK
+//
+// Copyright (C) 2007, Viacheslav Slavinsky
+// This design and core is distributed under modified BSD license. 
+// For complete licensing information see LICENSE.TXT.
+// -------------------------------------------------------------------- 
+// An open table tennis game for VGA displays.
+//
+// Author: Viacheslav Slavinsky, http://sensi.org/~svo
+// 
+// Design File: analinput.v
+// Analog input module. 
+// Implements SPI and alternatingly queries 2 channels of ADxxxx.
+//
+// Pins description:
+// 	clk		input		clock, same as used for SPI SCK
+//	pay		output		paddle A y-coordinate
+//	pby		output		paddle B y-coordinate
+//	miso	input		MISO
+//	mosi	output		MOSI
+//	cs		output		ADC CS
+//	sck		output		SCK
 module analinput(clk, pay, pby, miso, mosi, cs, sck);
 parameter PADDLESIZE = 0;
 parameter SCREENHEIGHT = 0;
@@ -66,6 +89,9 @@ always @(negedge sck) begin
 end
 
 
+//
+// Limit paddle position to stay within screen coordinates
+//
 function [9:0] paddlelimiter;
 input [9:0] py;
 begin
@@ -82,3 +108,4 @@ endfunction
 
 endmodule
 
+// $Id: analinput.v,v 1.6 2007/08/27 22:14:46 svo Exp $

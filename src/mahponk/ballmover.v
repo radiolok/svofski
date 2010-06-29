@@ -1,3 +1,30 @@
+// ====================================================================
+//                              MAH PONK
+//
+// Copyright (C) 2007, Viacheslav Slavinsky
+// This design and core is distributed under modified BSD license. 
+// For complete licensing information see LICENSE.TXT.
+// -------------------------------------------------------------------- 
+// An open table tennis game for VGA displays.
+//
+// Author: Viacheslav Slavinsky, http://sensi.org/~svo
+// 
+// Design File: ballmover.v, instantiated by tehgame.v
+// Calculates ball movement thoroughout the game.
+//
+// Pins description:
+//	clk				input	master clock
+//	reset			input	reset the ball and inner state
+//	advance			input	ball advance clock
+//	ball_x			input	ball x-coordinate
+//	ball_y			input	ball y-coordinate
+//	collide			input	paddle collision signal
+//	collidereset	output	collision acknowledge/reset signal
+//	deflect			input	deflection angle
+//	set_side		input 	ball service side
+//	outA, outB		output	ball out left and right signals, mutually exclusive
+//	wall			output	up/down wall hit signal
+//
 module ballmover(clk, reset, advance, ball_x, ball_y, collide, collidereset, deflect, set_side, outA, outB, wall);
 	parameter SCREENWIDTH = 640;
 	parameter SCREENHEIGHT = 480;
@@ -60,3 +87,4 @@ module ballmover(clk, reset, advance, ball_x, ball_y, collide, collidereset, def
 	end
 endmodule
 
+// $Id: ballmover.v,v 1.10 2007/08/27 22:14:47 svo Exp $

@@ -1,3 +1,14 @@
+// ====================================================================
+//                              MAH PONK
+//
+// Copyright (C) 2007, Viacheslav Slavinsky
+// This design and core is distributed under modified BSD license. 
+// For complete licensing information see LICENSE.TXT.
+// -------------------------------------------------------------------- 
+// An open table tennis game for VGA displays.
+//
+// Author: Viacheslav Slavinsky, http://sensi.org/~svo
+
 module soundnik(clk, pin, c, fxa, fxb);
 
 parameter bounce1 = 98;	// paddle bounce 440hz
@@ -53,3 +64,5 @@ always @(posedge clk) begin
 end
 
 endmodule
+
+// $Id: soundnik.v,v 1.5 2007/08/27 22:14:52 svo Exp $

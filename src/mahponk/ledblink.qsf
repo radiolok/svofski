@@ -1,0 +1,136 @@
+# Copyright (C) 1991-2007 Altera Corporation
+# Your use of Altera Corporation's design tools, logic functions 
+# and other software and tools, and its AMPP partner logic 
+# functions, and any output files from any of the foregoing 
+# (including device programming or simulation files), and any 
+# associated documentation or information are expressly subject 
+# to the terms and conditions of the Altera Program License 
+# Subscription Agreement, Altera MegaCore Function License 
+# Agreement, or other applicable license agreement, including, 
+# without limitation, that your use is for the sole purpose of 
+# programming logic devices manufactured by Altera and sold by 
+# Altera or its authorized distributors.  Please refer to the 
+# applicable agreement for further details.
+
+
+# The default values for assignments are stored in the file
+#		ledblink_assignment_defaults.qdf
+# If this file doesn't exist, and for assignments not listed, see file
+#		assignment_defaults.qdf
+
+# Altera recommends that you do not modify this file. This
+# file is updated automatically by the Quartus II software
+# and any changes you make may be lost or overwritten.
+
+
+
+# Project-Wide Assignments
+# ========================
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION "5.1 SP1"
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "01:55:31  MARCH 16, 2006"
+set_global_assignment -name LAST_QUARTUS_VERSION 7.1
+set_global_assignment -name SMART_RECOMPILE OFF
+
+# Pin & Location Assignments
+# ==========================
+set_location_assignment PIN_89 -to clk
+set_location_assignment PIN_27 -to LED1
+set_location_assignment PIN_10 -to HSYNC
+set_location_assignment PIN_3 -to VSYNC
+set_location_assignment PIN_12 -to RED
+set_location_assignment PIN_24 -to BLUE
+set_location_assignment PIN_15 -to GREEN
+set_location_assignment PIN_36 -to MISO
+set_location_assignment PIN_37 -to MOSI
+set_location_assignment PIN_40 -to SCK
+set_location_assignment PIN_43 -to SCS
+set_location_assignment PIN_29 -to SOUND
+set_location_assignment PIN_28 -to LED2
+set_location_assignment PIN_35 -to BATON2
+set_location_assignment PIN_34 -to BATON1
+
+# Classic Timing Assignments
+# ==========================
+set_global_assignment -name FMAX_REQUIREMENT "100 MHz"
+set_global_assignment -name FLOW_ENABLE_TIMING_CONSTRAINT_CHECK ON
+set_global_assignment -name ENABLE_CLOCK_LATENCY ON
+set_global_assignment -name ENABLE_RECOVERY_REMOVAL_ANALYSIS ON
+set_global_assignment -name ANALYZE_LATCHES_AS_SYNCHRONOUS_ELEMENTS ON
+
+# Analysis & Synthesis Assignments
+# ================================
+set_global_assignment -name FAMILY FLEX6000
+set_global_assignment -name TOP_LEVEL_ENTITY vga
+set_global_assignment -name DEVICE_FILTER_PACKAGE TQFP
+set_global_assignment -name DEVICE_FILTER_PIN_COUNT 144
+set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 3
+
+# Fitter Assignments
+# ==================
+set_global_assignment -name DEVICE "EPF6016TC144-3"
+set_global_assignment -name FLEX6K_DEVICE_IO_STANDARD TTL
+set_global_assignment -name RESERVE_NWS_NRS_NCS_CS_AFTER_CONFIGURATION "AS INPUT TRI-STATED"
+set_global_assignment -name RESERVE_RDYNBUSY_AFTER_CONFIGURATION "AS OUTPUT DRIVING AN UNSPECIFIED SIGNAL"
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED"
+set_global_assignment -name OPTIMIZE_HOLD_TIMING OFF
+
+# Assembler Assignments
+# =====================
+set_global_assignment -name GENERATE_RBF_FILE ON
+set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION OFF
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_NO_OUTPUT_GND "AS INPUT TRI-STATED"
+
+# Simulator Assignments
+# =====================
+set_global_assignment -name VECTOR_INPUT_SOURCE "C:\\altera\\designs\\vga\\clk.vwf"
+set_global_assignment -name END_TIME "10 ms"
+set_global_assignment -name GLITCH_DETECTION OFF
+set_global_assignment -name SIMULATION_MODE FUNCTIONAL
+
+# Design Assistant Assignments
+# ============================
+set_global_assignment -name ENABLE_DRC_SETTINGS OFF
+
+# start CLOCK(clkclk)
+# -------------------
+
+	# Classic Timing Assignments
+	# ==========================
+	set_global_assignment -name FMAX_REQUIREMENT "35 MHz" -section_id clkclk
+
+# end CLOCK(clkclk)
+# -----------------
+
+# -----------------
+# start ENTITY(vga)
+
+	# Classic Timing Assignments
+	# ==========================
+	set_instance_assignment -name CLOCK_SETTINGS clkclk -to clk
+
+	# Fitter Assignments
+	# ==================
+	set_instance_assignment -name GLOBAL_SIGNAL "GLOBAL CLOCK" -to clk
+	set_instance_assignment -name GLOBAL_SIGNAL "GLOBAL CLOCK" -to HSYNC
+	set_instance_assignment -name GLOBAL_SIGNAL "GLOBAL CLOCK" -to ballAdvance
+	set_instance_assignment -name GLOBAL_SIGNAL "GLOBAL CLOCK" -to clkdiv8
+
+# end ENTITY(vga)
+# ---------------
+set_global_assignment -name TEXT_FILE LICENSE.TXT
+set_global_assignment -name VERILOG_FILE scorecopymux.v
+set_global_assignment -name VERILOG_FILE scores2.v
+set_global_assignment -name VERILOG_FILE resetgen.v
+set_global_assignment -name VERILOG_FILE vgascan.v
+set_global_assignment -name VECTOR_WAVEFORM_FILE clk.vwf
+set_global_assignment -name VERILOG_FILE vga.v
+set_global_assignment -name VERILOG_FILE analinput.v
+set_global_assignment -name VERILOG_FILE tehgame.v
+set_global_assignment -name VERILOG_FILE ballmover.v
+set_global_assignment -name VERILOG_FILE robohand.v
+set_global_assignment -name VERILOG_FILE soundnik.v
+set_global_assignment -name VERILOG_FILE button2.v
+set_global_assignment -name VERILOG_FILE ballscan.v
+set_global_assignment -name VERILOG_FILE paddlescan.v
+set_global_assignment -name VERILOG_FILE deflector.v
