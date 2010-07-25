@@ -1,102 +1,3 @@
-/*
-    FreeRTOS V6.0.5 - Copyright (C) 2010 Real Time Engineers Ltd.
-
-    ***************************************************************************
-    *                                                                         *
-    * If you are:                                                             *
-    *                                                                         *
-    *    + New to FreeRTOS,                                                   *
-    *    + Wanting to learn FreeRTOS or multitasking in general quickly       *
-    *    + Looking for basic training,                                        *
-    *    + Wanting to improve your FreeRTOS skills and productivity           *
-    *                                                                         *
-    * then take a look at the FreeRTOS eBook                                  *
-    *                                                                         *
-    *        "Using the FreeRTOS Real Time Kernel - a Practical Guide"        *
-    *                  http://www.FreeRTOS.org/Documentation                  *
-    *                                                                         *
-    * A pdf reference manual is also available.  Both are usually delivered   *
-    * to your inbox within 20 minutes to two hours when purchased between 8am *
-    * and 8pm GMT (although please allow up to 24 hours in case of            *
-    * exceptional circumstances).  Thank you for your support!                *
-    *                                                                         *
-    ***************************************************************************
-
-    This file is part of the FreeRTOS distribution.
-
-    FreeRTOS is free software; you can redistribute it and/or modify it under
-    the terms of the GNU General Public License (version 2) as published by the
-    Free Software Foundation AND MODIFIED BY the FreeRTOS exception.
-    ***NOTE*** The exception to the GPL is included to allow you to distribute
-    a combined work that includes FreeRTOS without being obliged to provide the
-    source code for proprietary components outside of the FreeRTOS kernel.
-    FreeRTOS is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-    more details. You should have received a copy of the GNU General Public 
-    License and the FreeRTOS license exception along with FreeRTOS; if not it 
-    can be viewed here: http://www.freertos.org/a00114.html and also obtained 
-    by writing to Richard Barry, contact details for whom are available on the
-    FreeRTOS WEB site.
-
-    1 tab == 4 spaces!
-
-    http://www.FreeRTOS.org - Documentation, latest information, license and
-    contact details.
-
-    http://www.SafeRTOS.com - A version that is certified for use in safety
-    critical systems.
-
-    http://www.OpenRTOS.com - Commercial support, development, porting,
-    licensing and training services.
-*/
-
-/* 
-	NOTE : Tasks run in system mode and the scheduler runs in Supervisor mode.
-	The processor MUST be in supervisor mode when vTaskStartScheduler is 
-	called.  The demo applications included in the FreeRTOS.org download switch
-	to supervisor mode prior to main being called.  If you are not using one of
-	these demo application projects then ensure Supervisor mode is used.
-*/
-
-
-/*
- * Creates all the demo application tasks, then starts the scheduler.  The WEB
- * documentation provides more details of the demo application tasks.
- * 
- * Main.c also creates a task called "Check".  This only executes every three 
- * seconds but has the highest priority so is guaranteed to get processor time.  
- * Its main function is to check that all the other tasks are still operational.
- * Each task (other than the "flash" tasks) maintains a unique count that is 
- * incremented each time the task successfully completes its function.  Should 
- * any error occur within such a task the count is permanently halted.  The 
- * check task inspects the count of each task to ensure it has changed since
- * the last time the check task executed.  If all the count variables have 
- * changed all the tasks are still executing error free, and the check task
- * toggles the onboard LED.  Should any task contain an error at any time 
- * the LED toggle rate will change from 3 seconds to 500ms.
- *
- * To check the operation of the memory allocator the check task also 
- * dynamically creates a task before delaying, and deletes it again when it 
- * wakes.  If memory cannot be allocated for the new task the call to xTaskCreate
- * will fail and an error is signalled.  The dynamically created task itself
- * allocates and frees memory just to give the allocator a bit more exercise.
- *
- */
-
-/* 
-	Changes from V2.4.2
-
-	+ The vErrorChecks() task now dynamically creates then deletes a task each
-	  cycle.  This tests the operation of the memory allocator.
-
-	Changes from V2.5.2
-		
-	+ vParTestInitialise() is called during initialisation to ensure all the 
-	  LED's start off.
-*/
-
-
 /* Standard includes. */
 #include <stdlib.h>
 #include <string.h>
@@ -181,11 +82,7 @@ error. */
 
 /*-----------------------------------------------------------*/
 
-/*
- * The Olimex demo board has a single built in LED.  This function simply
- * toggles its state. 
- */
-void prvToggleOnBoardLED( void );
+void blinkLED(void);
 
 /*
  * Checks that all the demo application tasks are still executing without error
@@ -298,7 +195,7 @@ xTaskHandle xCreatedTask;
 			xDelayPeriod = mainERROR_FLASH_PERIOD;
 		}
 
-		prvToggleOnBoardLED();
+		blinkLED();
 	}
 }
 /*-----------------------------------------------------------*/
@@ -362,20 +259,9 @@ void prvLEDSetup(void) {
     GPIO_IODIR |= _BV2(28,30);
 }
 
-void prvToggleOnBoardLED( void )
+void blinkLED( void )
 {
-unsigned long ulState;
-    prvLEDSetup();
-
-	ulState = GPIO0_IOPIN;
-	if( ulState & mainON_BOARD_LED_BIT )
-	{
-		GPIO_IOCLR = mainON_BOARD_LED_BIT;
-	}
-	else
-	{
-		GPIO_IOSET = mainON_BOARD_LED_BIT;
-	}	
+    
 }
 /*-----------------------------------------------------------*/
 
