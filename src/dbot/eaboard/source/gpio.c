@@ -1,10 +1,7 @@
 #include <lpc210x.h>
 #include <inttypes.h>
 #include "gpio.h"
-
-#define _BV(x)      (1<<(x))
-#define _BV2(x,y)   (_BV(x)|_BV(y))
-#define _BV3(x,y,z) (_BV(x)|_BV2(y,z))
+#include "common.h"
 
 void gpio_init() {
     // buzzer on P0.13
@@ -16,11 +13,11 @@ void gpio_init() {
     PCB_PINSEL1 &= ~_BV2(25,24)   // 00: GPIO P0.28
                  & ~_BV2(29,28);  // 00: GPIO P0.30
 
-    // P0.28, P0.30 are outputs
-    GPIO_IODIR |= _BV2(28,30);
+    // P0.28, P0.30, P0.12 are outputs
+    GPIO_IODIR |= _BV3(28,30,12);
 
     // on leds, 1 = off, off by default
-    GPIO_IOSET |= _BV2(28,30);
+    GPIO_IOSET |= _BV3(28,30,12);
 }
 
 void gpio_led(int red, int green) {
@@ -35,13 +32,14 @@ void gpio_set_led(int n, int state) {
         case 0:  bit = _BV(28); break;
         case 1:  bit = _BV(30); break;
         case 2:  bit = _BV(13); break;
+        case 3:  bit = _BV(12); break;
         default: bit = 0; break;
     }
 
     if (state) {
-        GPIO_IOSET |= bit;
+        GPIO_IOSET = bit;
     } else {
-        GPIO_IOCLR |= bit;
+        GPIO_IOCLR = bit;
     }
 }
 
