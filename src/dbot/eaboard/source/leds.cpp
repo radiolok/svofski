@@ -4,7 +4,6 @@
 
 #include "gpio.h"
 #include "leds.h"
-#include "LCD_Driver.h"
 #include "LCD-color.h"
 #include "Fonts.h"
 #include "serial.h"
@@ -51,8 +50,6 @@ static portTASK_FUNCTION( ledFlashTask, pvParameters )
     }
 }
 
-static const int color[4] = {RED, GREEN, BLUE, WHITE};
-
 #define LCD_RES (1<<25)// LCD_RST#
 #define LCD_CS  (1<<24)// LCD_CS#
 #define LCD_DIO (1<<6) // MOSI
@@ -77,6 +74,7 @@ static portTASK_FUNCTION(lcdControlTask, pvParameters) {
             
    for(int i = 0;;i++) {
         lcd.FillRect(90,10,20,20, i & 0377);
+        lcd.FillCircle(96,64, 1+ (16 - i % 16), 0377 - i & 0377);
 
         xsprintf(buf, "Gruuu %010d", i);
         lcd.Print(buf, 1 + i % 20);
