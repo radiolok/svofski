@@ -8,7 +8,10 @@ OPTIM=-Os
 RUN_MODE=RUN_FROM_ROM
 LPC21ISP=~/src/lpc2000/lpc21isp -hex -term -control $(OUTPUT).hex /dev/tty.usbserial-A1000acS 230400 14746
 
-WARNINGS=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
+WARNINGSCXX=-Wall -Wextra -Wshadow -Wpointer-arith -Wcast-align -Wsign-compare \
+		-Waggregate-return -Wmissing-declarations -Wunused
+
+WARNINGSC=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
 BUILD 		= build
@@ -24,16 +27,18 @@ INCLUDES 	= ../FreeRTOS/Source/include source source/lcd
 #
 # CFLAGS common to both the THUMB and ARM mode builds
 #
-CFLAGS=$(WARNINGS) -D$(RUN_MODE) -DGCC_ARM7 $(INCLUDE) \
+CBASE=-D$(RUN_MODE) -DGCC_ARM7 $(INCLUDE) \
 		 $(DEBUG) -mcpu=arm7tdmi -T$(LDSCRIPT) \
-		 $(OPTIM) -fomit-frame-pointer -fno-strict-aliasing -fno-dwarf2-cfi-asm -std=c99
+		 $(OPTIM) -fomit-frame-pointer -fno-strict-aliasing -fno-dwarf2-cfi-asm
 
 ifeq ($(USE_THUMB_MODE),YES)
-	CFLAGS += -mthumb-interwork -DTHUMB_INTERWORK
+	CBASE += -mthumb-interwork -DTHUMB_INTERWORK
 	THUMB_FLAGS=-mthumb
 endif
 
-CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti
+CFLAGS=$(WARNINGSC) $(CBASE) -std=c99
+
+CXXFLAGS=$(WARNINGSCXX) $(CBASE) -fno-exceptions -fno-rtti
 
 LINKER_FLAGS=-Xlinker -o$(OUTPUT).elf -Xlinker -M -Xlinker -Map=$(OUTPUT).map
 
