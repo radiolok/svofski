@@ -20,6 +20,10 @@
 #define serUART0_VIC_ENABLE             ( ( unsigned long ) 0x0020 )
 #define serCLEAR_VIC_INTERRUPT          ( ( unsigned long ) 0 )
 
+#define serUART1_VIC_CHANNEL            ( ( unsigned long ) 0x0007 )
+#define serUART1_VIC_CHANNEL_BIT        ( ( unsigned long ) 0x0080 )
+#define serUART1_VIC_ENABLE             ( ( unsigned long ) 0x0020 )
+
 #define serINVALID_QUEUE                ( ( xQueueHandle ) 0 )
 #define serHANDLE                       ( ( xComPortHandle ) 1 )
 #define serNO_BLOCK                     ( ( portTickType ) 0 )
@@ -72,10 +76,20 @@ void SerialPort::Init(uint32_t baudrate, uint32_t queueLength) {
         // TODO for the second uart
 
         /* Setup the VIC for the UART. */
-        VICIntSelect &= ~( serUART0_VIC_CHANNEL_BIT );
-        VICIntEnable |= serUART0_VIC_CHANNEL_BIT;
-        VICVectAddr1 = (long) vUART_ISR_Wrapper;
-        VICVectCntl1 = serUART0_VIC_CHANNEL | serUART0_VIC_ENABLE;
+        switch (id) {
+        case 0:
+            VICIntSelect &= ~( serUART0_VIC_CHANNEL_BIT );
+            VICIntEnable |= serUART0_VIC_CHANNEL_BIT;
+            VICVectAddr1 = (long) vUART_ISR_Wrapper;
+            VICVectCntl1 = serUART0_VIC_CHANNEL | serUART0_VIC_ENABLE;
+            break;
+        case 1:
+            VICIntSelect &= ~( serUART1_VIC_CHANNEL_BIT );
+            VICIntEnable |= serUART1_VIC_CHANNEL_BIT;
+            VICVectAddr2 = (long) vUART_ISR_Wrapper;
+            VICVectCntl2 = serUART0_VIC_CHANNEL | serUART0_VIC_ENABLE;
+            break;
+        }
 
         /* Enable UART0 interrupts. */
         *IER |= serENABLE_INTERRUPTS;
