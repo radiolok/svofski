@@ -2,6 +2,11 @@
 #define _LCD_DRIVER_H
 
 #include <inttypes.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //********************************************************************
 //
 //				General Function Definitions
@@ -73,6 +78,11 @@ void LCDFillRect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color);
 #define BROWN	0xB22
 #define ORANGE	0xFA0
 #define PINK	0xF6A
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif
 
