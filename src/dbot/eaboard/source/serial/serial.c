@@ -278,6 +278,10 @@ void vSerialClose( xComPortHandle xPort )
 /*-----------------------------------------------------------*/
 
 
+void xputchar(char c) {
+   xSerialPutChar(NULL, c, serNO_BLOCK );
+}
+
 
 
 

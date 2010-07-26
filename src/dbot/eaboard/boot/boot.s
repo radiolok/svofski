@@ -104,6 +104,20 @@ _mainCRTStartup:
 
 .end_set_loop:
 
+    /* Call C++ Constructors */
+    ldr r0, =__ctors_start
+    ldr r1, =__ctors_end
+ctor_loop:
+    cmp r0, r1
+    beq ctor_end
+    ldr r2, [r0], #4
+    stmfd sp!, {r0,r1}
+    mov lr, pc
+    bx r2                   /* some constructors can be in thumb mode */
+    ldmfd sp!, {r0,r1}
+    b ctor_loop
+ctor_end:
+
 	mov		r0, #0          /* no arguments  */
 	mov		r1, #0          /* no argv either */
 
