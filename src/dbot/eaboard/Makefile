@@ -33,6 +33,7 @@ ifeq ($(USE_THUMB_MODE),YES)
 	THUMB_FLAGS=-mthumb
 endif
 
+CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti
 
 LINKER_FLAGS=-Xlinker -o$(OUTPUT).elf -Xlinker -M -Xlinker -Map=$(OUTPUT).map
 
@@ -41,7 +42,7 @@ RTOS_SOURCE_DIR=source/freertos
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 
-export LDSCRIPT=$(CURDIR)/lpc2104-rom.ld
+export LDSCRIPT=$(CURDIR)/lpc2104-rom2.ld
 export MAKEFILE = $(CURDIR)/Makefile
 
 export INCLUDE = $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
@@ -55,7 +56,9 @@ export DEPSDIR  :=  $(CURDIR)/$(BUILD)
 
 export CRT0=$(CURDIR)/boot/boot.s
 
-export AUTOSRC = $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+export CFILES   = $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+export CPPFILES = $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+export AUTOSRC = $(AUTOC) $(AUTOCPP)
 
 export THUMB_SRC = $(AUTOSRC) 
 #\
@@ -76,9 +79,10 @@ export THUMB_SRC = $(AUTOSRC)
 #
 # Define all object files.
 #
-export ARM_OBJ = $(ARM_SRC:.c=.o)
-export THUMB_OBJ = $(THUMB_SRC:.c=.o)
-export OFILES = $(ARM_OBJ) $(THUMB_OBJ)
+
+#export OFILES = $(ARM_OBJ) $(THUMB_OBJ)
+
+export OFILES   := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 
 .PHONY: $(BUILD) clean
 

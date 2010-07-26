@@ -5,7 +5,10 @@
 #include "gpio.h"
 #include "leds.h"
 #include "LCD_Driver.h"
+#include "LCD-color.h"
+#include "Fonts.h"
 #include "serial.h"
+#include "xprintf.h"
 
 static portTASK_FUNCTION_PROTO( ledFlashTask, pvParameters );
 
@@ -17,14 +20,14 @@ void startLEDFlashTasks(unsigned portBASE_TYPE uxPriority) {
     int i;
 
     for (i = 0; i < 2; i++) {
-        xTaskCreate(ledFlashTask, "LEDx", configMINIMAL_STACK_SIZE, NULL, uxPriority,  (xTaskHandle *)NULL);
+        xTaskCreate(ledFlashTask, (signed char *) "LEDx", configMINIMAL_STACK_SIZE, NULL, uxPriority,  (xTaskHandle *)NULL);
     }
     gpio_set_led(0,1);
     gpio_set_led(1,1);
     gpio_set_led(2,1);
     gpio_set_led(3,1);
 
-    xTaskCreate(lcdControlTask, "LCD", configMINIMAL_STACK_SIZE, NULL, uxPriority, (xTaskHandle *)NULL);
+    xTaskCreate(lcdControlTask, (signed char *)"LCD", configMINIMAL_STACK_SIZE, NULL, uxPriority, (xTaskHandle *)NULL);
 }
 
 static portTASK_FUNCTION( ledFlashTask, pvParameters )
@@ -50,32 +53,34 @@ static portTASK_FUNCTION( ledFlashTask, pvParameters )
 
 static const int color[4] = {RED, GREEN, BLUE, WHITE};
 
-static portTASK_FUNCTION(lcdControlTask, pvParameters) {
-    int i;
+#define LCD_RES (1<<25)// LCD_RST#
+#define LCD_CS  (1<<24)// LCD_CS#
+#define LCD_DIO (1<<6) // MOSI
+#define LCD_SCK (1<<4) // CLK
 
+
+static OUT lcdCS   = OUT(LCD_CS, 1);
+static OUT lcdMOSI = OUT(LCD_DIO, 0);
+static OUT lcdSCK  = OUT(LCD_SCK, 0);
+static OUT lcdRES  = OUT(LCD_RES, 1);
+
+char buf[64];
+
+static portTASK_FUNCTION(lcdControlTask, pvParameters) {
     vTaskDelay(500/portTICK_RATE_MS);
 
-    xSerialPutChar(NULL, '1', 0);
-    LCDInit();
-    xSerialPutChar(NULL, '2', 0);
-    LCDClear(BLUE);
+    LCD lcd(&lcdCS,
+            &lcdMOSI,
+            &lcdSCK,
+            &lcdRES,
+            &g_font3x5, clrYellow, clrDkBlue);
+            
+   for(int i = 0;;i++) {
+        lcd.FillRect(90,10,20,20, i & 0377);
 
-    LCDSetPixel(YELLOW, 0, 0);
-    LCDSetPixel(YELLOW, 1, 1);
-    LCDSetPixel(YELLOW, 2, 2);
-    LCDSetPixel(YELLOW, 3, 3);
-    LCDSetPixel(RED, 128, 128);
-    LCDSetPixel(RED, 129, 129);
-    LCDSetPixel(RED, 131, 131);
-    LCDSetPixel(RED, 132, 132);
+        xsprintf(buf, "Gruuu %010d", i);
+        lcd.Print(buf, 1 + i % 20);
 
-    for(;;i++) {
-        LCDClear(BLUE);
-
-        LCDFillRect(10,10,20,10, RED);
-
-        LCDFillRect(10+i,30+i,10,20, MAGENTA);
-
-        vTaskDelay(50/portTICK_RATE_MS);
+        vTaskDelay(100/portTICK_RATE_MS);
     }
 }
