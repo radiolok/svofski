@@ -4,7 +4,7 @@
 #include "task.h"
 #include "semphr.h"
 
-#include "serial.h"
+#include "serialport.h"
 #include "comchat.h"
 
 #define STACK_SIZE      configMINIMAL_STACK_SIZE
@@ -13,26 +13,20 @@
 static portTASK_FUNCTION_PROTO( comTxTask, pvParameters );
 static portTASK_FUNCTION_PROTO( comRxTask, pvParameters );
 
-static xComPortHandle port = NULL;
-
 #define LINE_LEN 64
 static char lineBuffer[LINE_LEN];
 
 xSemaphoreHandle semaphore;
 
+SerialPort serial(0, 230400, BUFFER_LENGTH);
+
 void createSerialChatTasks(unsigned portBASE_TYPE priority, uint32_t baudRate) {
-    xSerialPortInitMinimal(baudRate, BUFFER_LENGTH);
+    //xSerialPortInitMinimal(baudRate, BUFFER_LENGTH);
 
     vSemaphoreCreateBinary(semaphore);
 
     xTaskCreate(comTxTask, (signed char *) "COMtx", STACK_SIZE, NULL, priority - 1, (xTaskHandle *) NULL);
     xTaskCreate(comRxTask, (signed char *) "COMrx", STACK_SIZE, NULL, priority, (xTaskHandle *) NULL);
-}
-
-void serial_puts(char *s) {
-    for (;*s;) {
-        xSerialPutChar(port, *s++, portMAX_DELAY);
-    }
 }
 
 static portTASK_FUNCTION( comTxTask, pvParameters ) {
@@ -41,25 +35,27 @@ static portTASK_FUNCTION( comTxTask, pvParameters ) {
         if (xSemaphoreTake(semaphore, portMAX_DELAY) == pdTRUE) {
             // dump the input line
             if (lineBuffer[0] != 0) {
-                serial_puts("You say: ");
-                serial_puts(lineBuffer);
-                serial_puts("\n");
-                //vSerialPutString(port, (const signed char *) lineBuffer, 64);
-                //xSerialPutChar(port, '\n', 0);
+                serial.Puts("You say: ");
+                serial.Puts(lineBuffer);
+                serial.Puts("\n");
             }
         } else {
-            xSerialPutChar(port, '.', 0);
+            serial.PutChar('.');
         }
     }
 }
 
 static portTASK_FUNCTION( comRxTask, pvParameters ) {
     int idx = 0;
-    int c = 0;
+    int ic;
+    char c = 0;
 
     for(;;) {
-        if (xSerialGetChar(port, &c, portMAX_DELAY)) {
-            xSerialPutChar(port, c, 0);
+        ic = serial.GetChar();
+        if (ic != -1) {
+            c = (char)ic;
+
+            serial.PutChar(c);
             if (c == '\r') continue;
             if (c == '\n' || (idx + 1) == LINE_LEN) {
                 lineBuffer[idx] = '\0';
@@ -72,4 +68,11 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) {
         }
     }
 }
+
+extern "C" void xputchar(char c);
+
+void xputchar(char c) {
+   serial.PutChar(c);
+}
+
 

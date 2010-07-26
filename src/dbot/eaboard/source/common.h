@@ -16,5 +16,12 @@
 #define FONT_5x9_MONO
 #define FONT_3x5
 
+#define RESULT  uint32_t
+
+enum {
+    RES_OK = 0,
+    RES_FAIL = 1,
+};
+
 #endif
 

@@ -16,7 +16,7 @@ WARNINGSC=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-alig
 
 BUILD 		= build
 SOURCES 	= source \
-    source/serial \
+    source/isr \
     source/lcd \
     source/freertos \
     source/freertos/portable/MemMang \
@@ -66,20 +66,6 @@ export CPPFILES = $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 export AUTOSRC = $(AUTOC) $(AUTOCPP)
 
 export THUMB_SRC = $(AUTOSRC) 
-#\
-#	serial/serial.c \
-#	$(RTOS_SOURCE_DIR)/tasks.c \
-#	$(RTOS_SOURCE_DIR)/queue.c \
-#	$(RTOS_SOURCE_DIR)/list.c \
-#	$(RTOS_SOURCE_DIR)/portable/MemMang/heap_2.c \
-#	$(RTOS_SOURCE_DIR)/portable/GCC/ARM7_LPC2000/port.c 
-
-#
-# Source files that must be built to ARM mode.
-#
-#ARM_SRC = \
-#	$(RTOS_SOURCE_DIR)/portable/GCC/ARM7_LPC2000/portISR.c \
-#	serial/serialISR.c
 
 #
 # Define all object files.
