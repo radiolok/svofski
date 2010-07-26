@@ -102,13 +102,19 @@ all:	$(BUILD)
 clean:
 	rm -rf $(BUILD) $(TARGET).elf $(TARGET).{hex,map,elf}
 
-burn:	$(TARGET).hex
+burn:	$(BUILD)
 	$(LPC21ISP)
+
 
 else
 
-#DEPENDS :=  $(OFILES:.o=.d)
-#-include $(DEPENDS)
+DEPENDS :=  $(OFILES:.o=.d)
+
+$(OUTPUT).hex:	$(OUTPUT).elf
+
+$(OUTPUT).elf:	$(OFILES)
+
+-include $(DEPENDS)
 
 endif
 
