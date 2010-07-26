@@ -76,7 +76,7 @@ static portTASK_FUNCTION(lcdControlTask, pvParameters) {
         lcd.FillCircle(96,64, 1+ (16 - i % 16), 0377 - i & 0377);
 
         xsprintf(buf, "Gruuu %010d", i);
-        lcd.Print(buf, 1 + i % 20);
+        lcd.Print(buf, 1 + i % 20, FALSE);
 
         vTaskDelay(100/portTICK_RATE_MS);
     }
