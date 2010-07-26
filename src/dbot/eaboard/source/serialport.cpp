@@ -2,8 +2,6 @@
 #include "lpc210x.h"
 #include "serialport.h"
 
-#include "serialISR.h"
-
 /*-----------------------------------------------------------*/
 
 /* Constants to setup and access the UART. */
