@@ -6,7 +6,6 @@
 #include "leds.h"
 #include "LCD-color.h"
 #include "Fonts.h"
-#include "serial.h"
 #include "xprintf.h"
 
 static portTASK_FUNCTION_PROTO( ledFlashTask, pvParameters );

@@ -20,6 +20,10 @@ Created by Sten Larsson (sten_larsson at yahoo com)
 Edited by Richard Barry.
 *******************************************************************************/
 
+#define REG8_T  volatile unsigned char*
+#define REG16_T volatile unsigned short*
+#define REG32_T volatile unsigned int*
+
 #define REG8  (volatile unsigned char*)
 #define REG16 (volatile unsigned short*)
 #define REG32 (volatile unsigned int*)
