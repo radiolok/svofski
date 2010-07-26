@@ -69,8 +69,6 @@
 #include "queue.h"
 #include "task.h"
 
-#include "serialISR.h"
-
 /*-----------------------------------------------------------*/
 
 /* Constant to access the VIC. */
