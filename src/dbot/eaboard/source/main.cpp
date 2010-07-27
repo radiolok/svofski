@@ -6,28 +6,13 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Demo application includes. */
-#if 0
-#include "partest.h"
-#include "flash.h"
-#include "integer.h"
-#include "PollQ.h"
-#include "comtest2.h"
-#include "semtest.h"
-#include "flop.h"
-#include "dynamic.h"
-#include "BlockQ.h"
-#include "serial.h"
-#endif
-
+#include "common.h"
 #include "leds.h"
 #include "comchat.h"
 
 /*-----------------------------------------------------------*/
 
 /* Constants to setup I/O. */
-#define mainTX_ENABLE	( ( unsigned long ) 0x0001 )
-#define mainRX_ENABLE	( ( unsigned long ) 0x0004 )
 #define mainP0_14		( ( unsigned long ) 0x4000 )
 #define mainJTAG_PORT	( ( unsigned long ) 0x3E0000UL )
 
@@ -46,9 +31,6 @@
 
 /* Constants to setup the peripheral bus. */
 #define mainBUS_CLK_FULL	( ( unsigned char ) 0x01 )
-
-/* Constants for the ComTest tasks. */
-#define SERIAL_BAUD_RATE	( ( unsigned long ) 230400 )
 
 /* Priorities for the demo application tasks. */
 
@@ -125,7 +107,7 @@ int main( void )
 	/* Start the demo/test application tasks. */
 	startLEDFlashTasks( PRIORITY_LED );
 
-    createSerialChatTasks(PRIORITY_SERIAL, SERIAL_BAUD_RATE);
+    createSerialChatTasks(PRIORITY_SERIAL);
 
 	/* Start the check task - which is defined in this file. */
 	xTaskCreate( vErrorChecks, ( signed char * ) "Check", configMINIMAL_STACK_SIZE, NULL, CHECK_TASK_PRIORITY, NULL );
@@ -207,10 +189,6 @@ static void prvSetupHardware( void )
 		SCB_MEMMAP = 2;
 	#endif
 
-	/* Configure the RS2332 pins.  All other pins remain at their default of 0. */
-	PCB_PINSEL0 |= mainTX_ENABLE;
-	PCB_PINSEL0 |= mainRX_ENABLE;
-
 	/* Set all GPIO to output other than the P0.14 (BSL), and the JTAG pins.  
 	The JTAG pins are left as input as I'm not sure what will happen if the 
 	Wiggler is connected after powerup - not that it would be a good idea to
@@ -247,10 +225,6 @@ static void prvSetupHardware( void )
     prvLEDSetup();
 }
 /*-----------------------------------------------------------*/
-
-#define _BV(x)      (1<<(x))
-#define _BV2(x,y)   (_BV(x)|_BV(y))
-#define _BV3(x,y,z) (_BV(x)|_BV2(y,z))
 
 void prvLEDSetup(void) {
     PCB_PINSEL1 &= ~_BV2(25,24)   // 00: GPIO P0.28
