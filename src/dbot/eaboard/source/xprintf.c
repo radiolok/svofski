@@ -28,6 +28,8 @@
 
 #include <stdarg.h>
 
+#include "xprintf.h"
+
 static void printchar(char **str, int c)
 {
     extern int xputchar(int c);

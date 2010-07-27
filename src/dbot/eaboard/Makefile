@@ -22,7 +22,7 @@ SOURCES 	= source \
     source/freertos/portable/MemMang \
     source/freertos/portable/GCC/ARM7_LPC2000
 
-INCLUDES 	= ../FreeRTOS/Source/include source source/lcd
+INCLUDES 	= ../FreeRTOS/Source/include source source/lcd source/isr
 
 #
 # CFLAGS common to both the THUMB and ARM mode builds
@@ -109,7 +109,7 @@ $(OUTPUT).hex : $(OUTPUT).elf
 	$(OBJCOPY) $(OUTPUT).elf -O ihex $(OUTPUT).hex
 
 $(OUTPUT).elf : $(OFILES) $(CRT0) $(MAKEFILE)
-	$(CC) $(CFLAGS) $(OFILES) -nostartfiles $(CRT0) $(LINKER_FLAGS)
+	$(CXX) $(CFLAGS) $(OFILES) -nostartfiles $(CRT0) $(LINKER_FLAGS)
 
 #$(OFILES):	%.o : %.c %(LDSCRIPT) %(MAKEFILE)
 

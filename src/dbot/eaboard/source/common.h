@@ -9,6 +9,7 @@
 #define _BV(x)      (1<<(x))
 #define _BV2(x,y)   (_BV(x)|_BV(y))
 #define _BV3(x,y,z) (_BV(x)|_BV2(y,z))
+#define _BV4(q,x,y,z) (_BV(q)|_BV3(x,y,z))
 
 #define PHILIPS
 
