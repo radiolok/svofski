@@ -321,5 +321,20 @@ Edited by Richard Barry.
 #define MAM_TIM			(*(REG32 (0xE01FC004)))
 #define MAM_CR			(*(REG32 (0xE01FC000)))
 
+
+/* MCR bits */
+#define MR0I    0
+#define MR0R    1
+#define MR0S    2
+#define MR1I    3
+#define MR1R    4
+#define MR1S    5
+#define MR2I    6
+#define MR2R    7
+#define MR2S    8
+#define MR3I    9
+#define MR3R    10
+#define MR3S    11
+
 #endif /* lpc210x_h */
 
