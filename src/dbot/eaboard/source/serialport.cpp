@@ -8,18 +8,18 @@
 /*-----------------------------------------------------------*/
 
 /* Constants to setup and access the UART. */
-#define serDLAB                         ( ( unsigned char ) 0x80 )
-#define serENABLE_INTERRUPTS            ( ( unsigned char ) 0x03 )
-#define serNO_PARITY                    ( ( unsigned char ) 0x00 )
-#define ser1_STOP_BIT                   ( ( unsigned char ) 0x00 )
-#define ser8_BIT_CHARS                  ( ( unsigned char ) 0x03 )
-#define serFIFO_ON                      ( ( unsigned char ) 0x01 )
-#define serCLEAR_FIFO                   ( ( unsigned char ) 0x06 )
-#define serWANTED_CLOCK_SCALING         ( ( unsigned long ) 16 )
+#define serDLAB                         ((unsigned char) 0x80)
+#define serENABLE_INTERRUPTS            ((unsigned char) 0x03)
+#define serNO_PARITY                    ((unsigned char) 0x00)
+#define ser1_STOP_BIT                   ((unsigned char) 0x00)
+#define ser8_BIT_CHARS                  ((unsigned char) 0x03)
+#define serFIFO_ON                      ((unsigned char) 0x01)
+#define serCLEAR_FIFO                   ((unsigned char) 0x06)
+#define serWANTED_CLOCK_SCALING         ((unsigned long) 16)
 
-#define serINVALID_QUEUE                ( ( xQueueHandle ) 0 )
-#define serHANDLE                       ( ( xComPortHandle ) 1 )
-#define serNO_BLOCK                     ( ( portTickType ) 0 )
+#define serINVALID_QUEUE                ((xQueueHandle) 0)
+#define serHANDLE                       ((xComPortHandle) 1)
+#define serNO_BLOCK                     ((portTickType) 0)
 
 #define UART0_PINSEL                    _BV2(0,2)
 #define UART0_PINSEL_M                  _BV4(0,1,2,3)
