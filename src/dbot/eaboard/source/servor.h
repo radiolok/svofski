@@ -18,6 +18,8 @@ public:
 
     void PulseNextServo(void);
 
+    //inline Timer1* getTimer() { return &timer; }
+
 private:
     OUT* s[3];
 

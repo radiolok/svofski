@@ -9,6 +9,7 @@
 #include "common.h"
 #include "leds.h"
 #include "comchat.h"
+#include "effector.h"
 
 /*-----------------------------------------------------------*/
 
@@ -33,15 +34,7 @@
 #define PRIORITY_LED                    (tskIDLE_PRIORITY + 3)
 #define PRIORITY_SERIAL                 (tskIDLE_PRIORITY + 4)
 #define CHECK_TASK_PRIORITY		        (tskIDLE_PRIORITY + 4)
-
-/*
-#define mainLED_TASK_PRIORITY		( tskIDLE_PRIORITY + 3 )
-#define mainCOM_TEST_PRIORITY		( tskIDLE_PRIORITY + 2 )
-#define mainQUEUE_POLL_PRIORITY		( tskIDLE_PRIORITY + 0 )
-#define mainCHECK_TASK_PRIORITY		( tskIDLE_PRIORITY + 4 )
-#define mainSEM_TEST_PRIORITY		( tskIDLE_PRIORITY + 0 )
-#define mainBLOCK_Q_PRIORITY		( tskIDLE_PRIORITY + 2 )
-*/
+#define PRIORITY_SERVOR                 (tskIDLE_PRIORITY + 8)
 
 /* Constants used by the vMemCheckTask() task. */
 #define mainCOUNT_INITIAL_VALUE		( ( unsigned long ) 0 )
@@ -94,6 +87,9 @@ int main( void )
 	startLEDFlashTasks( PRIORITY_LED );
 
     createSerialChatTasks(PRIORITY_SERIAL);
+
+    Effector effector;
+    effector.Init(PRIORITY_SERVOR);
 
 	/* Now all the tasks have been started - start the scheduler.
 
