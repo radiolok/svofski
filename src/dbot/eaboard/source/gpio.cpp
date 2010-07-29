@@ -13,7 +13,10 @@ OUT GPIO::led_red(_BV(28),1);
 OUT GPIO::led_green(_BV(30), 1);
 OUT GPIO::led_backlight(_BV(12), 1);
 OUT GPIO::buzzer(_BV(13), 1);
-OUT GPIO::servo[3] = {OUT(_BV(1),0),OUT(_BV(2),0),OUT(_BV(3),0)};
+OUT GPIO::servo[] = {OUT(_BV(19),0),
+                     OUT(_BV(18),0),
+                     OUT(_BV(20),0), 
+                     OUT(_BV(17), 0)};
 
 OUT GPIO::lcdCS(LCD_CS, 1);
 OUT GPIO::lcdMOSI(LCD_DIO, 0);

@@ -15,5 +15,5 @@ public:
     static OUT lcdCLK;
     static OUT lcdRST;
 
-    static OUT servo[3];
+    static OUT servo[];
 };
