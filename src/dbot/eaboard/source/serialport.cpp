@@ -27,7 +27,6 @@
 #define UART1_PINSEL                    (_BV2(16,18)|_BV2(20,22))
 #define UART1_PINSEL_M                  (_BV4(16,17,18,19)|_BV4(20,21,22,23))
 
-//SerialPort::SerialPort(uint8_t portId, eBaud baud, eParity par, eDataBits data, eStopBits stop, uint32_t queueLength):
 SerialPort::SerialPort(uint8_t portId, uint32_t baudrate, uint32_t queueLength) 
     : id(portId), 
       isr(id, id ? &UART1_IIR : &UART0_IIR,

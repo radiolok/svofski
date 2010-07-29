@@ -1,17 +1,19 @@
-#ifndef _GPIO_H__
-#define _GPIO_H__
+#pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "InOut.h"
+#include "common.h"
 
-void gpio_init(void);
-void gpio_led(int,int);
-void gpio_set_led(int n, int state);
-void gpio_buzz(int);
+class GPIO {
+public:
+    static OUT led_red;
+    static OUT led_green;
+    static OUT led_backlight;
+    static OUT buzzer;
 
-#ifdef __cplusplus
-}
-#endif
+    static OUT lcdCS;
+    static OUT lcdMOSI;
+    static OUT lcdCLK;
+    static OUT lcdRST;
 
-#endif
+    static OUT servo[3];
+};
