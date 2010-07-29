@@ -19,10 +19,13 @@ public:
 
     void RunOnce(uint32_t us, OUT* pin);
 
+    inline uint32_t getCounter() { return counter; }
+
 private:
     static void ISR_Wrapper(void) __attribute__ ((naked));
 
     void ISR_Handler(void) __attribute__ ((noinline));
 private:
     OUT* pin;
+    volatile uint32_t counter;
 };
