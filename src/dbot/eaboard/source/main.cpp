@@ -48,26 +48,6 @@
 /*-----------------------------------------------------------*/
 
 /*
- * Checks that all the demo application tasks are still executing without error
- * - as described at the top of the file.
- */
-static long prvCheckOtherTasksAreStillRunning( unsigned long ulMemCheckTaskCount );
-
-/*
- * The task that executes at the highest priority and calls 
- * prvCheckOtherTasksAreStillRunning().  See the description at the top
- * of the file.
- */
-static void vErrorChecks( void *pvParameters );
-
-/*
- * Dynamically created and deleted during each cycle of the vErrorChecks()
- * task.  This is done to check the operation of the memory allocator.
- * See the top of vErrorChecks for more details.
- */
-static void vMemCheckTask( void *pvParameters );
-
-/*
  * Configure the processor for use with the Olimex demo board.  This includes
  * setup for the I/O, system clock, and access timings.
  */
@@ -148,85 +128,4 @@ void prvLEDSetup(void) {
     // P0.28, P0.30 are outputs
     GPIO_IODIR |= _BV2(28,30);
 }
-
-static void vMemCheckTask( void *pvParameters )
-{
-unsigned long *pulMemCheckTaskRunningCounter;
-void *pvMem1, *pvMem2, *pvMem3;
-static long lErrorOccurred = pdFALSE;
-
-	/* This task is dynamically created then deleted during each cycle of the
-	vErrorChecks task to check the operation of the memory allocator.  Each time
-	the task is created memory is allocated for the stack and TCB.  Each time
-	the task is deleted this memory is returned to the heap.  This task itself
-	exercises the allocator by allocating and freeing blocks. 
-	
-	The task executes at the idle priority so does not require a delay. 
-	
-	pulMemCheckTaskRunningCounter is incremented each cycle to indicate to the
-	vErrorChecks() task that this task is still executing without error. */
-
-	pulMemCheckTaskRunningCounter = ( unsigned long * ) pvParameters;
-
-	for( ;; )
-	{
-		if( lErrorOccurred == pdFALSE )
-		{
-			/* We have never seen an error so increment the counter. */
-			( *pulMemCheckTaskRunningCounter )++;
-		}
-
-		/* Allocate some memory - just to give the allocator some extra 
-		exercise.  This has to be in a critical section to ensure the
-		task does not get deleted while it has memory allocated. */
-		vTaskSuspendAll();
-		{
-			pvMem1 = pvPortMalloc( mainMEM_CHECK_SIZE_1 );
-			if( pvMem1 == NULL )
-			{
-				lErrorOccurred = pdTRUE;
-			}
-			else
-			{
-				memset( pvMem1, 0xaa, mainMEM_CHECK_SIZE_1 );
-				vPortFree( pvMem1 );
-			}
-		}
-		xTaskResumeAll();
-
-		/* Again - with a different size block. */
-		vTaskSuspendAll();
-		{
-			pvMem2 = pvPortMalloc( mainMEM_CHECK_SIZE_2 );
-			if( pvMem2 == NULL )
-			{
-				lErrorOccurred = pdTRUE;
-			}
-			else
-			{
-				memset( pvMem2, 0xaa, mainMEM_CHECK_SIZE_2 );
-				vPortFree( pvMem2 );
-			}
-		}
-		xTaskResumeAll();
-
-		/* Again - with a different size block. */
-		vTaskSuspendAll();
-		{
-			pvMem3 = pvPortMalloc( mainMEM_CHECK_SIZE_3 );
-			if( pvMem3 == NULL )
-			{
-				lErrorOccurred = pdTRUE;
-			}
-			else
-			{
-				memset( pvMem3, 0xaa, mainMEM_CHECK_SIZE_3 );
-				vPortFree( pvMem3 );
-			}
-		}
-		xTaskResumeAll();
-	}
-}
-
-
 
