@@ -13,3 +13,5 @@ void Effector::Init(uint32_t servorPriority)
 {
     servor.CreateTask(servorPriority);
 }
+
+
