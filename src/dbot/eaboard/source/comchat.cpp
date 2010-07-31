@@ -8,6 +8,7 @@
 #include "serialport.h"
 #include "comchat.h"
 #include "xprintf.h"
+#include "display.h"
 
 #define STACK_SIZE      configMINIMAL_STACK_SIZE
 #define BUFFER_LENGTH   8
@@ -63,17 +64,13 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
         ic = serial.GetChar();
         if (ic != -1) {
             c = (char)ic;
-            //serial.PutChar(c);
-            //serial.PutChar('.');
             switch(c) {
             case '[':   contrast--;
-                        xQueueSend(qhLCD, &cmdLCDContrast, portMAX_DELAY);
-                        xQueueSend(qhLCD, &contrast, portMAX_DELAY);
+                        display.Enqueue(CMD_LCD_CONTRAST, contrast);
                         xprintf("Contrast=%d\n", contrast);
                         break;
             case ']':   contrast++;
-                        xQueueSend(qhLCD, &cmdLCDContrast, portMAX_DELAY);
-                        xQueueSend(qhLCD, &contrast, portMAX_DELAY);
+                        display.Enqueue(CMD_LCD_CONTRAST, contrast);
                         xprintf("Contrast=%d\n", contrast);
                         break;
                 default: break;

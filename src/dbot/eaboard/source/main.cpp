@@ -10,8 +10,8 @@
 #include "leds.h"
 #include "comchat.h"
 #include "effector.h"
-#include "LCD-color.h"
 #include "gpio.h"
+#include "display.h"
 
 /*-----------------------------------------------------------*/
 
@@ -36,6 +36,7 @@
 #define PRIORITY_LED                    (tskIDLE_PRIORITY + 3)
 #define PRIORITY_SERIAL                 (tskIDLE_PRIORITY + 4)
 #define CHECK_TASK_PRIORITY		        (tskIDLE_PRIORITY + 4)
+#define PRIORITY_DISPLAY                (tskIDLE_PRIORITY + 4)
 #define PRIORITY_SERVOR                 (tskIDLE_PRIORITY + 8)
 
 /* Constants used by the vMemCheckTask() task. */
@@ -64,7 +65,7 @@ Effector effector;
 /*
  * Starts all the other tasks, then starts the scheduler. 
  */
-int main( void )
+int main(void)
 {
 	prvSetupHardware();
 
@@ -73,6 +74,8 @@ int main( void )
     createSerialChatTasks(PRIORITY_SERIAL);
 
     effector.Init(PRIORITY_SERVOR);
+
+    display.CreateTask(PRIORITY_DISPLAY);
 
 	/* Now all the tasks have been started - start the scheduler.
 

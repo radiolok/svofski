@@ -3,11 +3,13 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+
+#include "gpio.h"
 #include "servor.h"
 #include "effector.h"
-#include "gpio.h"
 #include "armmodel.h"
 #include "xprintf.h"
+#include "display.h"
 
 static portTASK_FUNCTION_PROTO(effControlTask, pvParameters);
 
@@ -58,15 +60,13 @@ static portTASK_FUNCTION(effControlTask, pvParameters) { (void)pvParameters;
     int fire = 0;
 
     Effector *eff;
-    extern xQueueHandle qhLCD;
-    static const uint8_t cmdLCDInvalidate = 1;
 
     eff = Effector::Instance;
 
     vTaskDelay(1000/portTICK_RATE_MS);
 
     eff->SetGoal(-40, 280, 0);
-    xQueueSend(qhLCD, &cmdLCDInvalidate, portMAX_DELAY);
+    display.Enqueue(CMD_LCD_INVALIDATE);
 
     for(;;) {
         dx = dy = dz = 0;
@@ -97,9 +97,9 @@ static portTASK_FUNCTION(effControlTask, pvParameters) { (void)pvParameters;
                          eff->Instance->getZ() + dz);
 
             // request screen redraw
-            xQueueSend(qhLCD, &cmdLCDInvalidate, portMAX_DELAY);
+            display.Enqueue(CMD_LCD_INVALIDATE);
         }
 
-        vTaskDelay(25/portTICK_RATE_MS);
+        vTaskDelay(40/portTICK_RATE_MS);
     }
 }
