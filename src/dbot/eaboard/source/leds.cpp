@@ -6,10 +6,6 @@
 #include "gpio.h"
 #include "leds.h"
 #include "Fonts.h"
-#include "effector.h"
-#include "xprintf.h"
-
-extern Effector effector;
 
 static portTASK_FUNCTION_PROTO( ledFlashTask, pvParameters );
 
