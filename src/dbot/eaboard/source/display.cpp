@@ -17,16 +17,13 @@ extern Effector effector;
 // Create Display instance here
 Display display;
 
-
-static portTASK_FUNCTION_PROTO( lcdControlTask, pvParameters);
-
 Display::Display()
 {
 }
 
 void Display::CreateTask(uint32_t priority) {
     queue = xQueueCreate(2, (unsigned portBASE_TYPE) sizeof(uint8_t));
-    xTaskCreate(lcdControlTask, (signed char *)"LCD", configMINIMAL_STACK_SIZE, NULL, priority, (xTaskHandle *)NULL);
+    xTaskCreate(displayTask, (signed char *)"DSPL", configMINIMAL_STACK_SIZE, NULL, priority, (xTaskHandle *)NULL);
 }
 
 #define effSize 8
@@ -94,7 +91,6 @@ void Display::updateLoop()
 
     int16_t px = 0, py = 0, pz = 0;
     char buf[64];
-    uint8_t qcmd;
 
     drawBackground(0, 0, lcd->getWidth(), lcd->getHeight());
 
@@ -129,27 +125,40 @@ void Display::updateLoop()
                             effector.getAngle240());
         lcd->Print(buf, 2, FALSE);
 
-        // check the command queue
-        if (xQueueReceive(queue, &qcmd, portMAX_DELAY) == pdTRUE) {
-            switch (qcmd) {
-            case 0: // set contrast
-                    xQueueReceive(queue, &qcmd, portMAX_DELAY);
-                    lcd->SetVolume(0, qcmd);
-                    break;
-            case 1: // invalidate
-                    for(;qcmd == 1 && xQueuePeek(queue, &qcmd, 0) == pdTRUE;) {
-                        if (qcmd == 1) {
-                            xQueueReceive(queue, &qcmd, 0); // purge extra invalidate requests
-                        }
-                    }
-                    break;
-            }
-        }
-        vTaskDelay(80/portTICK_RATE_MS);
+        // avoid too frequent updates
+        vTaskDelay(50/portTICK_RATE_MS);
+
+        blockOnQueue();
     }
 }
 
-static portTASK_FUNCTION(lcdControlTask, pvParameters) { (void)pvParameters;
+void Display::blockOnQueue() 
+{
+    uint8_t qcmd;
+
+    // check the command queue
+    if (xQueueReceive(queue, &qcmd, portMAX_DELAY) == pdTRUE) {
+        switch (qcmd) {
+        case CMD_LCD_CONTRAST: 
+                // set contrast
+                xQueueReceive(queue, &qcmd, portMAX_DELAY);
+                lcd->SetVolume(0, qcmd);
+                break;
+        case CMD_LCD_INVALIDATE: 
+                // invalidate
+                for(;qcmd == 1 && xQueuePeek(queue, &qcmd, 0) == pdTRUE;) {
+                    if (qcmd == 1) {
+                        xQueueReceive(queue, &qcmd, 0); // purge extra invalidate requests
+                    }
+                }
+                break;
+        }
+    }
+}
+
+void Display::displayTask(void *params) { 
+    (void)params;
+
     vTaskDelay(500/portTICK_RATE_MS);
 
     display.updateLoop();

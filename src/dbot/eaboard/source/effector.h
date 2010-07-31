@@ -21,7 +21,8 @@ public:
     inline int16_t getAngle120() const { return roundf(MathUtil::deg(arm120.getRho())); }
     inline int16_t getAngle240() const { return roundf(MathUtil::deg(arm240.getRho())); }
 
-    static Effector *Instance;
+private:
+    static void controlTask(void *);
 
 private:
     Servor servor;
@@ -29,5 +30,10 @@ private:
     ArmModel arm0, arm120, arm240;
 
     int32_t goal_x, goal_y, goal_z;
+
+private:
+    // the task loop, never exits
+    void updateLoop();
 };
 
+extern Effector effector;

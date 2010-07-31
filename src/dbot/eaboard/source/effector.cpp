@@ -11,14 +11,14 @@
 #include "xprintf.h"
 #include "display.h"
 
-static portTASK_FUNCTION_PROTO(effControlTask, pvParameters);
-
 #define HIP     155.0f
 #define ANKLE   335.0f
 #define BASE    85.0f
 #define EFF     35.0f
 
-Effector* Effector::Instance;
+#define EFFECTOR_TASK_STACK_SIZE    (configMINIMAL_STACK_SIZE + 64)
+
+Effector effector;
 
 Effector::Effector(void) :
     servor(&GPIO::servo[0], &GPIO::servo[1], &GPIO::servo[2]),
@@ -26,7 +26,6 @@ Effector::Effector(void) :
     arm120(120.0f,  HIP, ANKLE, BASE, EFF),
     arm240(240.0f,  HIP, ANKLE, BASE, EFF)
 {
-    Instance = this;
 }
 
 void Effector::SetGoal(int32_t x, int32_t y, int32_t z) 
@@ -45,8 +44,9 @@ void Effector::SetGoal(int32_t x, int32_t y, int32_t z)
 void Effector::Init(uint32_t servorPriority) 
 {
     servor.CreateTask(servorPriority);
-    xTaskCreate(effControlTask, (signed char *) "effi", 
-                configMINIMAL_STACK_SIZE, NULL, servorPriority-1, (xTaskHandle *) NULL);
+    xTaskCreate(controlTask, (signed char *) "EFF", 
+                EFFECTOR_TASK_STACK_SIZE, 
+                NULL, servorPriority-1, (xTaskHandle *) NULL);
 }
 
 uint16_t Effector::toServoValue(float rho) const {
@@ -55,17 +55,11 @@ uint16_t Effector::toServoValue(float rho) const {
     return (uint16_t)(1500 - roundf(MathUtil::deg(rho)*4.0f)); 
 }
 
-static portTASK_FUNCTION(effControlTask, pvParameters) { (void)pvParameters;
+void Effector::updateLoop() {
     int dx, dy, dz;
     int fire = 0;
 
-    Effector *eff;
-
-    eff = Effector::Instance;
-
-    vTaskDelay(1000/portTICK_RATE_MS);
-
-    eff->SetGoal(-40, 280, 0);
+    SetGoal(-40, 280, 0);
     display.Enqueue(CMD_LCD_INVALIDATE);
 
     for(;;) {
@@ -81,10 +75,10 @@ static portTASK_FUNCTION(effControlTask, pvParameters) { (void)pvParameters;
             if (fire == 0) {
                 fire = 1;
 
-                if (eff->Instance->getY() != 280) {
-                    dy = 280 - eff->Instance->getY();
+                if (getY() != 280) {
+                    dy = 280 - getY();
                 } else {
-                    dy = 180 - eff->Instance->getY();
+                    dy = 180 - getY();
                 }
             }
         } else {
@@ -92,9 +86,9 @@ static portTASK_FUNCTION(effControlTask, pvParameters) { (void)pvParameters;
         }
 
         if (dx != 0 || dz != 0 || dy != 0) {
-            eff->SetGoal(eff->Instance->getX() + dx, 
-                         eff->Instance->getY() + dy, 
-                         eff->Instance->getZ() + dz);
+            SetGoal(getX() + dx, 
+                    getY() + dy, 
+                    getZ() + dz);
 
             // request screen redraw
             display.Enqueue(CMD_LCD_INVALIDATE);
@@ -102,4 +96,12 @@ static portTASK_FUNCTION(effControlTask, pvParameters) { (void)pvParameters;
 
         vTaskDelay(40/portTICK_RATE_MS);
     }
+}
+
+void Effector::controlTask(void *params) 
+{   
+    (void)params;
+
+    vTaskDelay(1000/portTICK_RATE_MS);
+    effector.updateLoop();
 }
