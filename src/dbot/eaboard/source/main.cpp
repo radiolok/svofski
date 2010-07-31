@@ -57,6 +57,8 @@ static void prvLEDSetup(void);
 
 /*-----------------------------------------------------------*/
 
+Effector effector;
+
 /*
  * Starts all the other tasks, then starts the scheduler. 
  */
@@ -68,7 +70,6 @@ int main( void )
 
     createSerialChatTasks(PRIORITY_SERIAL);
 
-    Effector effector;
     effector.Init(PRIORITY_SERVOR);
 
 	/* Now all the tasks have been started - start the scheduler.

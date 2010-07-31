@@ -6,6 +6,7 @@
 #include "leds.h"
 #include "LCD-color.h"
 #include "Fonts.h"
+#include "effector.h"
 #include "xprintf.h"
 
 static portTASK_FUNCTION_PROTO( ledFlashTask, pvParameters );
@@ -24,6 +25,8 @@ void startLEDFlashTasks(unsigned portBASE_TYPE uxPriority) {
     xTaskCreate(lcdControlTask, (signed char *)"LCD", configMINIMAL_STACK_SIZE, NULL, uxPriority, (xTaskHandle *)NULL);
 }
 
+extern Effector effector;
+
 static portTASK_FUNCTION( ledFlashTask, pvParameters )
 {
     portTickType xFlashRate, xLastFlashTime;
@@ -41,6 +44,9 @@ static portTASK_FUNCTION( ledFlashTask, pvParameters )
         vTaskDelayUntil(&xLastFlashTime, 100/portTICK_RATE_MS);
         (led_id ? &GPIO::led_red : &GPIO::led_green)->Off();
         vTaskDelayUntil(&xLastFlashTime, xFlashRate);
+
+
+        effector.SetGoal(0, 280, 0);
     }
 }
 
