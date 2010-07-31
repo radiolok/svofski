@@ -20,7 +20,8 @@
  * up from there.
  */
 
-#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
 #include "LCD-color.h"
 #include "Fonts.h"
 #include "common.h"
@@ -129,11 +130,14 @@ static const uint16_t InitListEpson[] =
 
 static const uint16_t  InitListEpsonLength = sizeof(InitListEpson)/sizeof(InitListEpson[0]);
 
+//!
+//! Datasheet url: http://www.nxp.com/documents/data_sheet/PCF8833_1.pdf
+//!
 static const uint16_t InitListPhilips[] =
     {cmd(SLEEPOUT), cmd(BSTRON), cmd(INVON), 
-     cmd(MADCTL), data(0x88), // memory control
+     cmd(MADCTL), data(0x48), // memory control
      cmd(COLMOD), data(0x02), // 8bpp mode
-     cmd(SETCON), data(0x30), // contrast
+     cmd(SETCON), data(0x3f), // contrast
      cmd(NOPP),
      cmd(RGBSET),  data(0x00), data(0x02), data(0x04), data(0x06), data(0x08), data(0x0a), data(0x0c), data(0x0f),
                    data(0x00), data(0x02), data(0x04), data(0x06), data(0x08), data(0x0a), data(0x0c), data(0x0f),
@@ -270,12 +274,6 @@ void LCD::SetPos(uint8_t ich, uint8_t line)
 	}
 }
 
-static void memcpy_b(uint8_t* dst, const uint8_t* src, int count) {
-    for(int i = 0; i < count; i++) {
-        *dst++ = *src++;
-    }
-}
-
 /* writes a character at the current location, updates current location */
 void LCD::WriteCh(char ch)
 {
@@ -295,7 +293,7 @@ void LCD::WriteCh(char ch)
 	if (cpx != (uint)dx * dy)		// not enough room
 		return;
 
-	memcpy_b(&grf, pb, sizeof(uint8_t));
+	memcpy(&grf, pb, sizeof(uint8_t));
 
 	if (m_clrBack == clrTransparent)
 	{
@@ -310,7 +308,7 @@ void LCD::WriteCh(char ch)
 					ColorPixel(x, y, m_clrFore);
 				if ((f >>= 1) == 0)
 				{
-					memcpy_b(&grf, ++pb, sizeof(uint8_t));
+					memcpy(&grf, ++pb, sizeof(uint8_t));
 					f = 0x80;
 				}
 			}
@@ -326,7 +324,7 @@ void LCD::WriteCh(char ch)
 			WriteCommand(lctData, (grf & f) ? m_clrFore : m_clrBack);
 			if ((f >>= 1) == 0)
 			{
-				memcpy_b(&grf, ++pb, sizeof(uint8_t));
+				memcpy(&grf, ++pb, sizeof(uint8_t));
 				f = 0x80;
 			}
 		}
@@ -595,7 +593,7 @@ void LCD::ShowBitmap(const uint8_t *pab, uint8_t x, uint8_t y) const
 	uint8_t dz[2], clr;
 	uint16_t cpx;
 
-	memcpy_b(dz, pab, 2 * sizeof(uint8_t));
+	memcpy(dz, pab, 2 * sizeof(uint8_t));
 	pab += 2;
 	cpx = CpxSetAndValidateLCDRect(x, y, dz[0], dz[1]);
 	if (cpx != (uint)dz[0] * dz[1])
@@ -603,7 +601,7 @@ void LCD::ShowBitmap(const uint8_t *pab, uint8_t x, uint8_t y) const
 
 	while (cpx-- > 0)
 	{
-		memcpy_b(&clr, pab++, sizeof(uint8_t));
+		memcpy(&clr, pab++, sizeof(uint8_t));
 		WriteCommand(lctData, clr);
 	}
 }
@@ -619,11 +617,17 @@ void LCD::ShowBitmap(const uint8_t *pab, uint8_t x, uint8_t y) const
    volume: 0-63, "electronic volume value"
       this will fine-tune the brightness
    technique -- find a ratio value that works well, then tune volume */
+
 void LCD::SetVolume(uint8_t ratio, uint8_t volume) const
 {
+#ifdef PHILIPS
+    WriteCommand(lctCmd, SETCON);
+    WriteCommand(lctData, volume & 0x7f);
+#else
 	WriteCommand(lctCmd, VOLCTR);	// Electronic Volume Control (LCD brightness)
 	WriteCommand(lctData, volume & 0x3f);
 	WriteCommand(lctData, ratio & 0x03);
+#endif
 }
 
 void LCD::IncVolumn() const

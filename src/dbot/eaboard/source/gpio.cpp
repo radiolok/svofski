@@ -23,4 +23,8 @@ OUT GPIO::lcdMOSI(LCD_DIO, 0);
 OUT GPIO::lcdCLK(LCD_CLK, 0);
 OUT GPIO::lcdRST(LCD_RST, 1);
 
-
+IN  GPIO::joy[] = { IN(_BV(14)),    // centre
+                    IN(_BV(15)),
+                    IN(_BV(16)),
+                    IN(_BV(22)),
+                    IN(_BV(23)) };

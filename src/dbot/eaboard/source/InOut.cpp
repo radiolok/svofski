@@ -23,37 +23,26 @@
  * IN class needs conversion.
  */
 
+#include <inttypes.h>
 #include "lpc210x.h"
+#include "common.h"
 #include "InOut.h"
 
-#if WITH_INPUT
-extern TIMER g_timer;
+// FreeRTOS includes for timers
+#include "FreeRTOS.h"
+#include "task.h"
 
-static const uint msDebounce = 5;	// milliseconds to wait for button debounce
+#ifdef WITH_INPUT
+
+#define msDebounce  5	    // milliseconds to wait for button debounce
 
 /*
 *	IN -- input class, e.g. for switches
 */
-
-/* constructor for IN class
-   - sets up the specified register and pin for input
-   - enables/disables the pull-up resistor
-   - stores values to member variables
-     ~ names start with "m_" to indicate members
-     ~ m_bit is the bit corresponding to the pin
-	 ~ m_preg is a pointer to the PIN register
-*/
-IN::IN(volatile uint8_t *pregDDR, volatile uint8_t *pregPORT,
-	   volatile uint8_t *pregPIN, char pin, bool fPullup)
-	   : m_bit (0x01 << pin), m_preg(pregPIN)
+IN::IN(uint32_t bitmask)
+	   : m_bit (bitmask)
 {
-	/* input: clear DDR bit */
-	*pregDDR &= ~m_bit;
-	
-	if (fPullup)
-		*pregPORT |= m_bit;		// enable pull-up resistor
-	else
-		*pregPORT &= ~m_bit;	// disable pull-up resistor
+    GPIO_IODIR &= ~bitmask;
 }
 
 /* checks for button press; if not pressed, returns false; else
@@ -61,13 +50,15 @@ IN::IN(volatile uint8_t *pregDDR, volatile uint8_t *pregPORT,
 bool IN::FPressed() const
 {
 	if (FOpen())
-		return fFalse;
+		return FALSE;
 
-	g_timer.WaitMs(msDebounce);
-	while (FClosed())
-		;
-	g_timer.WaitMs(msDebounce);
-	return fTrue;
+    /* this is rather dubious
+    vTaskDelay(msDebounce/portTICK_RATE_MS);
+	while (FClosed());
+    vTaskDelay(msDebounce/portTICK_RATE_MS);
+    */
+
+	return TRUE;
 }
 #endif // WITH_INPUT
 
