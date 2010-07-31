@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 #include "semphr.h"
 
 #include "serialport.h"
@@ -52,6 +53,10 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
     int ic;
     char c = 0;
 
+    extern xQueueHandle qhLCD;
+    const uint8_t cmdLCDContrast = 0;
+    uint8_t contrast = 33;
+
     GPIO0_IOSET = _BV(26); // BT_RST#
 
     for(;;) {
@@ -60,6 +65,19 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
             c = (char)ic;
             //serial.PutChar(c);
             //serial.PutChar('.');
+            switch(c) {
+            case '[':   contrast--;
+                        xQueueSend(qhLCD, &cmdLCDContrast, portMAX_DELAY);
+                        xQueueSend(qhLCD, &contrast, portMAX_DELAY);
+                        xprintf("Contrast=%d\n", contrast);
+                        break;
+            case ']':   contrast++;
+                        xQueueSend(qhLCD, &cmdLCDContrast, portMAX_DELAY);
+                        xQueueSend(qhLCD, &contrast, portMAX_DELAY);
+                        xprintf("Contrast=%d\n", contrast);
+                        break;
+                default: break;
+            }
             if (c == '\r') xprintf("\\r");
             if (c == '\n') {
                 xprintf("\\n");

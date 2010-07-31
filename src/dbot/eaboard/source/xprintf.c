@@ -43,6 +43,7 @@ static void printchar(char **str, int c)
 
 #define PAD_RIGHT 1
 #define PAD_ZERO 2
+#define PAD_PLUS 4
 
 static int prints(char **out, const char *string, int width, int pad)
 {
@@ -115,6 +116,10 @@ static int printi(char **out, int i, int b, int sg, int width, int pad, int letb
         else {
             *--s = '-';
         }
+    } else {
+        if (pad & PAD_PLUS) {
+            *--s = '+';
+        }
     }
 
     return pc + prints (out, s, width, pad);
@@ -135,6 +140,10 @@ static int print(char **out, const char *format, va_list args )
             if (*format == '-') {
                 ++format;
                 pad = PAD_RIGHT;
+            }
+            if (*format == '+') {
+                ++format;
+                pad |= PAD_PLUS;
             }
             while (*format == '0') {
                 ++format;

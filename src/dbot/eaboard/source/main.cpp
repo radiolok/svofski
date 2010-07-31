@@ -10,6 +10,8 @@
 #include "leds.h"
 #include "comchat.h"
 #include "effector.h"
+#include "LCD-color.h"
+#include "gpio.h"
 
 /*-----------------------------------------------------------*/
 

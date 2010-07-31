@@ -84,6 +84,9 @@ public:
 	LCD(OUT *poutE, OUT *poutMOSI, OUT *poutSCK, OUT *poutReset,
 		const FONT *pfont, uint8_t clrBack, uint8_t clrFore);
 
+    inline uint16_t getWidth() const  { return dxLCDScreen; }
+    inline uint16_t getHeight() const { return dyLCDScreen; }
+    
 	/*
 	*	text stuff
 	*/

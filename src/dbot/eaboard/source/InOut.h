@@ -34,13 +34,11 @@
 class IN
 {
 public:
-	/* constructor for setting the register and pin (0-7),
-	   and specifying whether to enable the pull-up resistor */
-	IN(volatile uint8_t *pregDDR, volatile uint8_t *pregPORT,
-		volatile uint8_t *pregPIN, char pin, bool fPullup);
+	/* constructor for setting the pin bit mask */
+	IN(uint32_t bitmask);
 	
 	/* returns true if pin is reading high, else false */
-	inline bool FHigh() const { return *m_preg & m_bit; }
+	inline bool FHigh() const { return GPIO_IOPIN & m_bit; }
 	
 	/* returns true if pin is reading low, else false */
 	inline bool FLow() const { return !FHigh(); }
@@ -60,7 +58,6 @@ public:
 	
 private:
 	uint32_t m_bit;
-	volatile uint32_t *m_preg;
 };
 #endif // WITH_INPUT
 

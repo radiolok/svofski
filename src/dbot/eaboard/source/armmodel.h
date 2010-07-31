@@ -1,6 +1,7 @@
 #pragma once
 
 #include <math.h>
+#include "xprintf.h"
 
 class MathUtil {
 public:
@@ -21,6 +22,8 @@ public:
     float distFrom(Point& o);
     void rotateY(float phi);
     void rotateZ(float phi);
+
+    inline void print() {xprintf("P[%d,%d,%d]", (int)x, (int)y, (int)z);}
 };
 
 
@@ -29,6 +32,8 @@ public:
     ArmModel(const float _angle, const float _hip, const float _ankle, const float _base, const float _effector);
 
     float MoveTo(const float xg, const float yg, const float zg);
+
+    inline float getRho() const { return rho; }
 
 private:
     float alpha, beta, rho;
