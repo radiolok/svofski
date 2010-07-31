@@ -30,7 +30,7 @@
 /* Hungarian naming: xl and yl are x and y coordinates on LCD
    (handling offset for visible pixels) */
 static const uint16_t xlMin = 0;
-static const uint16_t ylMin = 2;
+static const uint16_t ylMin = 1;
 static const uint16_t xlMax = xlMin + dxLCDScreen;
 static const uint16_t ylMax = ylMin + dyLCDScreen;
 static const uint16_t xlMost = xlMin + dxLCDScreen - 1;

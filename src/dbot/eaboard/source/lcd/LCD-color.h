@@ -31,7 +31,7 @@ variable names
 	clr = color
 */
 
-const uint16_t dxLCDScreen = 130;	// number of horizontal pixels on LCD screen
+const uint16_t dxLCDScreen = 132;	// number of horizontal pixels on LCD screen
 const uint16_t dyLCDScreen = 130;	// number of vertical pixels on LCD screen
 
 /* CoLoRs */
