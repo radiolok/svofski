@@ -15,7 +15,7 @@ void startLEDFlashTasks(unsigned portBASE_TYPE uxPriority) {
     int i;
 
     for (i = 0; i < 2; i++) {
-        xTaskCreate(ledFlashTask, (signed char *) "LEDx", configMINIMAL_STACK_SIZE*2, NULL, uxPriority, (xTaskHandle *)NULL);
+        xTaskCreate(ledFlashTask, (signed char *) "LEDx", configMINIMAL_STACK_SIZE, NULL, uxPriority, (xTaskHandle *)NULL);
     }
 }
 

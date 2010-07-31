@@ -60,8 +60,6 @@ static void prvLEDSetup(void);
 
 /*-----------------------------------------------------------*/
 
-Effector effector;
-
 /*
  * Starts all the other tasks, then starts the scheduler. 
  */
