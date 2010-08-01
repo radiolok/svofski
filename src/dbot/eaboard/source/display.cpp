@@ -12,6 +12,8 @@
 
 #include "display.h"
 
+#define DISPLAY_TASK_STACK_SIZE     (configMINIMAL_STACK_SIZE * 2)
+
 extern Effector effector;
 
 // Create Display instance here
@@ -23,7 +25,7 @@ Display::Display()
 
 void Display::CreateTask(uint32_t priority) {
     queue = xQueueCreate(2, (unsigned portBASE_TYPE) sizeof(uint8_t));
-    xTaskCreate(displayTask, (signed char *)"DSPL", configMINIMAL_STACK_SIZE, NULL, priority, (xTaskHandle *)NULL);
+    xTaskCreate(displayTask, (signed char *)"DSPL", DISPLAY_TASK_STACK_SIZE, NULL, priority, (xTaskHandle *)NULL);
 }
 
 #define effSize 8
@@ -79,6 +81,8 @@ void Display::Enqueue(uint8_t cmd, uint8_t param) {
     }
 }
 
+//volatile char bubuf[7000];
+
 void Display::updateLoop() 
 {
     LCD nlcd(&GPIO::lcdCS,
@@ -94,7 +98,11 @@ void Display::updateLoop()
 
     drawBackground(0, 0, lcd->getWidth(), lcd->getHeight());
 
-    for (;;) {
+    uint32_t ticksBegin = xTaskGetTickCount();
+    uint32_t ticksEnd   = ticksBegin + 5000;
+    bool benchDone = FALSE;
+
+    for (int frames = 0;; frames++) {
         xsprintf(buf, "Eff [%+4d %+4d %+4d]", 
             effector.getX(), 
             effector.getY(),
@@ -124,11 +132,18 @@ void Display::updateLoop()
                             effector.getAngle120(),
                             effector.getAngle240());
         lcd->Print(buf, 2, FALSE);
+    
+        uint32_t ticksNow = xTaskGetTickCount();
+        if (ticksNow > ticksEnd) {
+            if (!benchDone) {
+                benchDone = TRUE;
+                xprintf("%d updates/5 sec", frames);
+            }
 
-        // avoid too frequent updates
-        vTaskDelay(50/portTICK_RATE_MS);
-
-        blockOnQueue();
+            // avoid too frequent updates
+            vTaskDelay(50/portTICK_RATE_MS);
+            blockOnQueue();
+        }
     }
 }
 

@@ -33,11 +33,10 @@
 
 /* Priorities for the demo application tasks. */
 
-#define PRIORITY_LED            (tskIDLE_PRIORITY + 3)
-#define PRIORITY_SERIAL         (tskIDLE_PRIORITY + 4)
-#define CHECK_TASK_PRIORITY     (tskIDLE_PRIORITY + 4)
-#define PRIORITY_DISPLAY        (tskIDLE_PRIORITY + 4)
-#define PRIORITY_SERVOR         (tskIDLE_PRIORITY + 8)
+#define PRIORITY_LED            (tskIDLE_PRIORITY + 0)
+#define PRIORITY_SERIAL         (tskIDLE_PRIORITY + 2)
+#define PRIORITY_DISPLAY        (tskIDLE_PRIORITY + 1)
+#define PRIORITY_SERVOR         (tskIDLE_PRIORITY + 5)
 
 /* Constants used by the vMemCheckTask() task. */
 #define mainCOUNT_INITIAL_VALUE ((unsigned long) 0)

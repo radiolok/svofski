@@ -16,7 +16,7 @@
 #define BASE    85.0f
 #define EFF     35.0f
 
-#define EFFECTOR_TASK_STACK_SIZE    (configMINIMAL_STACK_SIZE + 64)
+#define EFFECTOR_TASK_STACK_SIZE    (configMINIMAL_STACK_SIZE * 2)
 
 Effector effector;
 
