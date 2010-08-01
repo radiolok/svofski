@@ -14,17 +14,18 @@ enum CMD_LCD {
 
 /// \brief Top-level display module
 ///
-/// Represents the display update tasks that
-/// runs infinitely, waiting on its queue to
+/// Represents the display update task that
+/// runs infinitely, waiting on the queue to
 /// update.
+///
+/// Enqueue() puts a command to the display queue,
+/// see CMD_LCD_CONTRAST and CMD_LCD_INVALIDATE.
 ///
 /// The update method actually draws everything on the LCD.
 /// LCD driver class is constructed here and no accesses
 /// to it should be done from anywhere outside of the
 /// display update loop.
 ///
-/// Enqueue() puts a command to the display queue,
-/// see CMD_LCD_CONTRAST and CMD_LCD_INVALIDATE.
 class Display {
 public:
     Display();
