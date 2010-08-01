@@ -4,7 +4,7 @@ TARGET=rtosbot
 
 USE_THUMB_MODE=YES
 DEBUG=
-OPTIM=-Os
+OPTIM=-O2 -funroll-loops
 RUN_MODE=RUN_FROM_ROM
 LPC21ISP=~/src/lpc2000/lpc21isp -hex -term -control $(OUTPUT).hex /dev/tty.usbserial-A1000acS 230400 14746
 
@@ -38,7 +38,7 @@ endif
 
 CFLAGS=$(WARNINGSC) $(CBASE) -std=c99
 
-CXXFLAGS=$(WARNINGSCXX) $(CBASE) -fno-exceptions -fno-rtti
+CXXFLAGS=$(WARNINGSCXX) $(CBASE) -fno-exceptions -fno-rtti 
 
 LINKER_FLAGS=-Xlinker -o$(OUTPUT).elf -Xlinker -M -Xlinker -Map=$(OUTPUT).map
 
