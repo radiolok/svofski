@@ -22,6 +22,10 @@ public:
     inline int16_t getAngle240() const { return roundf(MathUtil::deg(arm240.getRho())); }
 
 private:
+    // the task loop, never exits
+    void updateLoop();
+    
+    // FreeRTOS task handler
     static void controlTask(void *);
 
 private:
@@ -30,10 +34,6 @@ private:
     ArmModel arm0, arm120, arm240;
 
     int32_t goal_x, goal_y, goal_z;
-
-private:
-    // the task loop, never exits
-    void updateLoop();
 };
 
 extern Effector effector;
