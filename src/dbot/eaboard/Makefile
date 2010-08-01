@@ -86,7 +86,7 @@ $(BUILD):
 all:	$(BUILD)
 
 clean:
-	rm -rf $(BUILD) $(TARGET).elf $(TARGET).{hex,map,elf}
+	rm -rf $(BUILD) $(TARGET).elf $(TARGET).{hex,map,elf} html
 
 burn:	$(BUILD)
 	$(LPC21ISP)

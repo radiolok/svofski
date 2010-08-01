@@ -72,8 +72,6 @@ float ArmModel::MoveTo(const float xg, const float yg, const float zg) {
     // offset the goal by effector size
     g.offset(effector,0,0);
 
-    //xprintf("\na=%d a^2=%d\n", (int)a, (int)(a*a));
-    
     // find projection of a on the z=0 plane, squared
     float a2 = a*a - g.z*g.z;  // sqrt(a*a - g.z*g.z), but we only need it squared
 
@@ -84,15 +82,9 @@ float ArmModel::MoveTo(const float xg, const float yg, const float zg) {
     // to calculate c like this:
     c = MathUtil::dist(g.x, g.y, 0, base, 0, 0);
     
-    //xprintf("{ a=%d a2=%d c=%d ", (int)a*100, (int)a2*100, (int)c*100);
-
-    alpha = acosf((-a2+b*b+c*c)/(2*b*c));
-    
-    beta = atan2f(g.y, g.x-base);
-    
+    float alpha = acosf((-a2+b*b+c*c)/(2*b*c));
+    float beta = atan2f(g.y, g.x-base);
     rho = alpha - beta;
-
-    //xprintf("alpha=%d beta=%d rho=%d }", (int)alpha*100, (int)beta*100, (int)rho*100);
    
     return rho;
 }
