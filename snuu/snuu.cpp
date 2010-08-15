@@ -53,8 +53,8 @@ void putpixel(int x, int y, int color)
 
 #define PITCH (screen->pitch / 4)
 
-int initText() {
-    font=TTF_OpenFont("Arial Rounded Bold.ttf", 64);
+int initText(const char* fontPath) {
+    font=TTF_OpenFont(fontPath ? fontPath : "BPreplayBold.otf", 64);
 
     if(!font) {
         fprintf(stderr, "TTF_OpenFont: %s\n", TTF_GetError());
@@ -97,8 +97,6 @@ void init() {
         snowflakes[i] = -1;
         rlebuf[i] = 1;
     }
-
-    initText();
 }
 
 void newsnow() {
@@ -200,7 +198,6 @@ int snowfall2() {
 void snowfall() {
     int i, j;
 
-
     unsigned int *fb = (unsigned int*)screen->pixels;
     for (j = solidBottom; j >= 0; j--) {
         int solid = 0;
@@ -283,7 +280,8 @@ void render(int nframe) {
         SDL_UnlockSurface(screen);
 
     // Tell SDL to update the whole screen
-    SDL_UpdateRect(screen, 0, 0, Width, Height);    
+    //SDL_UpdateRect(screen, 0, 0, Width, Height);    
+    SDL_Flip(screen);
 }
 
 
@@ -302,7 +300,7 @@ int main(int argc, char *argv[])
     }
 
     if (TTF_Init() == -1) {
-        fprintf(stderr, "Crap, can't initialize SDL_ttf API: %s\n", TTF_GetError());
+        fprintf(stderr, "Crepes, can't initialize SDL_ttf API: %s\n", TTF_GetError());
         exit(1);
     }
 
@@ -321,11 +319,12 @@ int main(int argc, char *argv[])
     }
 
     init();
-    if (initText() == -1) {
+    if (initText(argv[1]) == -1) {
         exit(1);
     }
 
     drawGruu();
+    srand(time(0));
 
     for(time_start = time(0);!quit;nframes++) {
         if (rand() % 32 == 11) {
