@@ -1,1 +1,1 @@
-CXXFLAGS="-O3 `sdl-config --cflags`" LDFLAGS="`sdl-config --libs` -lSDL_ttf" make snuu
+CXXFLAGS="-O2 `sdl-config --cflags`" LDFLAGS="`sdl-config --libs` -lSDL_ttf" make snuu
