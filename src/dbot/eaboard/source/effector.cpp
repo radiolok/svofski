@@ -11,9 +11,9 @@
 #include "xprintf.h"
 #include "display.h"
 
-#define HIP     155.0f
+#define HIP     150.0f
 #define ANKLE   335.0f
-#define BASE    85.0f
+#define BASE    78.0f
 #define EFF     35.0f
 
 #define EFFECTOR_TASK_STACK_SIZE    (configMINIMAL_STACK_SIZE * 2)
@@ -24,7 +24,9 @@ Effector::Effector(void) :
     servor(&GPIO::servo[0], &GPIO::servo[1], &GPIO::servo[2]),
     arm0  (0.0f,    HIP, ANKLE, BASE, EFF),
     arm120(120.0f,  HIP, ANKLE, BASE, EFF),
-    arm240(240.0f,  HIP, ANKLE, BASE, EFF)
+    arm240(240.0f,  HIP, ANKLE, BASE, EFF),
+    cal_zero(1520),
+    cal_scale(8.888f)
 {
 }
 
@@ -52,49 +54,75 @@ void Effector::Init(uint32_t servorPriority)
 uint16_t Effector::toServoValue(float rho) const {
     //int16_t ir = roundf(MathUtil::deg(rho)*10);
     //xprintf("[%d]", ir);
-    return (uint16_t)(1500 - roundf(MathUtil::deg(rho)*4.0f)); 
+    return (uint16_t)(cal_zero - roundf(MathUtil::deg(rho)*cal_scale)); 
+}
+
+void Effector::calibrate(int16_t base, float scale) {
+    cal_zero = base;
+    cal_scale = scale;
+    needUpdate = TRUE;
+}
+
+void Effector::zero() {
+    SetGoal(0, 210, 0);
+    needUpdate = TRUE;
 }
 
 void Effector::updateLoop() {
     int dx, dy, dz;
     int fire = 0;
+    int animate = 0,
+        animateGoal = 0;
 
-    SetGoal(-40, 280, 0);
+    SetGoal(0, 210, 0);
     display.Enqueue(CMD_LCD_INVALIDATE);
 
     for(;;) {
         dx = dy = dz = 0;
 
-        if (GPIO::joy[JOY_UP].FPressed())        dz = -4;
-        else if (GPIO::joy[JOY_DOWN].FPressed()) dz = 4;
+        if (GPIO::joy[JOY_UP].FPressed())        dz = -1;
+        else if (GPIO::joy[JOY_DOWN].FPressed()) dz = 1;
 
-        if (GPIO::joy[JOY_LEFT].FPressed())      dx = -4;
-        else if (GPIO::joy[JOY_RIGHT].FPressed())dx = 4;
+        if (GPIO::joy[JOY_LEFT].FPressed())      dx = -1;
+        else if (GPIO::joy[JOY_RIGHT].FPressed())dx = 1;
 
         if (GPIO::joy[JOY_FIRE].FPressed()) {
             if (fire == 0) {
                 fire = 1;
 
                 if (getY() != 280) {
-                    dy = 280 - getY();
+                    animate = 2;
+                    animateGoal = 280;
+                    //dy = 280 - getY();
                 } else {
-                    dy = 180 - getY();
+                    animate = -2;
+                    animateGoal = 210;
+                    //dy = 210 - getY();
                 }
             }
         } else {
             fire = 0;   
         }
 
-        if (dx != 0 || dz != 0 || dy != 0) {
+        if (animate) {
+            if (getY() == animateGoal) {
+                animate = 0;
+            } else {
+                dy = animate;
+            }
+        }
+
+        if (dx != 0 || dz != 0 || dy != 0 || needUpdate) {
             SetGoal(getX() + dx, 
                     getY() + dy, 
                     getZ() + dz);
 
             // request screen redraw
             display.Enqueue(CMD_LCD_INVALIDATE);
+            needUpdate = FALSE;
         }
 
-        vTaskDelay(40/portTICK_RATE_MS);
+        vTaskDelay(25/portTICK_RATE_MS);
     }
 }
 
@@ -102,6 +130,6 @@ void Effector::controlTask(void *params)
 {   
     (void)params;
 
-    vTaskDelay(1000/portTICK_RATE_MS);
+    //vTaskDelay(50/portTICK_RATE_MS);
     effector.updateLoop();
 }
