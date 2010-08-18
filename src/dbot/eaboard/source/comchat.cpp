@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
+#include <math.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -9,8 +11,9 @@
 #include "comchat.h"
 #include "xprintf.h"
 #include "display.h"
+#include "effector.h"
 
-#define STACK_SIZE      configMINIMAL_STACK_SIZE
+#define STACK_SIZE      (configMINIMAL_STACK_SIZE*2)
 #define BUFFER_LENGTH   8
 
 static portTASK_FUNCTION_PROTO( comTxTask, pvParameters );
@@ -50,15 +53,18 @@ static portTASK_FUNCTION( comTxTask, pvParameters ) { (void)pvParameters;
 }
 
 static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
-    int idx = 0;
+    extern Effector effector;
+
     int ic;
     char c = 0;
 
-    extern xQueueHandle qhLCD;
-    const uint8_t cmdLCDContrast = 0;
     uint8_t contrast = 33;
 
     GPIO0_IOSET = _BV(26); // BT_RST#
+
+    float cal_scale = effector.getScale();
+    int16_t cal_base  = effector.getZero();
+    bool calibrated = FALSE;
 
     for(;;) {
         ic = serial.GetChar();
@@ -73,8 +79,31 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
                         display.Enqueue(CMD_LCD_CONTRAST, contrast);
                         xprintf("Contrast=%d\n", contrast);
                         break;
-                default: break;
+            case 's':   cal_scale += 0.05; calibrated = TRUE;
+                        break;
+            case 'S':   cal_scale -= 0.05; calibrated = TRUE;
+                        break;
+            case 'z':   cal_base++; calibrated = TRUE;
+                        break;
+            case 'Z':   cal_base--; calibrated = TRUE;
+                        break;
+            case 'h':   effector.SetGoal(effector.getX(), effector.getY()+1, effector.getZ());
+                        display.Enqueue(CMD_LCD_INVALIDATE);
+                        break;
+            case 'H':   effector.SetGoal(effector.getX(), effector.getY()-1, effector.getZ());
+                        display.Enqueue(CMD_LCD_INVALIDATE);
+                        break;
+            case '0':   effector.zero();
+                        break;
+            default:    break;
             }
+
+            if (calibrated) {
+                //effector...;
+                effector.calibrate(cal_base, cal_scale);
+                xprintf("Z=%d S=%d.%02d\n", cal_base, (int)floorf(cal_scale), (int)roundf(cal_scale*100)%100);
+            }
+
             if (c == '\r') xprintf("\\r");
             if (c == '\n') {
                 xprintf("\\n");

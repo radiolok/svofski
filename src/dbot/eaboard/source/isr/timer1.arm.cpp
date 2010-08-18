@@ -45,7 +45,7 @@ void Timer1::RunOnce(uint32_t us, OUT* outpin) {
     T1_MR0 = (configCPU_CLOCK_HZ/100)*us/10000;
 
     // begin pulse
-    pin->SetHigh();
+    pin->SetLow();
 
     // start the timer
     T1_TCR = 1; 
@@ -59,7 +59,7 @@ void Timer1::ISR_Wrapper() {
 
 void Timer1::ISR_Handler() {
     // end pulse, stop timer
-    pin->SetLow();
+    pin->SetHigh();
     counter++;
     T1_IR = 1;          // clear match interrupt bit
     VICVectAddr = 0;    // clear VIC 

@@ -47,6 +47,6 @@ static portTASK_FUNCTION(servorTask, pvParameters ) { (void)pvParameters;
     for(;;) {
         Servor::Instance->PulseNextServo(); 
         // 15ms between pulses, each servo is fed every 45ms
-        vTaskDelay(15/portTICK_RATE_MS);        
+        vTaskDelay(5/portTICK_RATE_MS);        
     }
 }

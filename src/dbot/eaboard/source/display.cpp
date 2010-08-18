@@ -99,7 +99,7 @@ void Display::updateLoop()
     drawBackground(0, 0, lcd->getWidth(), lcd->getHeight());
 
     uint32_t ticksBegin = xTaskGetTickCount();
-    uint32_t ticksEnd   = ticksBegin + 5000;
+    uint32_t ticksEnd   = ticksBegin; // for benchmark: + 5000;
     bool benchDone = FALSE;
 
     for (int frames = 0;; frames++) {

@@ -21,6 +21,11 @@ public:
     inline int16_t getAngle120() const { return roundf(MathUtil::deg(arm120.getRho())); }
     inline int16_t getAngle240() const { return roundf(MathUtil::deg(arm240.getRho())); }
 
+    void calibrate(const int16_t base, const float scale);
+    inline int16_t getZero() const { return cal_zero; }
+    inline float   getScale() const{ return cal_scale; }
+    void zero();
+
 private:
     // the task loop, never exits
     void updateLoop();
@@ -34,6 +39,10 @@ private:
     ArmModel arm0, arm120, arm240;
 
     int32_t goal_x, goal_y, goal_z;
+
+    int16_t cal_zero;
+    float   cal_scale;
+    bool    needUpdate;
 };
 
 extern Effector effector;
