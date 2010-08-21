@@ -103,6 +103,7 @@ void Display::updateLoop()
     bool benchDone = FALSE;
 
     for (int frames = 0;; frames++) {
+        //xprintf("Eff [%+4d %+4d %+4d]", effector.getX(), effector.getY(), effector.getZ());
         xsprintf(buf, "Eff [%+4d %+4d %+4d]", 
             effector.getX(), 
             effector.getY(),
