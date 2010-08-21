@@ -14,18 +14,19 @@ public:
     
     void CreateTask(uint32_t priority);
 
-    void SetPosition(uint16_t s1pos, uint16_t s2pos, uint16_t s3pos); 
+    void SetPosition(uint32_t s1pos, uint32_t s2pos, uint32_t s3pos); 
 
     void PulseNextServo(void);
 
-    //inline Timer1* getTimer() { return &timer; }
+    inline void setEnabled(bool e) { enabled = e; }
+    inline bool isEnabled() const { return enabled; }
 
 private:
     OUT* s[3];
 
-    uint16_t sval[3];
-
-    uint16_t servoidx;
+    uint32_t sval[3];
 
     Timer1 timer;
+
+    bool enabled;
 };

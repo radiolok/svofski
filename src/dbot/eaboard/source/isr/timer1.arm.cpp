@@ -10,7 +10,12 @@
 
 Timer1* Timer1::Instance;
 
-Timer1::Timer1() : counter(0) {
+Timer1::Timer1(OUT* pin1, OUT* pin2, OUT* pin3) : 
+    counter(0)
+{
+    pin[0] = pin1;
+    pin[1] = pin2;
+    pin[2] = pin3;
 }
 
 void Timer1::Install() {
@@ -35,21 +40,34 @@ void Timer1::Install() {
 
 }
 
-void Timer1::RunOnce(uint32_t us, OUT* outpin) {
-    T1_TCR = 2; // reset timer
-    // save pin for turning it off from ISR
-    pin = outpin;
-
-    // configTICK_RATE_HZ * us / 1m
-    // tick rate is 58982400, cross two 00 at tick rate and 1m 
-    T1_MR0 = (configCPU_CLOCK_HZ/100)*us/10000;
-
-    // begin pulse
-    pin->SetLow();
-
-    // start the timer
-    T1_TCR = 1; 
+void Timer1::RunOnce(uint32_t t1, uint32_t t2, uint32_t t3) {
+    time[0] = t1;
+    time[1] = t2;
+    time[2] = t3;
+    pinidx = 0;
+    Run();
 }
+
+void Timer1::Run() {
+    T1_TCR = 2; // reset timer
+
+    if (pinidx < 3) {
+        // configTICK_RATE_HZ * us / 1m
+        // tick rate is 58982400, cross two 00 at tick rate and 1m 
+
+        uint32_t x = configCPU_CLOCK_HZ/400;
+        x *= time[pinidx];
+        x /= 10000;
+
+        T1_MR0 = x;
+
+        // begin pulse
+        pin[pinidx]->SetLow();
+
+        // start the timer
+        T1_TCR = 1;
+    }
+ }
 
 void Timer1::ISR_Wrapper() {
     portSAVE_CONTEXT();
@@ -59,8 +77,12 @@ void Timer1::ISR_Wrapper() {
 
 void Timer1::ISR_Handler() {
     // end pulse, stop timer
-    pin->SetHigh();
+    pin[pinidx]->SetHigh();
     counter++;
     T1_IR = 1;          // clear match interrupt bit
     VICVectAddr = 0;    // clear VIC 
+
+    // continue with the next servo
+    pinidx++;
+    Run();
 }
