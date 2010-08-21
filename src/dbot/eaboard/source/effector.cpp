@@ -5,11 +5,11 @@
 #include "queue.h"
 
 #include "gpio.h"
-#include "servor.h"
 #include "effector.h"
 #include "armmodel.h"
 #include "xprintf.h"
 #include "display.h"
+#include "timer1.h"
 
 #define HIP     150.0f
 #define ANKLE   335.0f
@@ -21,7 +21,7 @@
 Effector effector;
 
 Effector::Effector(void) :
-    servor(&GPIO::servo[0], &GPIO::servo[1], &GPIO::servo[2]),
+    timer(&GPIO::servo[0], &GPIO::servo[1], &GPIO::servo[2]),
     arm0  (0.0f,    HIP, ANKLE, BASE, EFF),
     arm120(120.0f,  HIP, ANKLE, BASE, EFF),
     arm240(240.0f,  HIP, ANKLE, BASE, EFF),
@@ -29,6 +29,7 @@ Effector::Effector(void) :
     cal_scale(10.14f*4),
     modeReq(HOLD)
 {
+    timer.Install();
 }
 
 void Effector::SetGoal(int32_t x, int32_t y, int32_t z) 
@@ -39,14 +40,13 @@ void Effector::SetGoal(int32_t x, int32_t y, int32_t z)
     float rho120 = arm120.MoveTo(x, y, z);
     float rho240 = arm240.MoveTo(x, y, z);
 
-    servor.SetPosition(toServoValue(rho0),
-                       toServoValue(rho120),
-                       toServoValue(rho240));
+    timer.Load(toServoValue(rho0),
+               toServoValue(rho120),
+               toServoValue(rho240));
 }
 
 void Effector::Init(uint32_t servorPriority) 
 {
-    servor.CreateTask(servorPriority);
     xTaskCreate(controlTask, (signed char *) "EFF", 
                 EFFECTOR_TASK_STACK_SIZE, 
                 NULL, servorPriority-1, (xTaskHandle *) NULL);
@@ -146,8 +146,9 @@ void Effector::updateLoop() {
     loopradius = loop2radius = 0;
 
 
-    servor.setEnabled(TRUE);
     SetGoal(0, 350, 0);
+
+    timer.Enable(TRUE);
 
     animode = RAISE;
     animate = -1;
@@ -260,6 +261,8 @@ void Effector::updateLoop() {
             SetGoal(getX() + dx, 
                     getY() + dy, 
                     getZ() + dz);
+
+            //xprintf("[%d %d %d]\n", getX(), getY(), getZ());
 
             // request screen redraw
             display.Enqueue(CMD_LCD_INVALIDATE);

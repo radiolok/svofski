@@ -1,7 +1,7 @@
 #pragma once
 #include <inttypes.h>
 #include "FreeRTOS.h"
-#include "servor.h"
+#include "timer1.h"
 #include "armmodel.h"
 
 class Effector {
@@ -50,7 +50,7 @@ private:
     float tcos(int angle);
 
 private:
-    Servor servor;
+    Timer1  timer;
 
     ArmModel arm0, arm120, arm240;
 

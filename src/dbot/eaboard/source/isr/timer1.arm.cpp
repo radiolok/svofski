@@ -40,16 +40,28 @@ void Timer1::Install() {
 
 }
 
-void Timer1::RunOnce(uint32_t t1, uint32_t t2, uint32_t t3) {
+void Timer1::Enable(bool e) {
+    if (e) {
+        pinidx = 0;
+        Run();
+    } else {
+        T1_TCR = 2;
+        for (int i = 0; i < 3; i++) pin[i]->SetHigh();
+    }
+}
+
+void Timer1::Load(uint32_t t1, uint32_t t2, uint32_t t3) {
     time[0] = t1;
     time[1] = t2;
     time[2] = t3;
-    pinidx = 0;
-    Run();
+    //pinidx = 0;
+    //Run();
 }
 
 void Timer1::Run() {
     T1_TCR = 2; // reset timer
+
+    if (pinidx == 3) pinidx = 0;
 
     if (pinidx < 3) {
         // configTICK_RATE_HZ * us / 1m

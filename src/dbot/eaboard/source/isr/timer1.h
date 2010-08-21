@@ -17,9 +17,11 @@ public:
     Timer1(OUT* pin1, OUT* pin2, OUT* pin3);
     void Install(void);
 
-    void RunOnce(uint32_t time1, uint32_t time2, uint32_t time3);
+    void Load(uint32_t time1, uint32_t time2, uint32_t time3);
 
-    inline uint32_t getCounter() { return counter; }
+    void Enable(bool enable);
+
+    inline uint32_t getCounter() const { return counter; }
 
 private:
     void Run();
