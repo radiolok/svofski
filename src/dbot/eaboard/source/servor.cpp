@@ -13,8 +13,7 @@ static portTASK_FUNCTION_PROTO(servorTask, pvParameters);
 Servor* Servor::Instance;
 
 Servor::Servor(OUT* pin1, OUT* pin2, OUT* pin3) :
-    servoidx(0),
-    timer()
+    timer(pin1, pin2, pin3)
 {
     s[0] = pin1; s[1] = pin2; s[2] = pin3;
     sval[0] = 2*(sval[1] = 2*(sval[2] = NEUTRAL));
@@ -23,11 +22,13 @@ Servor::Servor(OUT* pin1, OUT* pin2, OUT* pin3) :
     timer.Install();
 }
 
-void Servor::SetPosition(uint16_t s1, uint16_t s2, uint16_t s3) 
+void Servor::SetPosition(uint32_t s1, uint32_t s2, uint32_t s3) 
 {
+    taskENTER_CRITICAL();
     sval[0] = s1;
     sval[1] = s2;
     sval[2] = s3;
+    taskEXIT_CRITICAL();
 }
 
 void Servor::CreateTask(uint32_t priority) 
@@ -37,16 +38,15 @@ void Servor::CreateTask(uint32_t priority)
 
 void Servor::PulseNextServo() 
 {
-    timer.RunOnce(sval[servoidx], s[servoidx]);
-    if (++servoidx == 3) servoidx = 0;
+    if (enabled) {
+        timer.RunOnce(sval[0], sval[1], sval[2]);
+    }
 }
-
 
 static portTASK_FUNCTION(servorTask, pvParameters ) { (void)pvParameters;
     xprintf("servor task active\n");
     for(;;) {
         Servor::Instance->PulseNextServo(); 
-        // 15ms between pulses, each servo is fed every 45ms
-        vTaskDelay(5/portTICK_RATE_MS);        
+        vTaskDelay(10/portTICK_RATE_MS);        
     }
 }

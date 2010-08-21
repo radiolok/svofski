@@ -6,12 +6,22 @@
 
 class Effector {
 public:
+    enum LolMode {
+        HOLD = 0,
+        RAISE = 1,
+        LOOP1 = 2,
+        LOOP2 = 4,
+        MOVETO = 8,
+    };
+public:
     Effector(void);
     void Init(uint32_t servorPriority);
 
     void SetGoal(int32_t x, int32_t y, int32_t z);
 
-    uint16_t toServoValue(float rho) const;
+    void AnimateTo(int32_t x, int32_t y, int32_t z, float speed = 1.0);
+
+    uint32_t toServoValue(float rho) const;
 
     inline int32_t getX() const { return goal_x; }
     inline int32_t getY() const { return goal_y; }
@@ -21,10 +31,12 @@ public:
     inline int16_t getAngle120() const { return roundf(MathUtil::deg(arm120.getRho())); }
     inline int16_t getAngle240() const { return roundf(MathUtil::deg(arm240.getRho())); }
 
-    void calibrate(const int16_t base, const float scale);
-    inline int16_t getZero() const { return cal_zero; }
+    void calibrate(const int32_t base, const float scale);
+    inline int32_t getZero() const { return cal_zero; }
     inline float   getScale() const{ return cal_scale; }
     void zero();
+
+    void lol(const LolMode mode);
 
 private:
     // the task loop, never exits
@@ -33,6 +45,10 @@ private:
     // FreeRTOS task handler
     static void controlTask(void *);
 
+    void precalc();
+    float tsin(int angle);
+    float tcos(int angle);
+
 private:
     Servor servor;
 
@@ -40,9 +56,19 @@ private:
 
     int32_t goal_x, goal_y, goal_z;
 
-    int16_t cal_zero;
+    uint32_t cal_zero;
     float   cal_scale;
     bool    needUpdate;
+
+    LolMode modeReq;
+
+    float fx, fy, fz;   // differentials
+    float gx, gy, gz;   // goals
+    float cx, cy, cz;   // currents
+
+    int loopradius, loop2radius;
+
+    float sintab[128];
 };
 
 extern Effector effector;
