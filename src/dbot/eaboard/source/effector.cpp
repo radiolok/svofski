@@ -11,6 +11,8 @@
 #include "display.h"
 #include "timer1.h"
 
+#include "motion.h"
+
 #define HIP     150.0f
 #define ANKLE   335.0f
 #define BASE    78.0f

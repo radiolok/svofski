@@ -3,6 +3,8 @@
 #include <math.h>
 #include "xprintf.h"
 
+class Point;
+
 /// Generic math utilities
 class MathUtil {
 public:
@@ -14,6 +16,7 @@ public:
 
     /// Euclidean distance betwenn two points: (x1,y1,z1) and (x2,y2,z2)
     static float dist(float, float, float, float, float, float);
+    static float dist(Point& a, Point& b);
 };
 
 /// A point in 3-D space, floating point
