@@ -18,7 +18,7 @@
 #define BASE    78.0f
 #define EFF     35.0f
 
-#define EFFECTOR_TASK_STACK_SIZE    (configMINIMAL_STACK_SIZE * 2)
+#define EFFECTOR_TASK_STACK_SIZE    (configMINIMAL_STACK_SIZE * 4)
 
 Effector effector;
 
@@ -79,8 +79,8 @@ void Effector::updateLoop() {
     int animate = 0,
         animateGoal = 0,
         animode = 0;
-    int loopangle = 0,
-        loop2angle = 0;
+
+    int loop2angle;
    
     int lx = 0,
         lz = 0;
@@ -88,10 +88,10 @@ void Effector::updateLoop() {
     int movingtime = 0,
         speed = 3;
 
+    Point zeropoint(0,210,0);
+    CirclePath circlePath(zeropoint, 100.0f);
+
     portTickType loopTime;
-
-    loopradius = loop2radius = 0;
-
 
     SetGoal(0, 350, 0);
 
@@ -170,9 +170,14 @@ void Effector::updateLoop() {
         }
 
         if (loopradius > 0) {
-            lx = roundf(cos(((float)loopangle)/180.0*M_PI) * loopradius);
-            lz = roundf(sin(((float)loopangle)/180.0*M_PI) * loopradius);
-            loopangle = (loopangle + 1) % 360;
+            //lx = roundf(cos(((float)loopangle)/180.0*M_PI) * loopradius);
+            //lz = roundf(sin(((float)loopangle)/180.0*M_PI) * loopradius);
+            //loopangle = (loopangle + 1) % 360;
+            Point lp(0,0,0);
+            int dummy;
+            circlePath.next(&lp, &dummy);
+            lx = loopradius/100.0*lp.x;
+            lz = loopradius/100.0*lp.z;
             needUpdate = TRUE;
         } else {
             lx = lz = 0;
@@ -190,7 +195,7 @@ void Effector::updateLoop() {
         if (loop2radius > 0) {
             lx += roundf(cos(((float)loop2angle)/180.0*M_PI) * loop2radius);
             lz += roundf(sin(((float)loop2angle)/180.0*M_PI) * loop2radius);
-            loop2angle = (loop2angle + 2) % 360;
+            loop2angle = (loop2angle + 3) % 360;
             needUpdate = TRUE;
         }
 
