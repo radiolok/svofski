@@ -69,63 +69,8 @@ void Effector::zero() {
     needUpdate = TRUE;
 }
 
-void Effector::AnimateTo(int32_t x, int32_t y, int32_t z, float speed) {
-    gx = x; gy = y; gz = z;
-    cx = getX(); cy = getY(); cz = getZ();
-    float dist = MathUtil::dist(cx,cy,cz, gx,gy,gz);
-    fx = (gx-cx)/dist;
-    fy = (gy-cy)/dist;
-    gz = (gz-cz)/dist;
-    modeReq = MOVETO;
-}
-
 void Effector::lol(LolMode lm) {
     modeReq = lm;
-    /*
-    switch (lm) {
-        case LOOP1: loopradius = 0;
-                    break;
-        case LOOP2: loop2radius = 0;
-                    break;
-    }
-    */
-}
-
-void Effector::precalc() {
-    for(int i = 0; i < 128; i++) {
-        sintab[i] = sinf(i*(M_PI/2.0/128.0));
-    }
-}
-
-float Effector::tsin(int angle) {
-    int sign;
-
-    if (angle < 0) {
-        sign = -1;
-        angle = -angle;
-    } else {
-        sign = 1;
-    }
-
-    angle = angle % 512;
-
-    if (angle >= 128 && angle < 256) { 
-        angle = 255 - angle;
-    } 
-    else if (angle >= 256 && angle < 384) {
-        angle = angle - 256;
-        sign = -sign;
-    } 
-    else if (angle >= 384) {
-        angle = 511 - angle;
-        sign = -sign;
-    }
-
-    return sign == 1 ? sintab[angle] : -sintab[angle];
-}
-
-float Effector::tcos(int angle) {
-   return tsin(angle+128); 
 }
 
 void Effector::updateLoop() {
@@ -155,8 +100,6 @@ void Effector::updateLoop() {
     animode = RAISE;
     animate = -1;
     animateGoal = 210;
-
-    precalc();
 
     display.Enqueue(CMD_LCD_INVALIDATE);
 
@@ -227,12 +170,9 @@ void Effector::updateLoop() {
         }
 
         if (loopradius > 0) {
-            //lx = roundf(cos(((float)loopangle)/180.0*M_PI) * loopradius);
-            //lz = roundf(sin(((float)loopangle)/180.0*M_PI) * loopradius);
-            //loopangle = (loopangle + 1) % 360;
-            lx = roundf(tcos(loopangle) * loopradius);
-            lz = roundf(tsin(loopangle) * loopradius);
-            loopangle = (loopangle + 1) % 512;
+            lx = roundf(cos(((float)loopangle)/180.0*M_PI) * loopradius);
+            lz = roundf(sin(((float)loopangle)/180.0*M_PI) * loopradius);
+            loopangle = (loopangle + 1) % 360;
             needUpdate = TRUE;
         } else {
             lx = lz = 0;

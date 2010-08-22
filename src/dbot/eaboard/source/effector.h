@@ -19,8 +19,6 @@ public:
 
     void SetGoal(int32_t x, int32_t y, int32_t z);
 
-    void AnimateTo(int32_t x, int32_t y, int32_t z, float speed = 1.0);
-
     uint32_t toServoValue(float rho) const;
 
     inline int32_t getX() const { return goal_x; }
@@ -45,10 +43,6 @@ private:
     // FreeRTOS task handler
     static void controlTask(void *);
 
-    void precalc();
-    float tsin(int angle);
-    float tcos(int angle);
-
 private:
     Timer1  timer;
 
@@ -67,8 +61,6 @@ private:
     float cx, cy, cz;   // currents
 
     int loopradius, loop2radius;
-
-    float sintab[128];
 };
 
 extern Effector effector;

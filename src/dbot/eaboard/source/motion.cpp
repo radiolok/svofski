@@ -33,3 +33,16 @@ bool VectorPath::next(Point* p, int* speed) {
     return --step;
 }
 
+CirclePath::CirclePath(Point& centre, float radius, float startangle, float endangle):
+    c(centre),
+    r(radius),
+    phi(MathUtil::rad(startangle)),
+    phi2(MathUtil::rad(endangle))
+{
+}
+
+bool CirclePath::next(Point*p, int* speed) {
+    p->moveto(r * cosf(phi), p->y, r * sinf(phi));
+    *speed = 1;
+    phi += MathUtil::rad(0.5);
+}
