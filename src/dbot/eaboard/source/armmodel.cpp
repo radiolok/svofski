@@ -9,7 +9,7 @@ float MathUtil::dist(float x1, float y1, float z1,
     return sqrtf((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) + (z2-z1)*(z2-z1));
 }
 
-float MathUtil::dist(Point& a, Point& b)
+float MathUtil::dist(const Point& a, const Point& b)
 {
     return dist(a.x, a.y, a.z, b.x, b.y, b.z);
 }
@@ -39,8 +39,8 @@ void Point::offset(Point& o) {
     offset(o.x, o.y, o.z);
 }
 
-float Point::distFrom(Point& o) {
-    return MathUtil::dist(x, y, z, o.x, o.y, o.z);
+float Point::distFrom(const Point& o) const {
+    return MathUtil::dist(*this, o);
 }
 
 void Point::rotateY(float phi) {

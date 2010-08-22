@@ -16,7 +16,7 @@ public:
 
     /// Euclidean distance betwenn two points: (x1,y1,z1) and (x2,y2,z2)
     static float dist(float, float, float, float, float, float);
-    static float dist(Point& a, Point& b);
+    static float dist(const Point& a, const Point& b);
 };
 
 /// A point in 3-D space, floating point
@@ -29,11 +29,11 @@ public:
     void moveto(Point& o);
     void offset(Point& o);
     void offset(float,float,float);
-    float distFrom(Point& o);
+    float distFrom(const Point& o) const;
     void rotateY(float phi);
     void rotateZ(float phi);
 
-    inline void print() {xprintf("P[%d,%d,%d]", (int)x, (int)y, (int)z);}
+    inline void print() const {xprintf("P[%d,%d,%d]", (int)x, (int)y, (int)z);}
 };
 
 /// \brief Model of a single arm of a delta robot
