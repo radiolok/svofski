@@ -9,6 +9,11 @@ float MathUtil::dist(float x1, float y1, float z1,
     return sqrtf((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) + (z2-z1)*(z2-z1));
 }
 
+float MathUtil::dist(Point& a, Point& b)
+{
+    return dist(a.x, a.y, a.z, b.x, b.y, b.z);
+}
+
 Point::Point(const float _x, const float _y, const float _z) :
     x(_x), y(_y), z(_z)
 {
