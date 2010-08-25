@@ -12,6 +12,7 @@
 #include "xprintf.h"
 #include "display.h"
 #include "effector.h"
+#include "motion.h"
 
 #define STACK_SIZE      (configMINIMAL_STACK_SIZE*2)
 #define BUFFER_LENGTH   8
@@ -51,6 +52,18 @@ static portTASK_FUNCTION( comTxTask, pvParameters ) { (void)pvParameters;
         }
     }
 }
+
+static Waypoint bridge[] = {
+    Waypoint(Point(100,240,0),  MotionPath::ACCEL_DECEL),
+    Waypoint(Point(100,350,0),  MotionPath::CONST_S),
+    Waypoint(Point(100,240,0),  MotionPath::CONST_S),
+    Waypoint(Point(-100,240,0), MotionPath::ACCEL_DECEL),
+    Waypoint(Point(-100,350,0), MotionPath::CONST_S),
+    Waypoint(Point(-100,240,0), MotionPath::CONST_S)
+    };
+
+
+#define LENGTH(x)   (sizeof(x)/sizeof(x[0]))
 
 static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
     extern Effector effector;
@@ -99,11 +112,49 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
             case 'K':   effector.SetGoal(effector.getX(), effector.getY()-10, effector.getZ());
                         display.Enqueue(CMD_LCD_INVALIDATE);
                         break;
-            case '0':   effector.zero();
+            case 'b':   
+                        while (effector.isMoving()) vTaskDelay(25/portTICK_RATE_MS);
+
+                        if (!effector.isMoving()) {
+                            VectorPath zp1(Point(effector.getX(),effector.getY(),effector.getZ()), 
+                                           Point(effector.getX(),210,effector.getZ()));
+                            effector.Enqueue(&zp1);
+                            vTaskDelay(25/portTICK_RATE_MS);
+                            while (effector.isMoving()) vTaskDelay(25/portTICK_RATE_MS);
+                        }
+
+                        while(serial.GetChar(0) == -1) {
+                            for (int phase = 0; phase < LENGTH(bridge); phase++) {
+                                VectorPath vp1(Point(effector.getX(), effector.getY(), effector.getZ()), bridge[phase].loc);
+                                vp1.SetVelocity(bridge[phase].profile);
+
+                                effector.Enqueue(&vp1);
+                                vTaskDelay(25/portTICK_RATE_MS);
+                                while (effector.isMoving()) vTaskDelay(10/portTICK_RATE_MS);
+                                if (serial.GetChar(0) != -1) goto boo;
+                            }
+
+                            for (int i = 0; i < LENGTH(bridge); i++) {
+                                bridge[i].loc.rotateY(MathUtil::rad(90));
+                            }
+                        }
+                        boo:
                         break;
-            case '1':   effector.lol(Effector::LOOP1);
+
+            case '0':   if (!effector.isMoving()) {
+                            VectorPath zp1(Point(effector.getX(),effector.getY(),effector.getZ()), Point(0,210,0));
+                            effector.Enqueue(&zp1);
+                        }
                         break;
-            case '2':   effector.lol(Effector::LOOP2);
+            case '1':   if (!effector.isMoving()) {
+                            VectorPath qvp1(Point(effector.getX(),effector.getY(),effector.getZ()), Point(100,210,0));
+                            CirclePath qcp1(Point(0,210,0), 100, 0, 359);
+                            effector.Enqueue(&qvp1);
+                            effector.Enqueue(&qcp1);
+                        }
+                        break;
+            case '2':   {
+                        }
                         break;
             default:    break;
             }
