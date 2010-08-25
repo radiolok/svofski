@@ -24,7 +24,7 @@ class Point {
 public:
     float x, y, z;
 
-    Point(float, float, float);
+    Point(float x = 0, float y = 0, float z = 0);
     void moveto(float,float,float);
     void moveto(Point& o);
     void offset(Point& o);

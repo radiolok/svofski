@@ -27,9 +27,9 @@ Effector::Effector(void) :
     arm0  (0.0f,    HIP, ANKLE, BASE, EFF),
     arm120(120.0f,  HIP, ANKLE, BASE, EFF),
     arm240(240.0f,  HIP, ANKLE, BASE, EFF),
+    path(0),
     cal_zero(1520*4),
-    cal_scale(10.14f*4),
-    modeReq(HOLD)
+    cal_scale(10.14f*4)
 {
     timer.Install();
 }
@@ -49,6 +49,8 @@ void Effector::SetGoal(int32_t x, int32_t y, int32_t z)
 
 void Effector::Init(uint32_t servorPriority) 
 {
+    queue = xQueueCreate(1, sizeof(MotionPath*));
+
     xTaskCreate(controlTask, (signed char *) "EFF", 
                 EFFECTOR_TASK_STACK_SIZE, 
                 NULL, servorPriority-1, (xTaskHandle *) NULL);
@@ -69,10 +71,53 @@ void Effector::zero() {
     needUpdate = TRUE;
 }
 
-void Effector::lol(LolMode lm) {
-    modeReq = lm;
+void Effector::Enqueue(MotionPath* p) {
+    xQueueSend(queue, &p, portMAX_DELAY);
 }
 
+void Effector::updateLoop() {
+    Point loc;
+    int speed;
+    int pathsteps;
+
+    portTickType loopTime;
+
+    // reset the effector
+    SetGoal(0, 350, 0);
+
+    // enable servo control
+    timer.Enable(TRUE);
+
+    display.Enqueue(CMD_LCD_INVALIDATE);
+
+    loopTime = xTaskGetTickCount();
+    for(;;) {
+        if (path == 0 && xQueueReceive(queue, &path, 0) == pdTRUE) {
+            // we now have a path to follow
+            xprintf("path: %s:%x ", path->name(), path);
+            pathsteps = 0;
+        }
+
+        if (path) {
+            pathsteps++;
+            if (!path->next(&loc, &speed)) {
+                path = 0;
+                xprintf("%d steps\n", pathsteps);
+            }
+            SetGoal(loc.x, loc.y, loc.z);
+
+            display.Enqueue(CMD_LCD_INVALIDATE);
+
+            while(xTaskGetTickCount() < loopTime + speed) taskYIELD();
+            loopTime = xTaskGetTickCount();
+        } else {
+            vTaskDelayUntil(&loopTime, 10/portTICK_RATE_MS);
+            //movingtime = 0;
+        }
+    }
+}
+
+#if 0
 void Effector::updateLoop() {
     int dx, dy, dz;
     int fire = 0;
@@ -232,6 +277,8 @@ void Effector::updateLoop() {
         }
     }
 }
+
+#endif
 
 void Effector::controlTask(void *params) 
 {   

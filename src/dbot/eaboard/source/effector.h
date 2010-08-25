@@ -1,8 +1,11 @@
 #pragma once
 #include <inttypes.h>
 #include "FreeRTOS.h"
+#include "queue.h"
+
 #include "timer1.h"
 #include "armmodel.h"
+#include "motion.h"
 
 class Effector {
 public:
@@ -34,7 +37,9 @@ public:
     inline float   getScale() const{ return cal_scale; }
     void zero();
 
-    void lol(const LolMode mode);
+    void Enqueue(MotionPath* path);
+
+    inline bool isMoving() const { return path != 0; }
 
 private:
     // the task loop, never exits
@@ -48,19 +53,15 @@ private:
 
     ArmModel arm0, arm120, arm240;
 
+    MotionPath* path;
+
     int32_t goal_x, goal_y, goal_z;
+
+    xQueueHandle queue;
 
     uint32_t cal_zero;
     float   cal_scale;
     bool    needUpdate;
-
-    LolMode modeReq;
-
-    float fx, fy, fz;   // differentials
-    float gx, gy, gz;   // goals
-    float cx, cy, cz;   // currents
-
-    int loopradius, loop2radius;
 };
 
 extern Effector effector;
