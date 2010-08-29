@@ -34,7 +34,7 @@
 /* Priorities for the demo application tasks. */
 
 #define PRIORITY_LED            (tskIDLE_PRIORITY + 0)
-#define PRIORITY_SERIAL         (tskIDLE_PRIORITY + 2)
+#define PRIORITY_SERIAL         (tskIDLE_PRIORITY + 5)
 #define PRIORITY_DISPLAY        (tskIDLE_PRIORITY + 1)
 #define PRIORITY_SERVOR         (tskIDLE_PRIORITY + 5)
 

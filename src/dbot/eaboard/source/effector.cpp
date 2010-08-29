@@ -49,7 +49,7 @@ void Effector::SetGoal(int32_t x, int32_t y, int32_t z)
 
 void Effector::Init(uint32_t servorPriority) 
 {
-    queue = xQueueCreate(1, sizeof(MotionPath*));
+    queue = xQueueCreate(2, sizeof(MotionPath*));
 
     xTaskCreate(controlTask, (signed char *) "EFF", 
                 EFFECTOR_TASK_STACK_SIZE, 
@@ -92,9 +92,9 @@ void Effector::updateLoop() {
 
     loopTime = xTaskGetTickCount();
     for(;;) {
-        if (path == 0 && xQueueReceive(queue, &path, 0) == pdTRUE) {
+        if (path == 0 && xQueueReceive(queue, &path, portMAX_DELAY) == pdTRUE) {
             // we now have a path to follow
-            xprintf("path: %s:%x ", path->name(), path);
+            //xprintf("path: %s:%x ", path->name(), path);
             pathsteps = 0;
         }
 
@@ -102,7 +102,7 @@ void Effector::updateLoop() {
             pathsteps++;
             if (!path->next(&loc, &speed)) {
                 path = 0;
-                xprintf("%d steps\n", pathsteps);
+                //xprintf("%d steps\n", pathsteps);
             }
             SetGoal(loc.x, loc.y, loc.z);
 
@@ -110,10 +110,7 @@ void Effector::updateLoop() {
 
             while(xTaskGetTickCount() < loopTime + speed) taskYIELD();
             loopTime = xTaskGetTickCount();
-        } else {
-            vTaskDelayUntil(&loopTime, 10/portTICK_RATE_MS);
-            //movingtime = 0;
-        }
+        } 
     }
 }
 
@@ -192,10 +189,10 @@ void Effector::updateLoop() {
 
         if (animode & MOVETO) {
             cx += fx; cy += fy; cz += fz;
-            xprintf("y=%d |%d|", (int)cy, (int)MathUtil::dist(cx,cy,cz, gx, gy,gz));
+            //xprintf("y=%d |%d|", (int)cy, (int)MathUtil::dist(cx,cy,cz, gx, gy,gz));
             if (MathUtil::dist(cx,cy,cz, gx,gy,gz) < 1.1f) {
                 animode ^= MOVETO;
-                xprintf("GOAL\n");
+                //xprintf("GOAL\n");
             }
             dx = roundf(cx) - getX();
             dy = roundf(cy) - getY();
