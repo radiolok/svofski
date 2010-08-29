@@ -22,6 +22,9 @@ public:
 class VectorPath : public MotionPath {
 public:
     VectorPath(Point from, Point to);
+    VectorPath();
+
+    void Init(Point from, Point to, int velocity);
 
     bool next(Point* p, int* speed);
 
@@ -55,7 +58,30 @@ private:
 class Waypoint {
 public:
     inline Waypoint(Point p, MotionPath::Profile prof) : loc(p), profile(prof) {}
+    inline Waypoint() {}
 
     Point loc;
     MotionPath::Profile profile;    
+};
+
+class Multipath : public MotionPath {
+public:
+    Multipath(Waypoint *queue, int qlen);
+
+    virtual bool next(Point* p, int* speed);
+    virtual const char* name() const;
+
+    void newPoint(int32_t x, int32_t y, int32_t z);
+
+private:
+    inline int8_t advanceHead() { return head = ++head == queueLength ? 0 : head; }
+    inline int8_t advanceTail() { return tail = ++tail == queueLength ? 0 : tail; }
+    bool nextSegment(Point p);
+
+private:
+    Waypoint* queue;
+    int8_t queueLength;
+    int8_t head; 
+    int8_t tail;
+    VectorPath vp;
 };

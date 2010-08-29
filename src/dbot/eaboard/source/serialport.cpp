@@ -129,7 +129,7 @@ int SerialPort::PutChar(char c, portTickType blockTime)
     return result;
 }
 
-int SerialPort::GetChar(portTickType blockTime)
+int SerialPort::GetChar(portTickType blockTime) const
 {
     char c;
 
@@ -138,6 +138,17 @@ int SerialPort::GetChar(portTickType blockTime)
 
     if (xQueueReceive(isr.getRX(), &c, blockTime)) {
         return (int)c;
+    }
+
+    return -1;
+}
+
+int SerialPort::Peek(portTickType blockTime) const
+{
+    char c;
+
+    if (xQueuePeek(isr.getRX(), &c, blockTime)) {
+        return (int) c;
     }
 
     return -1;

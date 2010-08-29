@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <math.h>
+#include <ctype.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -15,7 +16,7 @@
 #include "motion.h"
 
 #define STACK_SIZE      (configMINIMAL_STACK_SIZE*2)
-#define BUFFER_LENGTH   8
+#define BUFFER_LENGTH   64
 
 static portTASK_FUNCTION_PROTO( comTxTask, pvParameters );
 static portTASK_FUNCTION_PROTO( comRxTask, pvParameters );
@@ -62,11 +63,41 @@ static Waypoint bridge[] = {
     Waypoint(Point(-100,240,0), MotionPath::CONST_S)
     };
 
+#define MOUSEQ_LEN 16
+static Waypoint mousePathWaypoints[MOUSEQ_LEN];
+static int mouseHead = 0, mouseTail = 0;
+
+Multipath mousePath(mousePathWaypoints, MOUSEQ_LEN);
+
+int readInt();
+
+int readInt() {
+    char c;
+    char rbuf[10];
+    int i;
+
+    for (i = 0; i < 9; i++) {
+        c = serial.GetChar();
+        serial.PutChar(c);
+        if (c == '-' || isdigit(c)) {
+            rbuf[i] = c;
+        } else {
+            rbuf[i] = '\0';
+            break;
+        }
+    }
+    rbuf[9] = '\0';
+    //xprintf("read[%s]", rbuf);
+
+    return atoi(rbuf);
+}
 
 #define LENGTH(x)   (sizeof(x)/sizeof(x[0]))
 
 static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
     extern Effector effector;
+
+    int mouseX = 0, mouseY = 0, mouseZ = 0;
 
     int ic;
     char c = 0;
@@ -80,9 +111,10 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
     bool calibrated = FALSE;
 
     for(;;) {
-        ic = serial.GetChar();
+        ic = serial.GetChar(10/portTICK_RATE_MS);
         if (ic != -1) {
             c = (char)ic;
+            serial.PutChar(c);
             switch(c) {
             case '[':   contrast--;
                         display.Enqueue(CMD_LCD_CONTRAST, contrast);
@@ -140,6 +172,17 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
                         }
                         boo:
                         break;
+            case 'M':
+                        {
+                            mouseX = readInt();
+                            mouseY = readInt();
+                            mouseZ = readInt();
+                            mousePath.newPoint(mouseX, mouseY, mouseZ);
+                            if (!effector.isMoving()) {
+                                effector.Enqueue(&mousePath);
+                            }
+                        }
+                       break;
 
             case '0':   if (!effector.isMoving()) {
                             VectorPath zp1(Point(effector.getX(),effector.getY(),effector.getZ()), Point(0,210,0));
@@ -165,38 +208,27 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
                 xprintf("Z=%d S=%d.%02d\n", cal_base, (int)floorf(cal_scale), (int)roundf(cal_scale*100)%100);
             }
 
+
             if (c == '\r') xprintf("\\r");
             if (c == '\n') {
                 xprintf("\\n");
-                btooth.PutChar('\r');
+                //btooth.PutChar('\r');
             }
-            btooth.PutChar(c);
+        } else {
+            /*
+            if (mouseHead != mouseTail) {
+                if (!effector.isMoving()) {
+                    VectorPath qvp1(Point(effector.getX(), effector.getY(), effector.getZ()), 
+                                    mousePath[mouseTail].loc);
+                    qvp1.SetVelocity(MotionPath::CONST_S);
+                    effector.Enqueue(&qvp1);
+                    mouseTail = mouseTail == MOUSEQ_LEN-1 ? 0 : mouseTail + 1;
+                }
+            }
+            */
         }
     }
 }
-/*
-            serial.PutChar(c);
-            
-
-            btooth.PutChar(c);
-            ib = btooth.GetChar(1000);
-            serial.PutChar(ib == -1 ? '#' : (char)ib);
-
-            if (c == '%') GPIO0_PIN ^= _BV(26);
-    
-            if (c == '\r') continue;
-            if (c == '\n' || (idx + 1) == LINE_LEN) {
-                lineBuffer[idx] = '\0';
-                idx = 0;
-                xSemaphoreGive(semaphore);
-            } else {
-                lineBuffer[idx] = c;
-                idx++;
-            }
-        }
-    }
-}
-*/
 
 static portTASK_FUNCTION( btRxTask, pvParameters ) { (void)pvParameters;
     int idx = 0;

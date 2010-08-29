@@ -25,7 +25,10 @@ public:
     int PutChar(char c, portTickType blockTime = portMAX_DELAY);
 
     /// Get a single char, by default with blocking if queue is full.
-    int GetChar(portTickType blockTime = portMAX_DELAY);
+    int GetChar(portTickType blockTime = portMAX_DELAY) const;
+
+    /// Return true if there is something, no wait
+    int Peek(portTickType blockTime = portMAX_DELAY) const;
 
     /// Puts a string in port, possibly blocking if queue is full.
     int Puts(const char* s, portTickType blockTime = portMAX_DELAY);

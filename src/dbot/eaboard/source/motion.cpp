@@ -19,7 +19,15 @@ VectorPath::VectorPath(Point from, Point to):
     loc(from),
     delta(0,0,0)
 {
-    xprintf("VP:["); from.print(); to.print(); xprintf("]\n");
+    Init(from, to, ACCEL_DECEL);
+}
+
+VectorPath::VectorPath() 
+{
+}
+
+void VectorPath::Init(Point from, Point to, int velocity) {
+    //xprintf("VP:["); from.print(); to.print(); xprintf("]\n");
     loc.moveto(from);
     float dist = MathUtil::dist(from, to);
     delta.moveto((to.x-from.x)/dist,
@@ -27,7 +35,7 @@ VectorPath::VectorPath(Point from, Point to):
                  (to.z-from.z)/dist);
     step = 1 + (int)roundf(dist);
     accel = 0;
-    SetVelocity(ACCEL_DECEL);
+    SetVelocity(velocity);
 }
 
 void VectorPath::SetVelocity(int v) {
@@ -102,3 +110,44 @@ const char* CirclePath::name() const {
     return "cp";
 }
 
+Multipath::Multipath(Waypoint* q, int qlen) : 
+    queue(q), queueLength(qlen), head(0), tail(0)
+{
+}
+
+void Multipath::newPoint(int32_t x, int32_t y, int32_t z) 
+{
+    bool needUpdate = FALSE;
+
+    queue[head].loc.moveto(x,y,z);
+    if (head == tail) {
+        needUpdate = TRUE;
+    }
+
+    advanceHead();
+
+    if (needUpdate) nextSegment(Point(x,y,z));
+}
+
+const char* Multipath::name() const {
+    return "p+";
+}
+
+bool Multipath::nextSegment(Point p) {
+    if (head != tail) {
+        vp.Init(p, queue[tail].loc, MotionPath::CONST_F);
+        advanceTail();
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+bool Multipath::next(Point* p, int* speed) {
+    bool result = vp.next(p, speed);
+    if (!result) {
+        result = nextSegment(*p);
+    }
+
+    return result;
+}

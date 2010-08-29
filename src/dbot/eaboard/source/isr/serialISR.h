@@ -31,7 +31,7 @@ public:
     void CreateQueues(uint32_t queueLength);
 
     /// RX queue handle
-    inline xQueueHandle getRX(void) { return qhRX; }    
+    inline xQueueHandle getRX(void) const { return qhRX; }    
 
     /// TX queue handle
     inline xQueueHandle getTX(void) { return qhTX; }    
