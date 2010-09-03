@@ -78,10 +78,13 @@ private:
     inline int8_t advanceTail() { return tail = ++tail == queueLength ? 0 : tail; }
     bool nextSegment(Point p);
 
+    bool isEndPath() const;
+
 private:
     Waypoint* queue;
     int8_t queueLength;
     int8_t head; 
     int8_t tail;
     VectorPath vp;
+    bool newPath;
 };

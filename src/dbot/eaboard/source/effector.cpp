@@ -102,8 +102,8 @@ void Effector::updateLoop() {
             pathsteps++;
             if (!path->next(&loc, &speed)) {
                 path = 0;
-                //xprintf("%d steps\n", pathsteps);
             }
+            //xprintf("@%d,%d,%d\n", (int)loc.x, (int)loc.y, (int)loc.z);
             SetGoal(loc.x, loc.y, loc.z);
 
             display.Enqueue(CMD_LCD_INVALIDATE);
