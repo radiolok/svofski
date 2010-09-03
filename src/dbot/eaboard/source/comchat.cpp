@@ -65,7 +65,6 @@ static Waypoint bridge[] = {
 
 #define MOUSEQ_LEN 16
 static Waypoint mousePathWaypoints[MOUSEQ_LEN];
-static int mouseHead = 0, mouseTail = 0;
 
 Multipath mousePath(mousePathWaypoints, MOUSEQ_LEN);
 
@@ -177,6 +176,9 @@ static portTASK_FUNCTION( comRxTask, pvParameters ) { (void)pvParameters;
                             mouseX = readInt();
                             mouseY = readInt();
                             mouseZ = readInt();
+                            if (!effector.isMoving()) {
+                                mousePath.newPoint(effector.getX(), effector.getY(), effector.getZ());
+                            }
                             mousePath.newPoint(mouseX, mouseY, mouseZ);
                             if (!effector.isMoving()) {
                                 effector.Enqueue(&mousePath);
