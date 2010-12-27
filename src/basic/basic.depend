@@ -1,0 +1,81 @@
+# depslib dependency file v1.0
+1184801299 c:\usr\src\basic\main.c
+	<stdio.h>
+	"interpreter.h"
+	"varpool.h"
+	"arrays.h"
+	"eval.h"
+
+1184542535 c:\usr\src\basic\terminal.c
+	<stdio.h>
+	"terminal.h"
+
+1184718393 c:\usr\src\basic\terminal.h
+
+1184542535 c:\usr\src\basic\interpreter.c
+	<stdio.h>
+	"interpreter.h"
+	"varpool.h"
+
+1184542535 c:\usr\src\basic\interpreter.h
+
+1184542535 c:\usr\src\basic\varpool.h
+
+1184542535 c:\usr\src\basic\varpool.c
+	<stdio.h>
+	"varpool.h"
+
+1184803695 c:\usr\src\basic\eval.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	"arrays.h"
+	"eval.h"
+	"evalfunc.h"
+	"evaloperator.h"
+	"tokenizer.h"
+	"rpn.h"
+
+1184803509 c:\usr\src\basic\eval.h
+	"rpn.h"
+
+1184542535 c:\usr\src\basic\arrays.h
+
+1184542535 c:\usr\src\basic\arrays.c
+	<stdio.h>
+	<string.h>
+	"arrays.h"
+
+1184714681 c:\usr\src\basic\evaloperator.c
+	<stdio.h>
+	<math.h>
+	"evaloperator.h"
+	"tokenizer.h"
+
+1184718308 c:\usr\src\basic\evaloperator.h
+	"eval.h"
+
+1184623724 c:\usr\src\basic\evalfunc.h
+	"eval.h"
+
+1184718379 c:\usr\src\basic\evalfunc.c
+	<stdio.h>
+	"evalfunc.h"
+	"eval.h"
+	"math.h"
+
+1184786828 c:\usr\src\basic\tokenizer.c
+	<stdio.h>
+	<stdlib.h>
+	"tokenizer.h"
+
+1184785102 c:\usr\src\basic\tokenizer.h
+
+1184803702 c:\usr\src\basic\rpn.c
+	<stdlib.h>
+	"rpn.h"
+	"evalfunc.h"
+	"evaloperator.h"
+
+1184803647 c:\usr\src\basic\rpn.h
+
