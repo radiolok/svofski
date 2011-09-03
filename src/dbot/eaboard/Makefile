@@ -3,7 +3,7 @@ include $(DEVKITARM)/base_rules
 TARGET=rtosbot
 
 USE_THUMB_MODE=YES
-DEBUG=
+DEBUG=-g
 OPTIM=-O2 -funroll-loops
 RUN_MODE=RUN_FROM_ROM
 LPC21ISP=~/src/lpc2000/lpc21isp -hex -term -control $(OUTPUT).hex /dev/tty.usbserial-A1000acS 230400 14746
