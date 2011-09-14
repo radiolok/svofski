@@ -1,0 +1,19 @@
+Goal: capture BK screen for sending it to the host PC over UART
+
+BK pixel clock = 12 MHz
+
+Fields are 318 lines, 15625 Hz approx, 50 fields/sec
+
+In B&W mode, 512x256
+In RGB mode, 256x256
+
+RGB can be calculated from B&W bits if they're captured properly.
+
+SPI hardware shifts in the bits
+DMA stores them in SRAM
+Master clock has to be 72Mhz (12x6)
+
+For 3x oversampled input: 1 line = 512*3/8 = 192 bytes, times 256 lines = 49152 bytes 
+
+1 frame = 16384 bytes
+
