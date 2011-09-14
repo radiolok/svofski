@@ -1,0 +1,42 @@
+# Project: bootloader
+# Makefile created by Dev-C++ 4.9.9.2
+
+#TARGET=mega8
+#TARGET=mega168
+TARGET=mega644
+
+PRG=$(TARGET)_bootload
+
+CPP  = g++.exe -D__DEBUG__
+CC   = gcc.exe -D__DEBUG__
+WINDRES = windres.exe
+RES  = 
+OBJ  = $(PRG).o serial.o flash.o $(RES)
+LINKOBJ  = $(PRG).o serial.o flash.o $(RES)
+LIBS =  -L"lib"  -g3 -s 
+INCS =  -I"include" 
+CXXINCS =  -I"lib/gcc/mingw32/3.4.2/include"  -I"include/c++/3.4.2/backward"  -I"include/c++/3.4.2/mingw32"  -I"include/c++/3.4.2"  -I"include" 
+BIN  = $(PRG).exe
+CXXFLAGS = $(CXXINCS)   -fexpensive-optimizations -O3 -g3
+CFLAGS = $(INCS) -D$(TARGET) -Dwindows   -fexpensive-optimizations -O3 -g3
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before $(PRG).exe all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+$(BIN): $(OBJ)
+	$(CC) $(LINKOBJ) -o $(PRG).exe $(LIBS)
+
+$(PRG).o: mega_bootload.c
+	$(CC) -c mega_bootload.c -o $(PRG).o $(CFLAGS)
+
+serial.o: serial.c
+	$(CC) -c serial.c -o serial.o $(CFLAGS)
+
+flash.o: flash.c
+	$(CC) -c flash.c -o flash.o $(CFLAGS)
