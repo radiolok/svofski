@@ -6,7 +6,7 @@
 
 Buttons buttons;
 
-Buttons::Buttons() : userInput(0),
+Buttons::Buttons() : userInput(1),
                      switchCounter(0),
                      switch1Pressed(0),
                      switch2Pressed(0) 
