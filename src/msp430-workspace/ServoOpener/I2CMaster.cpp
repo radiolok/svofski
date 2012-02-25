@@ -63,11 +63,9 @@ void I2CMaster::Send(uint8_t data)
     while((UCB0IFG & UCTXIFG0) == 0);
 }
 
-volatile int gruu;
 void I2CMaster::Request(uint8_t address) 
 {
-    //while (UCB0STATW & UCBUSY);
-    //for (gruu = 0; gruu < 10; gruu++);
+    // receive mode, (re)start condition
     UCB0CTLW0 &= ~UCTR;
     UCB0CTLW0 |= UCTXSTT;
     
