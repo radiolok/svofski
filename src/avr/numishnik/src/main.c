@@ -306,10 +306,10 @@ static void hardwareInit(void)
 #define NUMID   0
 #define NUMIE   0
 #define NUMIF   0
-/*
+
 const PROGMEM uint8_t number2segment[10] = {NUMI0, NUMI1, NUMI2, NUMI3, NUMI4, 
                                             NUMI5, NUMI6, NUMI7, NUMI8, NUMI9};
-*/
+
 /*
 uint32_t numitronsSegmentsFromNumbers(uint8_t h1, uint8_t h2, uint8_t m1, uint8_t m2)
 {
@@ -357,6 +357,7 @@ void numitronsShift(uint8_t bits)
     spi_wait();
     PORTC |= _BV(0);   // latch le data
 }
+*/
 
 void numitronsBCD(uint8_t num)
 {
@@ -371,7 +372,6 @@ void numitronsBCD(uint8_t num)
     spi_wait();
     PORTC |= _BV(0);   // latch le data
 }
-*/
 
 static uint16_t numitrons = 0;
 
@@ -402,10 +402,10 @@ int main(void)
         usbPoll();
         uartPoll();
 
-        //if (cdc_dsr()) {
-        //    numitrons++;
-        //    cdc_putchar(cdc_getchar());
-        //}
+        if (cdc_dsr()) {
+            numitrons++;
+            cdc_putchar(cdc_getchar());
+        }
 
 #if USB_CFG_HAVE_INTRIN_ENDPOINT3
         /* We need to report rx and tx carrier after open attempt */
