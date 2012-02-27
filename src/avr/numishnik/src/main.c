@@ -289,26 +289,27 @@ static void hardwareInit(void)
 }
 
 // Number definitions from the datasheet
-#define NUMI0   (BV6(3,4,5,6,8,9)>>3)
-#define NUMI1   (BV2(3,4)>>3)
-#define NUMI2   (BV5(3,5,7,8,9)>>3)
-#define NUMI3   (BV5(3,4,5,7,8)>>3)
-#define NUMI4   (BV4(3,4,6,7)>>3)
-#define NUMI5   (BV5(4,5,6,7,8)>>3)
-#define NUMI6   (BV6(4,5,6,7,8,9)>>3)
-#define NUMI7   (BV3(3,4,5)>>3)
-#define NUMI8   (BV7(3,4,5,6,7,8,9)>>3)
-#define NUMI9   (BV6(3,4,5,6,7,8)>>3)
+#define NUMI0   (BV6(3,4,5,6,8,9)   >>2)
+#define NUMI1   (BV2(3,4)           >>2)
+#define NUMI2   (BV5(3,5,7,8,9)     >>2)
+#define NUMI3   (BV5(3,4,5,7,8)     >>2)
+#define NUMI4   (BV4(3,4,6,7)       >>2)
+#define NUMI5   (BV5(4,5,6,7,8)     >>2)
+#define NUMI6   (BV6(4,5,6,7,8,9)   >>2)
+#define NUMI7   (BV3(3,4,5)         >>2)
+#define NUMI8   (BV7(3,4,5,6,7,8,9) >>2)
+#define NUMI9   (BV6(3,4,5,6,7,8)   >>2)
 
-#define NUMIA   0
-#define NUMIB   0
-#define NUMIC   0
-#define NUMID   0
-#define NUMIE   0
-#define NUMIF   0
+#define NUMIA   (BV6(1,2,3,4,5,7)   )
+#define NUMIB   (BV5(2,4,5,6,7)     )
+#define NUMIC   (BV4(3,4,6,7)       )
+#define NUMID   (BV5(1,2,5,6,7)     )
+#define NUMIE   (BV5(3,4,5,6,7)     )
+#define NUMIF   (BV4(3,4,5,7)       )
 
-const PROGMEM uint8_t number2segment[10] = {NUMI0, NUMI1, NUMI2, NUMI3, NUMI4, 
-                                            NUMI5, NUMI6, NUMI7, NUMI8, NUMI9};
+const PROGMEM uint8_t number2segment[16] = {NUMI0, NUMI1, NUMI2, NUMI3, NUMI4, 
+                                            NUMI5, NUMI6, NUMI7, NUMI8, NUMI9,
+                                            NUMIA, NUMIB, NUMIC, NUMID, NUMIE, NUMIF};
 
 /*
 uint32_t numitronsSegmentsFromNumbers(uint8_t h1, uint8_t h2, uint8_t m1, uint8_t m2)
@@ -343,7 +344,9 @@ static void spi_wait() {
     while (!(SPSR & _BV(SPIF)));
 }
 
-/*
+static volatile uint16_t numitrons = 0;
+static volatile uint8_t numitrons_blank = 0;
+
 void numitronsShift(uint8_t bits)
 {
     PORTC &= ~_BV(0);   // LE = 0
@@ -357,27 +360,30 @@ void numitronsShift(uint8_t bits)
     spi_wait();
     PORTC |= _BV(0);   // latch le data
 }
-*/
 
-void numitronsBCD(uint8_t num)
+void numitronsBCD(uint16_t num)
 {
     PORTC &= ~_BV(0);   // LE = 0
-    SPDR = number2segment[017 & num];//pgm_read_byte(&number2segment[017 & num]);
+    SPDR = (numitrons_blank & 1) ? pgm_read_byte(&number2segment[017 & num]) : 0;
     spi_wait();
-    SPDR = number2segment[017 & (num>>4)];
+    SPDR = (numitrons_blank & 2) ? pgm_read_byte(&number2segment[017 & (num>>4)]) : 0;
     spi_wait();
-    SPDR = number2segment[017 & (num>>8)];
+    SPDR = (numitrons_blank & 4) ? pgm_read_byte(&number2segment[017 & (num>>8)]) : 0;
     spi_wait();
-    SPDR = number2segment[017 & (num>>12)];
+    SPDR = (numitrons_blank & 8) ? pgm_read_byte(&number2segment[017 & (num>>12)]) : 0;
     spi_wait();
     PORTC |= _BV(0);   // latch le data
 }
 
-static uint16_t numitrons = 0;
 
 int main(void)
 {
     char c;
+    int gor = 100;
+    int dgor = 1;
+
+    numitronsInit();
+    numitronsBCD(0);
 
     wdt_enable(WDTO_1S);
 #if USB_CFG_HAVE_MEASURE_FRAME_LENGTH
@@ -387,7 +393,6 @@ int main(void)
     usbInit();
 
 
-    numitronsInit();
 
 
     intr3Status = 0;
@@ -396,15 +401,79 @@ int main(void)
     sei();
 
 
+    numitrons_blank = 0x0f;
+    numitronsBCD(numitrons);
+
 
     for(;;){    /* main event loop */
         wdt_reset();
         usbPoll();
         uartPoll();
 
-        if (cdc_dsr()) {
+        if ((gor -= dgor) == 0) {
             numitrons++;
-            cdc_putchar(cdc_getchar());
+            numitronsBCD(numitrons);
+            gor = 512;
+        }
+
+        numitronsBCD(numitrons);
+
+#if 0
+        switch ((gor>>4) & 3) {
+        case 0: numitrons_blank = 0x7; break;
+        case 1: numitrons_blank = 0xe; break;
+        case 2: numitrons_blank = 0xd; break;
+        case 3: numitrons_blank = 0xb; break;
+        }
+        numitronsBCD(numitrons);
+#endif
+        
+
+#if 0
+        switch (gor & 3) {
+        case 0: numitrons_blank = 3; break;
+        case 1: numitrons_blank = 6; break;
+        case 2: numitrons_blank = 12; break;
+        case 3: numitrons_blank = 9; break;
+        }
+        numitronsBCD(numitrons);
+#endif
+#if 0
+        numitrons_blank = 0;
+        numitronsBCD(0);
+        numitrons_blank = 0x0f;
+        numitronsBCD(numitrons);
+        numitronsBCD(numitrons);
+        numitronsBCD(numitrons);
+#endif
+
+
+        if (cdc_dsr()) {
+            cdc_putchar(c = cdc_getchar());
+            numitronsBCD(numitrons);
+            switch (c) {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+                numitronsShift(1<<(c-'0'));
+                break;
+            case 'a':
+                numitronsShift(NUMI4);
+                break;
+            case ' ':
+                numitrons_blank ^= 0x0f;
+                break;
+            case '.':
+                dgor = dgor ? 0 : 1;
+                break;
+            default:
+                break;
+            }
         }
 
 #if USB_CFG_HAVE_INTRIN_ENDPOINT3
