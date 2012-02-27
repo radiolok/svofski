@@ -62,7 +62,7 @@ CFILES :=  $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 SFILES :=  $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
 export OFILES   := $(addsuffix .o,$(BINFILES)) $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.S=.o)
 
-OFILES = usbdrv.o oddebug.o usbdrvasm.o osccal.o cdcuart.o main.o 
+OFILES = usbdrv.o oddebug.o usbdrvasm.o osccal.o cdcuart.o globals.o timer.o rtc.o util.o main.o 
 
 ## Objects explicitly added by the user
 LINKONLYOBJECTS = 
@@ -74,7 +74,26 @@ LINKONLYOBJECTS =
 
 all: $(TARGET) numishnik.hex numishnik.eep numishnik.lss size
 
+burn:	numishnik.hex
+	avrdude -p m8 -c pickit2 -U flash:w:"numishnik.hex":i -v -V -u
+
+fuses:
+	# for 12MHz crystal, no bootloader
+	avrdude -p m8 -c pickit2 -U hfuse:w:0xdc:m -U lfuse:w:0xef:m
+
 ## Compile
+globals.o: ../globals.c
+	$(CC) $(INCLUDES) $(CFLAGS) -c  $<
+
+timer.o: ../timer.c
+	$(CC) $(INCLUDES) $(CFLAGS) -c  $<
+
+rtc.o: ../rtc.c
+	$(CC) $(INCLUDES) $(CFLAGS) -c  $<
+
+util.o: ../util.c
+	$(CC) $(INCLUDES) $(CFLAGS) -c  $<
+
 usbdrvasm.o: ../../usbdrv/usbdrvasm.S
 	$(CC) $(INCLUDES) $(ASMFLAGS) -c  $<
 

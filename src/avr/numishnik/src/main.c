@@ -22,8 +22,9 @@
 //#include <stdio.h>
 #include "usbdrv.h"
 #include "cdcuart.h"
-
 #include "util.h"
+#include "timer.h"
+#include "globals.h"
 
 enum {
     SEND_ENCAPSULATED_COMMAND = 0,
@@ -364,7 +365,7 @@ void numitronsShift(uint8_t bits)
 void numitronsBCD(uint16_t num)
 {
     PORTC &= ~_BV(0);   // LE = 0
-    SPDR = (numitrons_blank & 1) ? pgm_read_byte(&number2segment[017 & num]) : 0;
+    SPDR = blinkdot | ((numitrons_blank & 1) ? pgm_read_byte(&number2segment[017 & num]) : 0);
     spi_wait();
     SPDR = (numitrons_blank & 2) ? pgm_read_byte(&number2segment[017 & (num>>4)]) : 0;
     spi_wait();
@@ -392,8 +393,7 @@ int main(void)
     hardwareInit();
     usbInit();
 
-
-
+    timer0_init();
 
     intr3Status = 0;
     sendEmptyFrame  = 0;
@@ -416,7 +416,7 @@ int main(void)
             gor = 512;
         }
 
-        numitronsBCD(numitrons);
+        numitronsBCD((the_time.hour << 8) | the_time.minute);
 
 #if 0
         switch ((gor>>4) & 3) {
