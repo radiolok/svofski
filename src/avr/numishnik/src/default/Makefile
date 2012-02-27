@@ -12,8 +12,8 @@ MCU = atmega8
 #MCU = atmega168
 #MCU = atmega328p
 
-CLK = 12800000UL
-#CLK = 12000000UL
+#CLK = 12800000UL
+CLK = 12000000UL
 #CLK = 15000000UL
 #CLK = 16000000UL
 #CLK = 18000000UL
@@ -46,11 +46,11 @@ LDFLAGS +=
 
 
 ## Intel Hex file production flags
-HEX_FLASH_FLAGS = -R .eeprom -R .fuse -R .lock -R .signature
+#HEX_FLASH_FLAGS = -R .eeprom -R .fuse -R .lock -R .signature
 
-HEX_EEPROM_FLAGS = -j .eeprom
-HEX_EEPROM_FLAGS += --set-section-flags=.eeprom="alloc,load"
-HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
+#HEX_EEPROM_FLAGS = -j .eeprom
+#HEX_EEPROM_FLAGS += --set-section-flags=.eeprom="alloc,load"
+#HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
 
 
 ## Include Directories
@@ -98,7 +98,7 @@ $(TARGET): $(OFILES)
 	 $(CC) $(LDFLAGS) $(OFILES) $(LINKONLYOBJECTS) $(LIBDIRS) $(LIBS) -o $(TARGET)
 
 %.hex: $(TARGET)
-	avr-objcopy -O ihex $(HEX_FLASH_FLAGS)  $< $@
+	avr-objcopy -O ihex --pad-to 0x2000 $(HEX_FLASH_FLAGS)  $< $@
 
 %.eep: $(TARGET)
 	-avr-objcopy $(HEX_EEPROM_FLAGS) -O ihex $< $@ || exit 0
