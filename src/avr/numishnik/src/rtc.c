@@ -6,13 +6,13 @@
 #include "util.h"
 #include "rtc.h"
 
-#define DDRRTCSEL    DDRB
-#define PORTRTCSEL   PORTB
+#define DDRRTCSEL    DDRD
+#define PORTRTCSEL   PORTD
 
 #define DDRSPI      DDRB
 #define PORTSPI     PORTB
 
-#define RTCSEL      6
+#define RTCSEL      7
 #define MISO        4
 #define MOSI        3
 #define SCK         5
@@ -22,8 +22,7 @@ static void spi_wait() {
 }
 
 void rtc_init() {
-    //DDRD |= _BV(4);     // RTCSEL#
-    DDRRTCSEL |= _BV(RTCSEL);
+    DDRRTCSEL |= _BV(RTCSEL); 
     
     DDRSPI |= BV2(MOSI,SCK);
     DDRB &= ~_BV(MISO);
@@ -44,6 +43,7 @@ void rtc_over() {
 }
 
 uint8_t rtc_rw(uint8_t addr, int8_t value) {
+    rtc_init();
     rtc_send(addr | (value == -1 ? 0 : 0200));
     rtc_send(value);
     rtc_over();
@@ -52,6 +52,9 @@ uint8_t rtc_rw(uint8_t addr, int8_t value) {
 
 uint16_t rtc_gettime(uint8_t ss) {
     uint16_t time = 0;
+
+    // init every time because SPI bus is shared with Macrobollocks
+    rtc_init();
 
     // address 0 for seconds, minutes; minutes, hours otherwise   
     rtc_send(ss ? 0 : 1);
