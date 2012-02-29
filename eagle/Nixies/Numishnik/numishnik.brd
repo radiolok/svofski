@@ -8,20 +8,20 @@
 </settings>
 <grid distance="2.5" unitdist="mil" unit="mm" style="dots" multiple="1" display="yes" altdistance="0.1" altunitdist="mm" altunit="mm"/>
 <layers>
-<layer number="1" name="Top" color="4" fill="1" visible="no" active="yes"/>
+<layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="yes"/>
 <layer number="17" name="Pads" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="18" name="Vias" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="19" name="Unrouted" color="6" fill="1" visible="no" active="yes"/>
 <layer number="20" name="Dimension" color="15" fill="1" visible="yes" active="yes"/>
-<layer number="21" name="tPlace" color="7" fill="1" visible="no" active="yes"/>
-<layer number="22" name="bPlace" color="7" fill="1" visible="no" active="yes"/>
-<layer number="23" name="tOrigins" color="15" fill="1" visible="no" active="yes"/>
-<layer number="24" name="bOrigins" color="15" fill="1" visible="no" active="yes"/>
+<layer number="21" name="tPlace" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="22" name="bPlace" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="23" name="tOrigins" color="15" fill="1" visible="yes" active="yes"/>
+<layer number="24" name="bOrigins" color="15" fill="1" visible="yes" active="yes"/>
 <layer number="25" name="tNames" color="7" fill="1" visible="no" active="yes"/>
-<layer number="26" name="bNames" color="7" fill="1" visible="no" active="yes"/>
+<layer number="26" name="bNames" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="27" name="tValues" color="7" fill="1" visible="no" active="yes"/>
-<layer number="28" name="bValues" color="7" fill="1" visible="no" active="yes"/>
+<layer number="28" name="bValues" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="29" name="tStop" color="7" fill="3" visible="no" active="yes"/>
 <layer number="30" name="bStop" color="7" fill="6" visible="no" active="yes"/>
 <layer number="31" name="tCream" color="7" fill="4" visible="no" active="yes"/>
@@ -45,7 +45,7 @@
 <layer number="49" name="Reference" color="7" fill="1" visible="no" active="yes"/>
 <layer number="50" name="dxf" color="7" fill="1" visible="no" active="no"/>
 <layer number="51" name="tDocu" color="7" fill="1" visible="no" active="yes"/>
-<layer number="52" name="bDocu" color="7" fill="1" visible="no" active="yes"/>
+<layer number="52" name="bDocu" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="53" name="tGND_GNDA" color="7" fill="9" visible="no" active="no"/>
 <layer number="54" name="bGND_GNDA" color="1" fill="9" visible="no" active="no"/>
 <layer number="56" name="wert" color="7" fill="1" visible="no" active="no"/>
@@ -1652,6 +1652,8 @@ design rules under a new name.</description>
 <element name="C3" library="rcl" package="SMC_B" value="10uF" x="50.165" y="29.845" rot="MR180"/>
 <element name="R12" library="rcl" package="R0805-SVO" value="000" x="35.56" y="17.78" rot="MR315"/>
 <element name="R13" library="rcl" package="R0805-SVO" value="000" x="30.7975" y="15.71625" rot="MR225"/>
+<element name="TP3" library="0-svo" package="P1-13" value="TPSPAD1-13" x="-4.1275" y="-3.81"/>
+<element name="TP4" library="0-svo" package="P1-13" value="TPSPAD1-13" x="-4.1275" y="-7.8105"/>
 </elements>
 <signals>
 <signal name="GND">
@@ -2082,15 +2084,15 @@ design rules under a new name.</description>
 <wire x1="45.72" y1="4.445" x2="46.355" y2="5.08" width="0.254" layer="16"/>
 </signal>
 <signal name="RTCSEL#">
-<contactref element="IC7" pad="7"/>
 <contactref element="IC6" pad="1"/>
-<wire x1="29.8404625" y1="7.903884375" x2="29.811384375" y2="7.903884375" width="0.254" layer="16"/>
 <wire x1="13.97" y1="3.81" x2="13.97" y2="3.02" width="0.254" layer="16"/>
 <wire x1="29.811384375" y1="7.903884375" x2="29.05125" y2="7.14375" width="0.3048" layer="16"/>
 <wire x1="29.05125" y1="7.14375" x2="25.4" y2="7.14375" width="0.254" layer="16"/>
 <wire x1="25.4" y1="7.14375" x2="21.9075" y2="3.65125" width="0.254" layer="16"/>
 <wire x1="21.9075" y1="3.65125" x2="14.12875" y2="3.65125" width="0.254" layer="16"/>
 <wire x1="14.12875" y1="3.65125" x2="13.97" y2="3.81" width="0.254" layer="16"/>
+<contactref element="IC7" pad="11"/>
+<wire x1="29.811384375" y1="7.903884375" x2="30.406146875" y2="11.711796875" width="0" layer="19" extent="16-16"/>
 </signal>
 <signal name="BTNSET">
 <contactref element="IC7" pad="27"/>
@@ -2518,6 +2520,16 @@ design rules under a new name.</description>
 <wire x1="41.91" y1="24.765" x2="43.18" y2="24.765" width="0.3048" layer="16"/>
 <wire x1="32.0675" y1="23.5695" x2="32.0675" y2="25.0825" width="0.3048" layer="16"/>
 <wire x1="32.0675" y1="25.0825" x2="27.94" y2="29.21" width="0.3048" layer="16"/>
+</signal>
+<signal name="XTAL2">
+<contactref element="IC7" pad="8"/>
+<contactref element="TP4" pad="1"/>
+<wire x1="-4.1275" y1="-7.8105" x2="29.274775" y2="8.469571875" width="0" layer="19" extent="16-16"/>
+</signal>
+<signal name="N$1">
+<contactref element="IC7" pad="7"/>
+<contactref element="TP3" pad="1"/>
+<wire x1="-4.1275" y1="-3.81" x2="29.8404625" y2="7.903884375" width="0" layer="19" extent="16-16"/>
 </signal>
 </signals>
 </board>
