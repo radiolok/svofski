@@ -19,12 +19,13 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 
-//#include <stdio.h>
+#include <stdio.h>
 #include "usbdrv.h"
 #include "cdcuart.h"
 #include "util.h"
 #include "timer.h"
 #include "globals.h"
+#include "rtc.h"
 
 enum {
     SEND_ENCAPSULATED_COMMAND = 0,
@@ -328,16 +329,19 @@ uint32_t numitronsSegmentsFromBCD(uint16_t num)
 }
 */
 
+void numitronsInitSPI() 
+{
+    DDRB |= BV2(3,5);   // MOSI, SCK outputs
+    DDRB &= ~_BV(4);    // MISO input
+    SPCR = BV5(DORD, SPE, MSTR, CPHA, SPR1);
+    SPCR |= _BV(DORD);
+    SPCR &= ~_BV(CPHA);
+}
+
 void numitronsInit() 
 {
     DDRC |= _BV(0);     // Latch Enable for Macroblocks, output
     PORTC &= ~_BV(0);   // LE = 0, disable
-    DDRB |= BV2(3,5);   // MOSI, SCK outputs
-    DDRB &= ~_BV(4);    // MISO input
-
-    SPCR = BV4(SPE, MSTR, CPHA, SPR1);
-    SPCR |= _BV(DORD);
-    SPCR &= ~_BV(CPHA);
 }
 
 
@@ -364,8 +368,10 @@ void numitronsShift(uint8_t bits)
 
 void numitronsBCD(uint16_t num)
 {
+    numitronsInitSPI();
     PORTC &= ~_BV(0);   // LE = 0
-    SPDR = blinkdot | ((numitrons_blank & 1) ? pgm_read_byte(&number2segment[017 & num]) : 0);
+    SPDR = blinkdot | 
+           ((numitrons_blank & 1) ? pgm_read_byte(&number2segment[017 & num]) : 0);
     spi_wait();
     SPDR = (numitrons_blank & 2) ? pgm_read_byte(&number2segment[017 & (num>>4)]) : 0;
     spi_wait();
@@ -374,14 +380,36 @@ void numitronsBCD(uint16_t num)
     SPDR = (numitrons_blank & 8) ? pgm_read_byte(&number2segment[017 & (num>>12)]) : 0;
     spi_wait();
     PORTC |= _BV(0);   // latch le data
+    asm __volatile__ ("nop");
+    asm __volatile__ ("nop");
+    asm __volatile__ ("nop");
+    PORTC &= ~_BV(0);   // LE = 0
 }
 
+#define HELPTEXT    PSTR("\r\nN U M I S H N I K\r\n\nPress T to set time\n\r")
+
+#if 0
+#define HELPTEXT PSTR("   __^__    __^__     __^__    __^__\r\n"\
+"  | .-. |  | .-. |   | .-. |  | .-. |\r\n"\
+"  | |_| |  | |_| |   | |_| |  | |_| |\r\n"\
+"  | |_| |  | |_| | O | |_| |  | |_| |\r\n"\
+" _|_____|__|_____|___|_____|__|_____|_\r\n"\
+"|                                     |\r\n"\
+"|          N U M I S H N I K          |\r\n"\
+"|            T to set time            |\r\n"\
+"`-------------------------------------'\r\n")
+#endif
+
+typedef enum { Normal, TimeInput } Mode;
 
 int main(void)
 {
     char c;
-    int gor = 100;
-    int dgor = 1;
+    int8_t inputPos;
+    uint16_t rtime = 0x1838;
+    uint8_t lastdot = 0;
+    Mode mode = Normal;
+
 
     numitronsInit();
     numitronsBCD(0);
@@ -393,6 +421,9 @@ int main(void)
     hardwareInit();
     usbInit();
 
+
+    (void)fdevopen(cdc_putchar, NULL/*, 0*/);
+
     timer0_init();
 
     intr3Status = 0;
@@ -402,77 +433,68 @@ int main(void)
 
 
     numitrons_blank = 0x0f;
-    numitronsBCD(numitrons);
-
+    numitronsBCD(0x1838);
 
     for(;;){    /* main event loop */
         wdt_reset();
         usbPoll();
         uartPoll();
 
-        if ((gor -= dgor) == 0) {
-            numitrons++;
-            numitronsBCD(numitrons);
-            gor = 512;
+        if (lastdot & !blinkdot) {
+            rtime = rtc_gettime(0);
         }
+        lastdot = blinkdot;
 
-        numitronsBCD((the_time.hour << 8) | the_time.minute);
-
-#if 0
-        switch ((gor>>4) & 3) {
-        case 0: numitrons_blank = 0x7; break;
-        case 1: numitrons_blank = 0xe; break;
-        case 2: numitrons_blank = 0xd; break;
-        case 3: numitrons_blank = 0xb; break;
-        }
-        numitronsBCD(numitrons);
-#endif
+        numitronsBCD(rtime);
         
-
-#if 0
-        switch (gor & 3) {
-        case 0: numitrons_blank = 3; break;
-        case 1: numitrons_blank = 6; break;
-        case 2: numitrons_blank = 12; break;
-        case 3: numitrons_blank = 9; break;
-        }
-        numitronsBCD(numitrons);
-#endif
-#if 0
-        numitrons_blank = 0;
-        numitronsBCD(0);
-        numitrons_blank = 0x0f;
-        numitronsBCD(numitrons);
-        numitronsBCD(numitrons);
-        numitronsBCD(numitrons);
-#endif
-
-
         if (cdc_dsr()) {
-            cdc_putchar(c = cdc_getchar());
-            numitronsBCD(numitrons);
-            switch (c) {
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-                numitronsShift(1<<(c-'0'));
-                break;
-            case 'a':
-                numitronsShift(NUMI4);
-                break;
-            case ' ':
-                numitrons_blank ^= 0x0f;
-                break;
-            case '.':
-                dgor = dgor ? 0 : 1;
-                break;
-            default:
-                break;
+            c = cdc_getchar();
+
+            if (mode == TimeInput) {
+                if (c >= '0' && c <= '9') {
+                    putchar(c);
+                    c = c - '0';
+                    switch (inputPos) {
+                        case 3:   rtime = (rtime & 0x0fff) | (c << 12); break;
+                        case 2:   rtime = (rtime & 0xf0ff) | (c << 8);  break;
+                        case 1:   rtime = (rtime & 0xff0f) | (c << 4);  break;
+                        case 0:   rtime = (rtime & 0xfff0) | c;         break;
+                    }
+                    rtc_xhour(rtime >> 8);
+                    rtc_xminute(rtime & 0xff);
+                }
+                else {
+                    mode = Normal;
+                    printf_P(PSTR("\r\n\007Aborted\r\n"));
+                }
+
+                --inputPos;
+                if (inputPos == 1) {
+                    putchar(':');
+                } 
+                else if (inputPos == -1) {
+                    mode = Normal;
+                    printf_P(PSTR("\r\nTime set\r\n"));
+                }
+            } else {
+                switch (c) {
+                case 't':
+                case 'T':
+                    printf_P(PSTR("\r\n%02x:%02x enter time\r"), 
+                        (rtime>>8)&0xff, rtime & 0xff);
+                    mode = TimeInput;
+                    inputPos = 3;
+                    break;
+                case '.':
+                    printf_P(PSTR("%04x\n"), rtime);
+                    break;
+                case 'd':
+                    rtc_dump();
+                    break;
+                default:
+                    printf_P(HELPTEXT);
+                    break;
+                }
             }
         }
 
