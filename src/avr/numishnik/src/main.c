@@ -26,6 +26,7 @@
 #include "timer.h"
 #include "globals.h"
 #include "rtc.h"
+#include "numitrons.h"
 
 enum {
     SEND_ENCAPSULATED_COMMAND = 0,
@@ -290,130 +291,8 @@ static void hardwareInit(void)
     resetUart();
 }
 
-// Number definitions from the datasheet
-#define NUMI0   (BV6(3,4,5,6,8,9)   >>2)
-#define NUMI1   (BV2(3,4)           >>2)
-#define NUMI2   (BV5(3,5,7,8,9)     >>2)
-#define NUMI3   (BV5(3,4,5,7,8)     >>2)
-#define NUMI4   (BV4(3,4,6,7)       >>2)
-#define NUMI5   (BV5(4,5,6,7,8)     >>2)
-#define NUMI6   (BV6(4,5,6,7,8,9)   >>2)
-#define NUMI7   (BV3(3,4,5)         >>2)
-#define NUMI8   (BV7(3,4,5,6,7,8,9) >>2)
-#define NUMI9   (BV6(3,4,5,6,7,8)   >>2)
-
-#define NUMIA   (BV6(1,2,3,4,5,7)   )
-#define NUMIB   (BV5(2,4,5,6,7)     )
-#define NUMIC   (BV4(3,4,6,7)       )
-#define NUMID   (BV5(1,2,5,6,7)     )
-#define NUMIE   (BV5(3,4,5,6,7)     )
-#define NUMIF   (BV4(3,4,5,7)       )
-
-const PROGMEM uint8_t number2segment[16] = {NUMI0, NUMI1, NUMI2, NUMI3, NUMI4, 
-                                            NUMI5, NUMI6, NUMI7, NUMI8, NUMI9,
-                                            NUMIA, NUMIB, NUMIC, NUMID, NUMIE, NUMIF};
-
-/*
-uint32_t numitronsSegmentsFromNumbers(uint8_t h1, uint8_t h2, uint8_t m1, uint8_t m2)
-{
-    return ((uint32_t)number2segment[m2]) |
-          (((uint32_t)number2segment[m1]) << 8) |
-          (((uint32_t)number2segment[h2]) << 16) |
-          (((uint32_t)number2segment[h1]) << 24);
-}
-
-uint32_t numitronsSegmentsFromBCD(uint16_t num) 
-{
-    return numitronsSegmentsFromNumbers(017 & (num>>12), 017 & (num>>8), 
-                                        017 & (num>>4), 017 & num);
-}
-*/
-
-void numitronsInitSPI() 
-{
-    DDRB |= BV2(3,5);   // MOSI, SCK outputs
-    DDRB &= ~_BV(4);    // MISO input
-    SPCR = BV5(DORD, SPE, MSTR, CPHA, SPR1);
-    SPCR |= _BV(DORD);
-    SPCR &= ~_BV(CPHA);
-}
-
-void numitronsInit() 
-{
-    DDRC |= _BV(0);     // Latch Enable for Macroblocks, output
-    PORTC &= ~_BV(0);   // LE = 0, disable
-}
-
-
-static void spi_wait() {
-    while (!(SPSR & _BV(SPIF)));
-}
-
-static volatile uint16_t numitrons = 0;
-static volatile uint8_t numitrons_blank = 0;
-
-void numitronsShift(uint8_t bits)
-{
-    PORTC &= ~_BV(0);   // LE = 0
-    SPDR = bits & 0377;
-    spi_wait();
-    SPDR = (bits >> 8) & 0377;
-    spi_wait();
-    SPDR = (bits >> 16) & 0377;
-    spi_wait();
-    SPDR = (bits >> 24) & 0377;
-    spi_wait();
-    PORTC |= _BV(0);   // latch le data
-}
-
-void numitronsBCD(uint16_t num)
-{
-    numitronsInitSPI();
-    PORTC &= ~_BV(0);   // LE = 0
-    SPDR = blinkdot | 
-           ((numitrons_blank & 1) ? pgm_read_byte(&number2segment[017 & num]) : 0);
-    spi_wait();
-    SPDR = (numitrons_blank & 2) ? pgm_read_byte(&number2segment[017 & (num>>4)]) : 0;
-    spi_wait();
-    SPDR = (numitrons_blank & 4) ? pgm_read_byte(&number2segment[017 & (num>>8)]) : 0;
-    spi_wait();
-    SPDR = (numitrons_blank & 8) ? pgm_read_byte(&number2segment[017 & (num>>12)]) : 0;
-    spi_wait();
-    PORTC |= _BV(0);   // latch le data
-    asm __volatile__ ("nop");
-    asm __volatile__ ("nop");
-    asm __volatile__ ("nop");
-    PORTC &= ~_BV(0);   // LE = 0
-}
-
-#define HELPTEXT    PSTR("\r\nN U M I S H N I K\r\n\nPress T to set time\n\r")
-
-#if 0
-#define HELPTEXT PSTR("   __^__    __^__     __^__    __^__\r\n"\
-"  | .-. |  | .-. |   | .-. |  | .-. |\r\n"\
-"  | |_| |  | |_| |   | |_| |  | |_| |\r\n"\
-"  | |_| |  | |_| | O | |_| |  | |_| |\r\n"\
-" _|_____|__|_____|___|_____|__|_____|_\r\n"\
-"|                                     |\r\n"\
-"|          N U M I S H N I K          |\r\n"\
-"|            T to set time            |\r\n"\
-"`-------------------------------------'\r\n")
-#endif
-
-typedef enum { Normal, TimeInput } Mode;
-
 int main(void)
 {
-    char c;
-    int8_t inputPos;
-    uint16_t rtime = 0x1838;
-    uint8_t lastdot = 0;
-    Mode mode = Normal;
-
-
-    numitronsInit();
-    numitronsBCD(0);
-
     wdt_enable(WDTO_1S);
 #if USB_CFG_HAVE_MEASURE_FRAME_LENGTH
         oscInit();
@@ -422,7 +301,7 @@ int main(void)
     usbInit();
 
 
-    (void)fdevopen(cdc_putchar, NULL/*, 0*/);
+    (void)fdevopen(cdc_putchar, NULL);
 
     timer0_init();
 
@@ -431,72 +310,15 @@ int main(void)
 
     sei();
 
-
     numitrons_blank = 0x0f;
     numitronsBCD(0x1838);
 
-    for(;;){    /* main event loop */
+    for(;;) {  
         wdt_reset();
         usbPoll();
         uartPoll();
 
-        if (lastdot & !blinkdot) {
-            rtime = rtc_gettime(0);
-        }
-        lastdot = blinkdot;
-
-        numitronsBCD(rtime);
-        
-        if (cdc_dsr()) {
-            c = cdc_getchar();
-
-            if (mode == TimeInput) {
-                if (c >= '0' && c <= '9') {
-                    putchar(c);
-                    c = c - '0';
-                    switch (inputPos) {
-                        case 3:   rtime = (rtime & 0x0fff) | (c << 12); break;
-                        case 2:   rtime = (rtime & 0xf0ff) | (c << 8);  break;
-                        case 1:   rtime = (rtime & 0xff0f) | (c << 4);  break;
-                        case 0:   rtime = (rtime & 0xfff0) | c;         break;
-                    }
-                    rtc_xhour(rtime >> 8);
-                    rtc_xminute(rtime & 0xff);
-                }
-                else {
-                    mode = Normal;
-                    printf_P(PSTR("\r\n\007Aborted\r\n"));
-                }
-
-                --inputPos;
-                if (inputPos == 1) {
-                    putchar(':');
-                } 
-                else if (inputPos == -1) {
-                    mode = Normal;
-                    printf_P(PSTR("\r\nTime set\r\n"));
-                }
-            } else {
-                switch (c) {
-                case 't':
-                case 'T':
-                    printf_P(PSTR("\r\n%02x:%02x enter time\r"), 
-                        (rtime>>8)&0xff, rtime & 0xff);
-                    mode = TimeInput;
-                    inputPos = 3;
-                    break;
-                case '.':
-                    printf_P(PSTR("%04x\n"), rtime);
-                    break;
-                case 'd':
-                    rtc_dump();
-                    break;
-                default:
-                    printf_P(HELPTEXT);
-                    break;
-                }
-            }
-        }
+        mainloop();
 
 #if USB_CFG_HAVE_INTRIN_ENDPOINT3
         /* We need to report rx and tx carrier after open attempt */

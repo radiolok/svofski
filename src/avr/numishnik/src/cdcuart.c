@@ -57,13 +57,22 @@ int cdc_rts()
     return ((iwptr+1) & RX_MASK) != urptr;
 }
 
-void cdc_putchar(int c) 
-{
+static void cdc_puu(char c) {
     int next = (iwptr+1) & RX_MASK;
     if( next!=urptr ) {
         rx_buf[iwptr] = c;
         iwptr = next;
     }
+ }
+
+int cdc_putchar(char c, FILE* f) 
+{
+    cdc_puu(c);
+    if (c == '\n') {
+        cdc_puu('\r');
+    }
+
+    return 0;
 }
 
 void uartPoll(void)
