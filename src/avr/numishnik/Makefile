@@ -68,7 +68,7 @@ $(BUILD):
 all:    $(BUILD) size
 
 clean:
-	rm -rf $(BUILD) $(TARGET).elf $(TARGET).{hex,map,elf} html
+	rm -rf $(BUILD) $(TARGET).elf $(TARGET).{hex,map,elf,lss} html
 
 burn:   $(BUILD)
 	avrdude -p m8 -c pickit2 -U flash:w:"numishnik.hex":i -v -V -u

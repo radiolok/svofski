@@ -11,6 +11,7 @@
 #include "usbportability.h"
 #include "usbdrv.h"
 #include "oddebug.h"
+#include <avr/pgmspace.h>
 
 /*
 General Description:

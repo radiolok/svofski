@@ -11,6 +11,7 @@
 #pragma once
 
 #include <avr/io.h> /* for TXEN or TXEN0 resp., if available */
+#include <stdio.h>
 
 #ifndef uchar
 #define uchar   unsigned char
@@ -64,5 +65,5 @@ static inline uchar uartTxBytesFree(void)
 int cdc_dsr(void);
 int cdc_getchar(void);
 int cdc_rts();
-void cdc_putchar(int c);
+int cdc_putchar(char c, FILE* f);
 
