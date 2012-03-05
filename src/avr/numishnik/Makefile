@@ -75,7 +75,7 @@ burn:   $(BUILD)
 
 fuses:
 	# for 12MHz crystal, no bootloader
-	avrdude -p m8 -c pickit2 -U hfuse:w:0xdc:m -U lfuse:w:0xef:m
+	avrdude -p m8 -c pickit2 -U hfuse:w:0xcc:m -U lfuse:w:0xef:m
 
 size:	$(BUILD)
 	@echo
