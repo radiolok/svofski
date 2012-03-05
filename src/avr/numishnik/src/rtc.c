@@ -29,7 +29,8 @@ void rtc_init() {
     
     PORTRTCSEL |= _BV(RTCSEL);
     
-    SPCR = BV4(SPE, MSTR, CPHA, SPR1);
+    SPCR = BV3(SPE, MSTR, CPHA);
+    SPSR = _BV(SPI2X);
 }
 
 void rtc_send(uint8_t b) {

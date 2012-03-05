@@ -17,7 +17,9 @@ void numitronsInit()
 {
     DDRB |= BV2(3,5);   // MOSI, SCK outputs
     DDRB &= ~_BV(4);    // MISO input
-    SPCR = BV5(DORD, SPE, MSTR, CPHA, SPR1);
+    //SPCR = BV5(DORD, SPE, MSTR, CPHA, SPR1);
+    SPSR = _BV(SPI2X);
+    SPCR = BV4(DORD, SPE, MSTR, CPHA);
     SPCR |= _BV(DORD);
     SPCR &= ~_BV(CPHA);
     DDRC |= _BV(0);     // Latch Enable for Macroblocks, output
@@ -29,7 +31,7 @@ static inline void spi_wait() {
 }
 
 
-void numitronsBCD(uint16_t num)
+void numitronsBCD(uint16_t num) 
 {
     numitronsInit();
 

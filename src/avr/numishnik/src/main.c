@@ -311,7 +311,7 @@ int main(void)
     sei();
 
     numitrons_blank = 0x0f;
-    numitronsBCD(0x1838);
+    numitronsBCD(0x1838);//, 0);
 
     for(;;) {  
         wdt_reset();
