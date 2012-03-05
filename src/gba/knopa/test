@@ -1,0 +1,2 @@
+#!/bin/sh
+/Applications/VisualBoyAdvance/VisualBoyAdvance.app/Contents/MacOS/VisualBoyAdvance knopa.gba
