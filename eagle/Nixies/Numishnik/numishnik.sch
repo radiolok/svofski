@@ -14970,13 +14970,10 @@ wire to board 1.25 mm (.049 inch) pitch header</description>
 <wire x1="83.82" y1="198.12" x2="63.5" y2="198.12" width="0.1524" layer="91"/>
 <wire x1="88.9" y1="198.12" x2="83.82" y2="198.12" width="0.1524" layer="91"/>
 <wire x1="88.9" y1="198.12" x2="88.9" y2="200.66" width="0.1524" layer="91"/>
-<wire x1="88.9" y1="200.66" x2="88.9" y2="203.2" width="0.1524" layer="91"/>
 <junction x="83.82" y="198.12"/>
-<junction x="88.9" y="200.66"/>
 <pinref part="C11" gate="G$1" pin="1"/>
 <pinref part="V2" gate="+5V" pin="+5V"/>
 <pinref part="IC7" gate="G$1" pin="AVCC"/>
-<pinref part="IC7" gate="G$1" pin="AREF"/>
 </segment>
 <segment>
 <wire x1="88.9" y1="175.26" x2="88.9" y2="172.72" width="0.1524" layer="91"/>
@@ -15202,20 +15199,6 @@ wire to board 1.25 mm (.049 inch) pitch header</description>
 <pinref part="IC7" gate="G$1" pin="PD7(AIN1)"/>
 <wire x1="137.16" y1="170.18" x2="144.78" y2="170.18" width="0.1524" layer="91"/>
 <label x="144.78" y="170.18" size="1.016" layer="95" xref="yes"/>
-</segment>
-</net>
-<net name="BTNSET" class="0">
-<segment>
-<wire x1="137.16" y1="200.66" x2="144.78" y2="200.66" width="0.1524" layer="91"/>
-<label x="144.78" y="200.66" size="1.016" layer="95" rot="MR180" xref="yes"/>
-<pinref part="IC7" gate="G$1" pin="PC4(ADC4/SDA)"/>
-</segment>
-</net>
-<net name="BTN+" class="0">
-<segment>
-<wire x1="144.78" y1="198.12" x2="137.16" y2="198.12" width="0.1524" layer="91"/>
-<label x="144.78" y="198.12" size="1.016" layer="95" xref="yes"/>
-<pinref part="IC7" gate="G$1" pin="PC5(ADC5/SCL)"/>
 </segment>
 </net>
 <net name="N$4" class="0">
