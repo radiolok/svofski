@@ -9,7 +9,7 @@ typedef struct _rtc_time {
     uint8_t day;
 } RTC_TIME;
 
-#define rtc_xseconds(x) rtc_rw(0,x);
+#define rtc_xseconds(x) rtc_rw(0,x)
 
 #define rtc_xminute(x) rtc_rw(1,x)
 

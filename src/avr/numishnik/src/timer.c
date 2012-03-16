@@ -23,8 +23,8 @@ ISR(TIMER0_OVF_vect, ISR_NOBLOCK) {
 
     --blinkcounter;
 
-    if (blinkcounter > 1875/2) 
-        blinkdot = (blinkcounter & 7) == 0 ? 1 : 0;
+    if (blinkcounter == 1875/2) 
+        blinkdot = 1; //(blinkcounter & 7) == 0 ? 1 : 0;
     else if (blinkcounter == 0) {
         blinkcounter = 1875;
         blinkdot = 0;

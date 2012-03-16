@@ -21,13 +21,26 @@ PROGMEM const char* const helps[] = {fuu0, fuu1, fuu2, fuu3,
 
 const char PSTR_ABORTED[] PROGMEM = "\n\007Aborted";
 
+void print_time(uint16_t rtime) 
+{
+    printf_P(PSTR("%02x:%02x"),
+             (rtime>>8)&0xff, rtime & 0xff);
+}
+
+uint8_t print_date(uint16_t year, uint8_t month, uint8_t day) 
+{
+    printf_P(PSTR("%04x-%02x-%02x"), year, month, day);
+}
+
+
 uint8_t input_time(uint16_t rtime, char c)
 {
     static int8_t inputPos = 0;
 
     if (c == 0) {
-        printf_P(PSTR("\n%02x:%02x enter time\r"),
-                 (rtime>>8)&0xff, rtime & 0xff);
+        putchar('\n');
+        print_time(rtime);
+        printf_P(PSTR(" enter time\r"));
         inputPos = 3;
     } else {
         if (c >= '0' && c <= '9') {
@@ -45,6 +58,7 @@ uint8_t input_time(uint16_t rtime, char c)
             rtc_xminute(rtime & 0xff);
 
             if (--inputPos == -1) {
+                rtc_xseconds(0);
                 puts_P(PSTR("\nTime set"));
                 return 1;
             }
@@ -69,8 +83,9 @@ uint8_t input_date(char c) {
         year = 0x2000 + rtc_xyear(-1);
         month = rtc_xmonth(-1);
         day = rtc_xday(-1);
-        printf_P(PSTR("\n%04x-%02x-%02x enter date\r"),
-            year, month, day);
+        putchar('\n');
+        print_date(year, month, day);
+        printf_P(PSTR(" enter date\r"), year, month, day);
         return 0;
     }
 
@@ -80,7 +95,7 @@ uint8_t input_date(char c) {
         switch (inputPos) {
             case 7:     /* :yaoming: */ break;
             case 6:     /* :yaoming: */ break;
-            case 5:     year |= c << 4; break;
+            case 5:     year = c << 4; break;
             case 4:     year |= c;
                         putchar('-');
                         break;
@@ -126,6 +141,16 @@ void mainloop() {
 
     if (lastdot & !blinkdot) {
         rtime = rtc_gettime(0);
+
+        if (mode == Normal) {
+            print_date(rtc_xyear(-1) + 0x2000,
+                       rtc_xmonth(-1),
+                       rtc_xday(-1)); 
+            putchar(' '); 
+            print_time(rtime);
+            printf_P(PSTR(":%02x\r"), rtc_xseconds(-1));
+        }
+
     }
     lastdot = blinkdot;
 
