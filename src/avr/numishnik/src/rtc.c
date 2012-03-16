@@ -5,6 +5,7 @@
 
 #include "util.h"
 #include "rtc.h"
+#include "globals.h"
 
 #define DDRRTCSEL    DDRD
 #define PORTRTCSEL   PORTD
@@ -17,9 +18,9 @@
 #define MOSI        3
 #define SCK         5
 
-static void spi_wait() {
-    while (!(SPSR & _BV(SPIF)));
-}
+//static void spi_wait() {
+//    while (!(SPSR & _BV(SPIF)));
+//}
 
 void rtc_init() {
     DDRRTCSEL |= _BV(RTCSEL); 
@@ -30,7 +31,7 @@ void rtc_init() {
     PORTRTCSEL |= _BV(RTCSEL);
     
     SPCR = BV3(SPE, MSTR, CPHA);
-    SPSR = _BV(SPI2X);
+    SPSR = 0; // mejor que sea mas lento _BV(SPI2X);
 }
 
 void rtc_send(uint8_t b) {

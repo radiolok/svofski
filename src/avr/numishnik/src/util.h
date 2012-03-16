@@ -6,40 +6,12 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
-#define PORTDIGIT PORTC
-#define DDRDIGIT  DDRC
-
-#define PORTBUTTON PORTC
-#define DDRBUTTON  DDRC
-
-#define PORTSA234  PORTD
-#define DDRSA234   DDRD
-#define PORTSA1    PORTB
-#define DDRSA1     DDRB
-
-#define PORTDOT     PORTD
-#define DDRDOT      DDRD
-#define DOT         3
-
-#define PORTHVPUMP PORTB
-#define DDRHVPUMP  DDRB
-
-
 #define BV2(a,b) (_BV(a)|_BV(b))
 #define BV3(a,b,c) (_BV(a)|_BV(b)|_BV(c))
 #define BV4(a,b,c,d) (_BV(a)|_BV(b)|_BV(c)|_BV(d))
 #define BV5(a,b,c,d,e) (_BV(a)|_BV(b)|_BV(c)|_BV(d)|_BV(e))
 #define BV6(a,b,c,d,e,f) (_BV(a)|_BV(b)|_BV(c)|_BV(d)|_BV(e)|_BV(f))
 #define BV7(a,b,c,d,e,f,g) (_BV(a)|_BV(b)|_BV(c)|_BV(d)|_BV(e)|_BV(f)|_BV(g))
-
-// Select Anode constants
-enum _sa_values {
-    SA1 = 0,
-    SA2, 
-    SA3,
-    SA4,
-    SAX = 0377
-};
 
 /// Make BCD time from 2 bytes
 #define maketime(hh,mm) (((hh) << 8) + (mm))
