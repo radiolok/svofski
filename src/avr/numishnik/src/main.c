@@ -291,15 +291,20 @@ static void hardwareInit(void)
     resetUart();
 }
 
+#define FFFUUU
+
 int main(void)
 {
-    wdt_enable(WDTO_1S);
+    wdt_enable(WDTO_2S);
 #if USB_CFG_HAVE_MEASURE_FRAME_LENGTH
         oscInit();
 #endif
     hardwareInit();
-    usbInit();
 
+    DDRB |= _BV(2); // puto SS pin, que sea un output
+
+#ifdef FFFUUU
+    usbInit();
 
     (void)fdevopen(cdc_putchar, NULL);
 
@@ -307,19 +312,21 @@ int main(void)
 
     intr3Status = 0;
     sendEmptyFrame  = 0;
-
+#endif
     sei();
 
     numitrons_blank = 0x0f;
-    numitronsBCD(0x1838);
+    numitronsBCD(0x1838);//, 0);
 
     for(;;) {  
         wdt_reset();
+#ifdef FFFUUU
         usbPoll();
         uartPoll();
-
+#endif
         mainloop();
 
+#ifdef FFFUUU
 #if USB_CFG_HAVE_INTRIN_ENDPOINT3
         /* We need to report rx and tx carrier after open attempt */
         if(intr3Status != 0 && usbInterruptIsReady3()){
@@ -332,6 +339,7 @@ int main(void)
             }
             intr3Status--;
         }
+#endif
 #endif
     }
 
