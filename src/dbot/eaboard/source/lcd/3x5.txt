@@ -1,0 +1,58 @@
+/* font base name is "3x5" */
+/* total font glyph width = 178 */
+/* digit width = 3 */
+/* largest width = 5 */
+
+#define uint    uint16_t
+#define uchar   uint8_t
+
+static const uint dyAscentFont3x5 = 5;
+static const uint dyDescentFont3x5 = 0;
+static const uint dyFont3x5 = dyAscentFont3x5 + dyDescentFont3x5;
+static const uchar chMostFont3x5 = '}';
+static const uint cchFont3x5 = chMostFont3x5 - ' ' + 1;
+
+/* font pixels */
+static const uint8_t s_apxFont3x5[112] =
+{
+	0x00, 0x01, 0xDB, 0x40, 0x10, 0xA8, 0x70, 0xD4, 0xCA, 0xC3, 
+	0x0B, 0xA0, 0x2A, 0xA0, 0x0E, 0x00, 0x41, 0x50, 0x2B, 0x6A, 
+	0x59, 0x25, 0xCF, 0x9F, 0x96, 0x7D, 0xBC, 0x9F, 0x39, 0xF2, 
+	0x7B, 0xF9, 0x29, 0x7B, 0xEF, 0xF7, 0x92, 0xA5, 0x95, 0x11, 
+	0x1C, 0x71, 0x11, 0x53, 0x14, 0x12, 0xB7, 0xDD, 0x75, 0xCE, 
+	0x48, 0xF5, 0xB7, 0x79, 0xA7, 0xF3, 0x48, 0xE5, 0xAE, 0xDF, 
+	0x6F, 0x49, 0x72, 0x4D, 0x56, 0xEB, 0x64, 0x93, 0xC7, 0x75, 
+	0x8C, 0x67, 0x6E, 0x67, 0xDB, 0x7E, 0xBA, 0x46, 0x99, 0xA5, 
+	0xD7, 0x5A, 0xE2, 0x3B, 0xA4, 0x95, 0xB6, 0xFB, 0x6A, 0x51, 
+	0x8D, 0x54, 0xAB, 0x55, 0xB6, 0xA4, 0xB9, 0x53, 0xF5, 0x62, 
+	0x22, 0x35, 0x75, 0x40, 0x00, 0x01, 0xF0, 0x56, 0x47, 0xF1, 
+	0x35, 0x00
+}; /* 112 bytes */
+
+/* array of starting column for each char (with extra entry at end
+   for calculating the width of the last char) */
+static const uint16_t s_mpchxFont3x5[95] =
+{
+	  0, /* ' ' */    3, /* '!' */    4, /* '"' */    7, /* '#' */    7, /* '$' */
+	  7, /* '%' */   10, /* '&' */   10, /* ''' */   11, /* '(' */   13, /* ')' */
+	 15, /* '*' */   16, /* '+' */   19, /* ',' */   22, /* '-' */   25, /* '.' */
+	 26, /* '/' */   29, /* '0' */   32, /* '1' */   35, /* '2' */   38, /* '3' */
+	 41, /* '4' */   44, /* '5' */   47, /* '6' */   50, /* '7' */   53, /* '8' */
+	 56, /* '9' */   59, /* ':' */   60, /* ';' */   61, /* '<' */   64, /* '=' */
+	 67, /* '>' */   70, /* '?' */   73, /* '@' */   73, /* 'A' */   76, /* 'B' */
+	 79, /* 'C' */   82, /* 'D' */   85, /* 'E' */   88, /* 'F' */   91, /* 'G' */
+	 94, /* 'H' */   97, /* 'I' */  100, /* 'J' */  103, /* 'K' */  106, /* 'L' */
+	109, /* 'M' */  114, /* 'N' */  118, /* 'O' */  121, /* 'P' */  124, /* 'Q' */
+	128, /* 'R' */  131, /* 'S' */  134, /* 'T' */  137, /* 'U' */  140, /* 'V' */
+	143, /* 'W' */  148, /* 'X' */  151, /* 'Y' */  154, /* 'Z' */  157, /* '[' */
+	159, /* '\' */  162, /* ']' */  164, /* '^' */  167, /* '_' */  170, /* '`' */
+	171, /* 'a' */  171, /* 'b' */  171, /* 'c' */  171, /* 'd' */  171, /* 'e' */
+	171, /* 'f' */  171, /* 'g' */  171, /* 'h' */  171, /* 'i' */  171, /* 'j' */
+	171, /* 'k' */  171, /* 'l' */  171, /* 'm' */  171, /* 'n' */  171, /* 'o' */
+	171, /* 'p' */  171, /* 'q' */  171, /* 'r' */  171, /* 's' */  171, /* 't' */
+	171, /* 'u' */  171, /* 'v' */  171, /* 'w' */  171, /* 'x' */  171, /* 'y' */
+	171, /* 'z' */  171, /* '{' */  174, /* '|' */  175, /* '}' */  178
+};
+
+FONT g_font3x5(dyFont3x5, cchFont3x5, s_apxFont3x5, s_mpchxFont3x5);
+
