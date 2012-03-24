@@ -4,11 +4,18 @@ import fileinput
 import string
 import re
 import sys
+import math
 
 SCALE=2540
 
 def scale(x):
     return int(SCALE*x)
+
+def rotate(phi, x, y):
+    phi = phi*math.pi/180.0
+    x2 = x * math.cos(phi) - y * math.sin(phi)
+    y2 = x * math.sin(phi) + y * math.cos(phi)
+    return int(x2),int(y2)
 
 def manglePadName(s):
     #return '['+s+']'+s.replace('+', '_plus_').replace('-', '_minus_')
@@ -79,10 +86,19 @@ def parsePlacement(tokens):
         if item[0] == 'component':
             parseComponent(item[1:])
 
-def strPadShape(x, y, shape):
+def strPadShape(angle, x, y, shape):
     if shape[0] == 'rect':
         xy = [scale(eval(q)) for q in shape[2:6]]
-        thick, length = xy[2]-xy[0], xy[3]-xy[1]
+
+        # rotate the shape before offsetting
+        p1 = rotate(angle, xy[0], xy[1])
+        p2 = rotate(angle, xy[2], xy[3])
+        if p1[0] < p2[0]:
+            xy = list(p1) + list(p2)
+        else:
+            xy = list(p2) + list(p1)
+
+        thick, length = abs(xy[2]-xy[0]), abs(xy[3]-xy[1])
         if thick > length:
             temp = length
             length = thick
@@ -92,17 +108,16 @@ def strPadShape(x, y, shape):
             # x = const
             coords = [x,y-length/2+thick/2,x,y+length/2-thick/2, thick]
 
-        #coords = [int(SCALE*(o[0]+eval(o[1]))) for o in zip([x,y,x,y],shape[2:6])]
         ofs = " ".join([repr(x) for x in coords])
         return ofs
     #return '--' + shape[0] + '--'     
     return None
 
-def printPad(x, y, name, pad):
+def printPad(angle, x, y, name, pad):
     str = "Pad["
     for piece in pad:
         if piece[0] == 'shape':
-            shape = strPadShape(x, y, piece[1:][0])
+            shape = strPadShape(angle, x, y, piece[1:][0])
             if shape != None:
                 str = str + shape
             else:
@@ -115,7 +130,7 @@ def printPad(x, y, name, pad):
 def printElement(co, e):
     MX = scale(eval(e[2]))
     MY = scale(eval(e[3]))
-    ROT = e[5]
+    angle = eval(e[5])
     SIDE = e[4]
     # rotate the shit here
     # ...
@@ -130,7 +145,8 @@ def printElement(co, e):
             name = manglePadName(sections[2])
             padX = scale(eval(sections[3]))
             padY = scale(eval(sections[4]))
-            strpad = printPad(padX, padY, name, pad)
+            padX,padY = rotate(angle, padX, padY)
+            strpad = printPad(angle, padX, padY, name, pad)
             if strpad != None:
                 str = str + strpad + '\n'
                 validPins = validPins + 1
