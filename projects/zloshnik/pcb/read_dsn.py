@@ -6,13 +6,17 @@ import re
 import sys
 import math
 
-SCALE=2540
+SCALE=3937
+default_clearance = 1.2*SCALE
+pcb_width = 600000
+pcb_height = 300000
+pcb_top=pcb_height
 
 def scale(x):
     return int(SCALE*x)
 
 def scaleses(x):
-    return x
+    return int(x/10000.0*SCALE)
 
 def rotate(phi, x, y):
     phi = phi*math.pi/180.0
@@ -68,6 +72,7 @@ dsnImages = {}
 dsnPadstacks = {}
 dsnComponents = {}
 dsnLayers = {}
+dsnViaList = []
 
 def parseImage(tokens):
     dsnImages[tokens[0].strip('"')] = tokens[1:]
@@ -135,14 +140,16 @@ def parseNetworkWire(wire):
         list.append(path)
 
 def parseNetworkVia(via):
-    None
+    padstack = via[1]
+    x,y = scaleses(eval(via[2])),scaleses(eval(via[3]))
+    dsnViaList.append((padstack,x,y))
 
 def parseNetwork(net):
     for piece in net[2:]:
         if piece[0] == 'wire':
             parseNetworkWire(piece[1])
         elif piece[0] == 'via':
-            parseNetworkVia(piece[1])
+            parseNetworkVia(piece)
         else:
             print 'BOO', piece
 
@@ -171,13 +178,16 @@ def strPadShape(angle, x, y, name, shape, flags='square'):
         # x = const
         coords = [x,y-length/2+thick/2,x,y+length/2-thick/2, thick]
 
+    coords[1] = -coords[1]
+    coords[3] = -coords[3]
+
     ofs = " ".join([repr(x) for x in coords])
-    return 'Pad[' + ofs + ' 1000 3500 "" "%s" "%s"]'%(name, flags) 
+    return 'Pad[' + ofs + ' %d 3500 "" "%s" "%s"]'%(default_clearance, name, flags) 
 
 def strPinShape(angle, x, y, name, shape):
     thick = scale(eval(shape[2]))
     result = 'Pin[%d %d %d %d %d %d "%s" "%s" "%s"]' %\
-        (x, y, thick, 1000, 3500, 500, name, '', '')
+        (x, -y, thick, default_clearance, 3500, 500, name, '', '')
     return result
     
 def strOctagonShape(angle, x, y, name, shape):
@@ -191,7 +201,7 @@ def strOctagonShape(angle, x, y, name, shape):
 
     radius = width
     result = 'Pin[%d %d %d %d %d %d "%s" "%s" "%s"]' %\
-        (x, y, radius, 1000, 3500, 500, name, '', '')
+        (x, -y, radius, 1000, 3500, 500, name, '', '')
     return result
 
 
@@ -233,6 +243,9 @@ def printPin(angle, x, y, name, pad, padstack):
                 return "\t" + pinstr
     return None
 
+#
+# Print components
+#
 def printElement(co, e):
     elementName = e[1].strip('"')
     MX = scale(eval(e[2]))
@@ -242,8 +255,8 @@ def printElement(co, e):
     # rotate the shit here
     # ...
     str = 'Element ["" "%s" "%s" "unknown" %d %d %d %d %d %d ""]\n(\n'%\
-        (co, elementName, MX, MY, 1000,1000,1000,1000)
-    # Pin.. ElementLine.. ElementArc..
+        (co, elementName, MX, pcb_top - MY, 1000,1000,1000,1000)
+
     image = dsnImages[co]
     validPins = 0
     for sections in image:
@@ -263,9 +276,33 @@ def printElement(co, e):
     if validPins > 0:
         print str
 
+def printShapedVia(via):
+    x = via[1]
+    y = via[2]
+
+    str = 'Element ["" "%s" "%s" "unknown" %d %d %d %d %d %d ""]\n(\n'%\
+        ('via', 'via', x, pcb_top - y, 1000,1000,1000,1000)
+
+    padstackName = via[0]
+    pad = dsnPadstacks[padstackName]
+    name = "via"
+    strpad = printPin(0, 0, 0, name, pad, padstackName)
+    if strpad != None:
+        str = str + strpad + '\n'
+
+    str = str + ')'
+    print str
+
+def printVia(via):
+    [x,y] = [via[1],via[2]]
+    str = 'Via [%d %d %d %d %d %d "" ""]\n' % (x,pcb_top-y,1000,1000,1000,1000)
+    print str
+
 def printComponent(co):
     for place in dsnComponents[co]:
         printElement(co, place)
+    for via in dsnViaList:
+        printShapedVia(via)
 
 def printElements():
     for co in dsnComponents:
@@ -279,7 +316,7 @@ def strPolyline(polyline):
         if xys[0] == 0: xys = (xy[0],xys[1])
         if xys[1] == 0: xys = (xys[0],xy[1])
         str = str + '\tLine[%d %d %d %d ' % (xy[0],xy[1],xys[0],xys[1])
-        str = str + '%d 1000 "clearline"]\n' % polyline[1]
+        str = str + '%d %d "clearline"]\n' % (polyline[1], default_clearance)
         xy = xys
     return str
 
@@ -287,8 +324,8 @@ def strPath(path):
     str = ''
     xy = path[2]
     for xys in path[3:]:
-        str = str + '\tLine[%d %d %d %d ' % (xy[0],xy[1],xys[0],xys[1])
-        str = str + '%d 1000 "clearline"]\n' % path[1]
+        str = str + '\tLine[%d %d %d %d ' % (xy[0],pcb_top-xy[1],xys[0],pcb_top-xys[1])
+        str = str + '%d %d "clearline"]\n' % (path[1], default_clearance)
         xy = xys
     return str
 
@@ -306,7 +343,6 @@ def printLayer(layerName):
 def printLayers():
     for la in dsnLayers:
         printLayer(la)
-
 
 text = readinput('testk.dsn')
 tokens = re.split(r'([\(\)\s])',text)
@@ -339,7 +375,7 @@ for sespart in ses:
 #print ses
 exit
 
-print 'PCB["" 1250000 1250000]'
+print 'PCB["" %d %d]' %(pcb_width,pcb_height)
 print 'Grid[1.000000 0 0 1]'
 print 'Cursor[0 0 0.000000]'
 print 'PolyArea[200000000.000000]'
@@ -348,6 +384,9 @@ print 'DRC[1000 1000 1000 500 1500 1000]'
 print 'Flags("rubberband,nameonpcb,uniquename,clearnew,snappin,onlynames")'
 print 'Groups("1,c:2,s:3:4:5:6:7:8")'
 print 'Styles["Signal,1000,3600,2000,1000:Power,2500,6000,3500,1000:Fat,4000,6000,3500,1000:Skinny,600,2402,1181,600"]'
+
+for via in dsnViaList:
+    printVia(via)
 
 printElements()
 printLayers()
