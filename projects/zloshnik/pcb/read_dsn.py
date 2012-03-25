@@ -10,7 +10,6 @@ SCALE=3937
 default_clearance = 1.2*SCALE
 pcb_width = 600000
 pcb_height = 300000
-pcb_top=pcb_height
 
 def scale(x):
     return int(SCALE*x)
@@ -27,6 +26,13 @@ def rotate(phi, x, y):
 def manglePadName(s):
     #return '['+s+']'+s.replace('+', '_plus_').replace('-', '_minus_')
     return s.strip('\"')
+
+def translateLayer(s):
+    if s == '1#Top':
+        return '1#component'
+    if s == '16#Bottom':
+        return '2#solder'
+    return s
 
 def readinput(fileName):
     fi = open(fileName, 'r')
@@ -122,6 +128,15 @@ def parseWiring(tokens):
             None
         else:
             print 'BOO', wire
+
+# only find out the board boundary
+def parseStructure(tokens):
+    global pcb_width, pcb_height
+
+    for boundary in tokens:
+        if boundary[1][0:2] == ['rect','pcb']:
+            [x1,y1,x2,y2] = [scale(eval(q)) for q in boundary[1][2:6]]
+            pcb_width, pcb_height = abs(x2-x1), abs(y2-y1)
 
 def parseNetworkWire(wire):
     if wire[0] == 'path':
@@ -252,10 +267,11 @@ def printElement(co, e):
     MY = scale(eval(e[3]))
     angle = eval(e[5])
     SIDE = e[4]
-    # rotate the shit here
-    # ...
+
+    textdir = int(angle/90)
+
     str = 'Element ["" "%s" "%s" "unknown" %d %d %d %d %d %d ""]\n(\n'%\
-        (co, elementName, MX, pcb_top - MY, 1000,1000,1000,1000)
+        (co, elementName, MX, pcb_height - MY, -3000,-2500,textdir,100)
 
     image = dsnImages[co]
     validPins = 0
@@ -281,7 +297,7 @@ def printShapedVia(via):
     y = via[2]
 
     str = 'Element ["" "%s" "%s" "unknown" %d %d %d %d %d %d ""]\n(\n'%\
-        ('via', 'via', x, pcb_top - y, 1000,1000,1000,1000)
+        ('', '', x, pcb_height - y, 1000,1000,1000,1000)
 
     padstackName = via[0]
     pad = dsnPadstacks[padstackName]
@@ -295,7 +311,7 @@ def printShapedVia(via):
 
 def printVia(via):
     [x,y] = [via[1],via[2]]
-    str = 'Via [%d %d %d %d %d %d "" ""]\n' % (x,pcb_top-y,1000,1000,1000,1000)
+    str = 'Via [%d %d %d %d %d %d "" ""]\n' % (x,pcb_height-y,1000,1000,1000,1000)
     print str
 
 def printComponent(co):
@@ -324,13 +340,13 @@ def strPath(path):
     str = ''
     xy = path[2]
     for xys in path[3:]:
-        str = str + '\tLine[%d %d %d %d ' % (xy[0],pcb_top-xy[1],xys[0],pcb_top-xys[1])
+        str = str + '\tLine[%d %d %d %d ' % (xy[0],pcb_height-xy[1],xys[0],pcb_height-xys[1])
         str = str + '%d %d "clearline"]\n' % (path[1], default_clearance)
         xy = xys
     return str
 
 def printLayer(layerName):
-    str = 'Layer(%s "%s")\n(' % tuple(layerName.split('#'))
+    str = 'Layer(%s "%s")\n(' % tuple(translateLayer(layerName).split('#'))
     for stuffie in dsnLayers[layerName]:
         if stuffie[0] == 'polyline':
             #str = str + strPolyline(stuffie) + '\n'
@@ -344,7 +360,25 @@ def printLayers():
     for la in dsnLayers:
         printLayer(la)
 
-text = readinput('testk.dsn')
+if len(sys.argv) < 2:
+    print 'Usage: ' + sys.argv[0] + ' board.ses > board.pcb'
+    quit()
+
+text = readinput(sys.argv[1])
+tokens = re.split(r'([\(\)\s])',text)
+ses = parse(None, tokens)[1][1]
+
+dsnFileName = None
+
+for tok in ses:
+    if tok[0] == 'base_design':
+        dsnFileName = tok[1]
+
+if dsnFileName == None:
+    print 'Could not locate base DSN file name'
+    quit()
+
+text = readinput(dsnFileName)
 tokens = re.split(r'([\(\)\s])',text)
 pcb = parse(None, tokens)[1][1]
 if pcb[0] != 'PCB':
@@ -352,7 +386,6 @@ if pcb[0] != 'PCB':
     exit
 name = pcb[0]
 
-#print "PCB name=", eval(pcb[1])
 for section in pcb[2:]:
     if section[0] == 'library':
         parseLibrary(section[1:])
@@ -360,11 +393,10 @@ for section in pcb[2:]:
         parsePlacement(section[1:])
     if section[0] == 'wiring':
         parseWiring(section[1:])
+    if section[0] == 'structure':
+        parseStructure(section[1:])
 
 
-text = readinput('testk.ses')
-tokens = re.split(r'([\(\)\s])',text)
-ses = parse(None, tokens)[1][1]
 
 for sespart in ses:
     if sespart[0] == 'routes':
@@ -372,8 +404,6 @@ for sespart in ses:
             if routepart[0] =='network_out':
                 parseNetworks(routepart[1:])
 
-#print ses
-exit
 
 print 'PCB["" %d %d]' %(pcb_width,pcb_height)
 print 'Grid[1.000000 0 0 1]'
@@ -385,8 +415,23 @@ print 'Flags("rubberband,nameonpcb,uniquename,clearnew,snappin,onlynames")'
 print 'Groups("1,c:2,s:3:4:5:6:7:8")'
 print 'Styles["Signal,1000,3600,2000,1000:Power,2500,6000,3500,1000:Fat,4000,6000,3500,1000:Skinny,600,2402,1181,600"]'
 
+try:
+    fsyminc = open('symbols.inc','r')
+    print fsyminc.read()
+    fsyminc.close()
+except:
+    None
+
 for via in dsnViaList:
     printVia(via)
 
 printElements()
 printLayers()
+
+print 'Layer(3 "GND")'
+print '('
+print ')'
+print 'Layer(4 "power")'
+print '('
+print ')'
+
