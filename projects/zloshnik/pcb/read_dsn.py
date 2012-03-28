@@ -43,22 +43,18 @@ def readinput(fileName):
     return text
 
 def parse(scope, tokens):
-    #print 'SCOPE=', scope, tokens[0]
     i = 0
     data = []
     selfscope = None
     while i < len(tokens):
-        #print '----', tokens[i:i+5]
         if tokens[i] == ')':
             # end of scope
-            # print '['+selfscope+']', data
             return i + 1, data
         elif tokens[i] == '(':
             # open scope
             if selfscope == None:
                 selfscope = ''
             size, sdata = parse(selfscope, tokens[i+1:])
-            #print 'appended ', size, sdata
             i = i + size + 1
             data.append(sdata)
         elif selfscope == None:
@@ -79,6 +75,7 @@ dsnPadstacks = {}
 dsnComponents = {}
 dsnLayers = {}
 dsnViaList = []
+dsnNetList = {}
 
 def parseImage(tokens):
     dsnImages[tokens[0].strip('"')] = tokens[1:]
@@ -138,14 +135,35 @@ def parseStructure(tokens):
             [x1,y1,x2,y2] = [scale(eval(q)) for q in boundary[1][2:6]]
             pcb_width, pcb_height = abs(x2-x1), abs(y2-y1)
 
-def parseNetworkWire(wire):
+def parseNetListNet(netName, pins):
+    global dsnNetList
+
+    pinList = []
+    for pin in pins[1:]:
+        m = re.match(r'("[_.,\-+\w]+"|[_.,\-+\w]+)-("[_.,\-+\w]+"|[_.,\-+\w]+)', pin)
+        if m != None:
+            componentName = m.group(1).strip('"')
+            pinName = m.group(2).strip('"')
+            pinList.append((componentName, pinName))
+
+    dsnNetList[netName] = pinList
+        
+
+def parseNetList(tokens):
+    # parse dsn netlist, ignore the vias, they will reappear in the session file
+    for net in tokens:
+        if net[0] == 'net':
+            parseNetListNet(net[1].strip('"'), net[3])
+    
+
+def parseNetworkWire(wire, netName):
     if wire[0] == 'path':
         layer = wire[1]
         aperture = scaleses(eval(wire[2]))
         p = [scaleses(eval(x)) for x in wire[3:]]
         points = zip(p[::2], p[1::2])
 
-        path = ['path', aperture] + points
+        path = ['path', aperture, netName] + points
 
         list = []
         if layer in dsnLayers:
@@ -154,17 +172,18 @@ def parseNetworkWire(wire):
             dsnLayers[layer] = list
         list.append(path)
 
-def parseNetworkVia(via):
+def parseNetworkVia(via, netName):
     padstack = via[1]
     x,y = scaleses(eval(via[2])),scaleses(eval(via[3]))
     dsnViaList.append((padstack,x,y))
 
 def parseNetwork(net):
+    netName = net[1]
     for piece in net[2:]:
         if piece[0] == 'wire':
-            parseNetworkWire(piece[1])
+            parseNetworkWire(piece[1], netName)
         elif piece[0] == 'via':
-            parseNetworkVia(piece)
+            parseNetworkVia(piece, netName)
         else:
             print 'BOO', piece
 
@@ -199,13 +218,13 @@ def strPadShape(angle, x, y, name, shape, flags='square'):
     ofs = " ".join([repr(x) for x in coords])
     return 'Pad[' + ofs + ' %d 3500 "" "%s" "%s"]'%(default_clearance, name, flags) 
 
-def strPinShape(angle, x, y, name, shape):
+def strPinShape(angle, x, y, name, shape, flags=''):
     thick = scale(eval(shape[2]))
     result = 'Pin[%d %d %d %d %d %d "%s" "%s" "%s"]' %\
-        (x, -y, thick, default_clearance, 3500, 500, name, '', '')
+        (x, -y, thick, default_clearance, 3500, 500, name, name, flags)
     return result
     
-def strOctagonShape(angle, x, y, name, shape):
+def strOctagonShape(angle, x, y, name, shape, flags=''):
     s = [scale(eval(q)) for q in shape[3:]]
     xmin = min(s[3::2])
     xmax = max(s[3::2])
@@ -216,11 +235,11 @@ def strOctagonShape(angle, x, y, name, shape):
 
     radius = width
     result = 'Pin[%d %d %d %d %d %d "%s" "%s" "%s"]' %\
-        (x, -y, radius, 1000, 3500, 500, name, '', '')
+        (x, -y, radius, default_clearance, 3500, 500, name, name, '')
     return result
 
 
-def strOblongShape(angle, x, y, name, shape):
+def strOblongShape(angle, x, y, name, shape, flags=''):
     s = [eval(q) for q in shape[3:]]
     xmin = min(s[3::2])
     xmax = max(s[3::2])
@@ -228,32 +247,33 @@ def strOblongShape(angle, x, y, name, shape):
     ymax = max(s[4::2])
     fakeshape = [0,0,str(ymin),str(xmin),str(ymax),str(xmax)]
 
-    s1 = strPadShape(angle, x, y, name, fakeshape, '')
+    s0 = strPadShape(angle, x, y, name, fakeshape, '')
+    s1 = strPadShape(angle, x, y, name, fakeshape, 'onsolder')
+
 
     fakeshape = [0,0,str(min([abs(xmax-xmin), abs(ymax-ymin)])),0,0]
 
     s2 = strPinShape(angle, x, y, name, fakeshape)
 
-    return s1 + '\n' + s2
+    return s0+'\n\t' + s1 + '\n\t' + s2
 
-def strShape(angle, x, y, name, shape, padstack):
+def strShape(angle, x, y, name, shape, padstack, flags):
     if shape[0] == 'rect':
-        return strPadShape(angle, x, y, name, shape)
+        return strPadShape(angle, x, y, name, shape, 'square,' + flags)
     elif shape[0] == 'circle':
-        return strPinShape(angle, x, y, name, shape)
+        return strPinShape(angle, x, y, name, shape, flags)
     elif (shape[0] == 'polygon'):
         if padstack.startswith('Octagon'):
-            return strOctagonShape(angle, x, y, name, shape)
+            return strOctagonShape(angle, x, y, name, shape, flags)
         elif padstack.startswith('Oblong'):
-            return strOblongShape(angle, x, y, name, shape)
+            return strOblongShape(angle, x, y, name, shape, flags)
 
-    #return '--' + shape[0] + '--'     
     return None
 
-def printPin(angle, x, y, name, pad, padstack):
+def printPin(angle, x, y, name, pad, padstack, flags=''):
     for piece in pad:
         if piece[0] == 'shape':
-            pinstr = strShape(angle, x, y, name, piece[1:][0], padstack)
+            pinstr = strShape(angle, x, y, name, piece[1:][0], padstack, flags)
             if pinstr != None:
                 return "\t" + pinstr
     return None
@@ -302,23 +322,31 @@ def printShapedVia(via):
     padstackName = via[0]
     pad = dsnPadstacks[padstackName]
     name = "via"
-    strpad = printPin(0, 0, 0, name, pad, padstackName)
-    if strpad != None:
-        str = str + strpad + '\n'
+    [strpad1,strpad2] = [printPin(0, 0, 0, name, pad, padstackName), \
+                    printPin(0, 0, 0, name, pad, padstackName, flags='onsolder')]
+    if strpad1 != None and strpad2 != None:
+        str = "\n".join([str, strpad1, strpad2])
 
     str = str + ')'
     print str
 
 def printVia(via):
     [x,y] = [via[1],via[2]]
-    str = 'Via [%d %d %d %d %d %d "" ""]\n' % (x,pcb_height-y,1000,1000,1000,1000)
+    padstackName = via[0]
+    pad = dsnPadstacks[padstackName]
+    rect = pad[0][1]
+    xyxy = [scale(eval(q)) for q in rect[2:6]]
+    dia = abs(xyxy[2]-xyxy[0])
+    drill = scale(0.6)
+    str = 'Via [%d %d %d %d %d %d "" "thermal"]\n' % (x,pcb_height-y,dia,3500,1000,drill)
     print str
 
 def printComponent(co):
     for place in dsnComponents[co]:
         printElement(co, place)
-    for via in dsnViaList:
-        printShapedVia(via)
+    # Shaped vias are nice but they cause too much trouble with polygons in PCB
+    #for via in dsnViaList:
+    #    printShapedVia(via)
 
 def printElements():
     for co in dsnComponents:
@@ -338,8 +366,8 @@ def strPolyline(polyline):
 
 def strPath(path):
     str = ''
-    xy = path[2]
-    for xys in path[3:]:
+    xy = path[3]
+    for xys in path[4:]:
         str = str + '\tLine[%d %d %d %d ' % (xy[0],pcb_height-xy[1],xys[0],pcb_height-xys[1])
         str = str + '%d %d "clearline"]\n' % (path[1], default_clearance)
         xy = xys
@@ -359,6 +387,20 @@ def printLayer(layerName):
 def printLayers():
     for la in dsnLayers:
         printLayer(la)
+
+
+def printNetList():
+    print 'NetList()\n('
+    for net in dsnNetList:
+        print '\tNet("%s" "(unknown)")\n\t(' % net
+        for node in dsnNetList[net]:
+            print '\t\tConnect("%s-%s")' % node
+        print '\t)'
+    print ')'
+
+#
+# -- the script starts here
+#
 
 if len(sys.argv) < 2:
     print 'Usage: ' + sys.argv[0] + ' board.ses > board.pcb'
@@ -395,6 +437,8 @@ for section in pcb[2:]:
         parseWiring(section[1:])
     if section[0] == 'structure':
         parseStructure(section[1:])
+    if section[0] == 'network':
+        parseNetList(section[1:])
 
 
 
@@ -411,7 +455,7 @@ print 'Cursor[0 0 0.000000]'
 print 'PolyArea[200000000.000000]'
 print 'Thermal[0.500000]'
 print 'DRC[1000 1000 1000 500 1500 1000]'
-print 'Flags("rubberband,nameonpcb,uniquename,clearnew,snappin,onlynames")'
+print 'Flags(0x00000000000008d0)'
 print 'Groups("1,c:2,s:3:4:5:6:7:8")'
 print 'Styles["Signal,1000,3600,2000,1000:Power,2500,6000,3500,1000:Fat,4000,6000,3500,1000:Skinny,600,2402,1181,600"]'
 
@@ -435,3 +479,4 @@ print 'Layer(4 "power")'
 print '('
 print ')'
 
+printNetList()
