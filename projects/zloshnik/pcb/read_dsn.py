@@ -220,8 +220,9 @@ def strPadShape(angle, x, y, name, shape, flags='square'):
 
 def strPinShape(angle, x, y, name, shape, flags=''):
     thick = scale(eval(shape[2]))
+    drill = scale(0.4)
     result = 'Pin[%d %d %d %d %d %d "%s" "%s" "%s"]' %\
-        (x, -y, thick, default_clearance, 3500, 500, name, name, flags)
+        (x, -y, thick, default_clearance, 3500, drill, name, name, flags)
     return result
     
 def strOctagonShape(angle, x, y, name, shape, flags=''):
