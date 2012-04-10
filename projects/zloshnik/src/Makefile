@@ -4,9 +4,9 @@ MCU = atmega8
 CLK = 20000000UL
 CC = avr-gcc
 OBJCOPY=avr-objcopy
-HEX_FLASH_FLAGS=
+HEX_FLASH_FLAGS=--pad-to 0x2000
 
-OPTIM=-Os
+OPTIM=-O2
 WARNINGS=-Wall
 
 BUILD=build

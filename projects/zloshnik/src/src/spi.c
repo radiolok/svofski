@@ -1,10 +1,13 @@
 #include <avr/io.h>
 
+#include "config.h"
 #include "spi.h"
 
-inline void spi_wait() 
+void spi_setup() 
 {
-    while (!(SPSR & _BV(SPIF)));
+    DDR_MOSI |= MOSIBV;
+    DDR_SCK  |= SCKBV;
+    DDR_MISO  &= ~MISOBV;
 }
 
 void spi_send(uint8_t b) 
