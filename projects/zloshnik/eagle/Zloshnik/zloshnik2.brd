@@ -1631,55 +1631,6 @@ for trimmer refence see : &lt;u&gt;www.electrospec-inc.com/cross_references/trim
 <rectangle x1="-1.3" y1="-0.2" x2="1.35" y2="0.2" layer="21"/>
 <rectangle x1="-0.2" y1="-1.35" x2="0.2" y2="1.3" layer="21"/>
 </package>
-<package name="RTRIMTS63Z">
-<description>&lt;b&gt;Trimm resistror&lt;/b&gt; VISHAY&lt;p&gt;
-seales container, solder immerson IP67</description>
-<wire x1="-3.3" y1="3.3" x2="-3.3" y2="-3.3" width="0.254" layer="51"/>
-<wire x1="-3.3" y1="-3.3" x2="3.3" y2="-3.3" width="0.254" layer="51"/>
-<wire x1="3.3" y1="-3.3" x2="3.3" y2="3.3" width="0.254" layer="51"/>
-<wire x1="3.3" y1="3.3" x2="-3.3" y2="3.3" width="0.254" layer="51"/>
-<wire x1="-0.75" y1="3.3" x2="-3.3" y2="3.3" width="0.254" layer="21"/>
-<wire x1="-3.3" y1="3.3" x2="-3.3" y2="-3.3" width="0.254" layer="21"/>
-<wire x1="-1.75" y1="-3.3" x2="1.75" y2="-3.3" width="0.254" layer="21"/>
-<wire x1="3.3" y1="-3.3" x2="3.3" y2="3.3" width="0.254" layer="21"/>
-<wire x1="3.3" y1="3.3" x2="0.75" y2="3.3" width="0.254" layer="21"/>
-<wire x1="-2.95" y1="3.45" x2="-2.95" y2="4.1" width="0.1016" layer="21"/>
-<wire x1="-2.95" y1="4.1" x2="-2.4" y2="4.1" width="0.1016" layer="21"/>
-<wire x1="-2.4" y1="4.1" x2="-2.4" y2="3.85" width="0.1016" layer="21"/>
-<wire x1="-2.4" y1="3.85" x2="-1.8" y2="3.85" width="0.1016" layer="21"/>
-<wire x1="-1.8" y1="3.85" x2="-1.8" y2="4.1" width="0.1016" layer="21"/>
-<wire x1="-1.8" y1="4.1" x2="-1.25" y2="4.1" width="0.1016" layer="21"/>
-<wire x1="-1.25" y1="4.1" x2="-1.25" y2="3.4" width="0.1016" layer="21"/>
-<smd name="1" x="-2.55" y="-3.15" dx="1" dy="3" layer="1"/>
-<smd name="2" x="0" y="3.15" dx="1" dy="3" layer="1"/>
-<smd name="3" x="2.55" y="-3.15" dx="1" dy="3" layer="1"/>
-<text x="-3.84" y="-3.44" size="1.27" layer="25" rot="R90">&gt;NAME</text>
-<text x="5.16" y="-3.44" size="1.27" layer="27" rot="R90">&gt;VALUE</text>
-<rectangle x1="-0.3" y1="3.4" x2="0.3" y2="4.4" layer="51"/>
-<rectangle x1="-2.85" y1="-4.4" x2="-2.25" y2="-3.4" layer="51"/>
-<rectangle x1="2.25" y1="-4.4" x2="2.85" y2="-3.4" layer="51"/>
-</package>
-<package name="RTRIM3314J">
-<description>&lt;b&gt;Trimm resistor&lt;/b&gt; BOURNS&lt;p&gt;
-0,25W, 20%</description>
-<wire x1="2.15" y1="2.15" x2="2.15" y2="-2.15" width="0.254" layer="51"/>
-<wire x1="2.15" y1="-2.15" x2="-2.15" y2="-2.15" width="0.254" layer="51"/>
-<wire x1="-2.15" y1="-2.15" x2="-2.15" y2="2.15" width="0.254" layer="51"/>
-<wire x1="-2.15" y1="2.15" x2="2.15" y2="2.15" width="0.254" layer="51"/>
-<wire x1="2.15" y1="-0.8" x2="2.15" y2="2.15" width="0.254" layer="21"/>
-<wire x1="2.15" y1="2.15" x2="1.2" y2="2.15" width="0.254" layer="21"/>
-<wire x1="-1.2" y1="2.15" x2="-2.15" y2="2.15" width="0.254" layer="21"/>
-<wire x1="-2.15" y1="2.15" x2="-2.15" y2="-0.8" width="0.254" layer="21"/>
-<wire x1="0.95" y1="-2.15" x2="-0.95" y2="-2.15" width="0.254" layer="21"/>
-<wire x1="-0.5" y1="-0.9" x2="0.9" y2="0.5" width="0.1016" layer="21"/>
-<wire x1="-0.85" y1="-0.55" x2="0.55" y2="0.85" width="0.1016" layer="21"/>
-<circle x="0" y="0" radius="1.1" width="0.1016" layer="21"/>
-<smd name="3" x="1.8" y="-2" dx="1.3" dy="2" layer="1"/>
-<smd name="1" x="-1.8" y="-2" dx="1.3" dy="2" layer="1"/>
-<smd name="2" x="0" y="2" dx="2" dy="2" layer="1"/>
-<text x="-2.64" y="-2.99" size="1.27" layer="25" rot="R90">&gt;NAME</text>
-<text x="4.01" y="-2.99" size="1.27" layer="27" rot="R90">&gt;VALUE</text>
-</package>
 </packages>
 </library>
 <library name="semicon-smd-ipc">
@@ -2765,7 +2716,7 @@ design rules under a new name.</description>
 <element name="C15" library="rcl" package="SMC_B" value="10uF" x="88.475" y="11.9275" rot="R270"/>
 <element name="R20" library="0-rcl" package="RTRIM4G/J" value="10K" x="74.93" y="7.8275"/>
 <element name="R21" library="0-rcl" package="RTRIM4G/J" value="500K" x="81.18" y="7.8275" rot="R180"/>
-<element name="R22" library="rcl" package="R0805-SVO" value="2M2" x="85.555" y="6.885" rot="R270"/>
+<element name="R22" library="rcl" package="R0805-SVO" value="33K" x="85.555" y="6.885" rot="R270"/>
 <element name="R23" library="rcl" package="R0805-SVO" value="0" x="81.805" y="16.885" rot="R270"/>
 <element name="R24" library="rcl" package="R0805-SVO" value="2M2" x="65.555" y="16.885" rot="R270"/>
 <element name="R25" library="rcl" package="R0805-SVO" value="4M7" x="59.305" y="16.885" rot="R270"/>
@@ -2776,7 +2727,7 @@ design rules under a new name.</description>
 <element name="C18" library="rcl" package="SMC_B" value="10uF" x="68.7975" y="11.9275" rot="R270"/>
 <element name="R28" library="0-rcl" package="RTRIM4G/J" value="10K" x="55.555" y="7.8275"/>
 <element name="R29" library="0-rcl" package="RTRIM4G/J" value="500K" x="61.805" y="7.8275" rot="R180"/>
-<element name="R30" library="rcl" package="R0805-SVO" value="2M2" x="66.18" y="6.885" rot="R270"/>
+<element name="R30" library="rcl" package="R0805-SVO" value="33K" x="66.18" y="6.885" rot="R270"/>
 <element name="R31" library="rcl" package="R0805-SVO" value="0" x="62.43" y="16.885" rot="R270"/>
 <element name="IC1" library="0-tlv5626" package="SO08" value="TL5626D" x="38.735" y="13.0175" rot="R270"/>
 <element name="C19" library="rcl" package="C0603K" value="100nF" x="39.37" y="17.145"/>
@@ -2824,8 +2775,6 @@ design rules under a new name.</description>
 <element name="HEA2" library="wirepad" package="1,6/0,8" value="" x="96.52" y="45.72"/>
 <element name="CAP-" library="wirepad" package="2,54/0,8" value="" x="47.3075" y="36.5125"/>
 <element name="CAP+" library="wirepad" package="2,54/0,8" value="" x="47.3075" y="31.4325"/>
-<element name="R47" library="0-rcl" package="RTRIMTS63Z" value="" x="-10.795" y="-35.56"/>
-<element name="R39" library="0-rcl" package="RTRIM3314J" value="" x="-11.7475" y="-44.7675"/>
 </elements>
 <signals>
 <signal name="GND">
