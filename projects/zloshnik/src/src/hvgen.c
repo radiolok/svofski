@@ -8,7 +8,8 @@
 #include "dac.h"
 
 
-#define FREQDIV 125
+//#define FREQDIV 125
+#define FREQDIV 100
 
 #define DEADZONE 5
 
@@ -33,8 +34,6 @@ void hvgen_setup()
     OCR1A = FREQDIV/2 - DEADZONE;//-FREQDIV/5;
 
     DDRB |= BV2(1,2);
-
-    TCCR1B |= _BV(CS10);    // start the timer
 }
 
 void hvgen_enable() 

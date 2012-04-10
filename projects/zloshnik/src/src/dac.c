@@ -20,13 +20,13 @@ void xyz_spi_setup()
 {
     // fastest SPI
     SPSR = _BV(SPI2X);
-    SPCR = BV3(DORD, SPE, MSTR);
+    SPCR = BV4(SPE, MSTR, CPHA, CPOL);
 }
 
-void xyz_spi(uint8_t hb, uint8_t lb)
+static void xyz_spi(uint8_t hb, uint8_t lb)
 {
-    spi_send(hb);
-    spi_send(lb);
+    SPDR = hb; spi_wait();
+    SPDR = lb; spi_wait();
 }
 
 void xyz_setup()
@@ -54,19 +54,24 @@ void xyz_setup()
 void xyz_setdac(uint8_t dacA, uint8_t dacB) 
 {
     dacss_on();
+    xyz_spi(0xd0, 0x02);
+    dacss_off();
+
 
     // A) Write dacB to BUFFER
     // R1:R0    0xx1
     // SPD      x1xx
     // PWR      xx0x
+    dacss_on();
     xyz_spi(0x50 | ((dacB >> 4) & 0x0f), (dacB << 4) & 0xf0);
+    dacss_off();
 
     // B) Write dacA to DAC_A and BUFFER to DAC_B
     // R1: R0   1xx0
     // SPD      x1xx
     // PWR      xx0x
+    dacss_on();
     xyz_spi(0xc0 | ((dacA >> 4) & 0x0f), (dacA << 4) & 0xf0);
-
     dacss_off();
 }
 
