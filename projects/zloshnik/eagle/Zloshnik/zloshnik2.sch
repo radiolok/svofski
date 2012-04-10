@@ -8,20 +8,20 @@
 </settings>
 <grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
-<layer number="1" name="Top" color="4" fill="1" visible="yes" active="no"/>
-<layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="no"/>
-<layer number="17" name="Pads" color="2" fill="1" visible="yes" active="no"/>
-<layer number="18" name="Vias" color="2" fill="1" visible="yes" active="no"/>
-<layer number="19" name="Unrouted" color="6" fill="1" visible="yes" active="no"/>
-<layer number="20" name="Dimension" color="15" fill="1" visible="yes" active="no"/>
-<layer number="21" name="tPlace" color="7" fill="1" visible="yes" active="no"/>
-<layer number="22" name="bPlace" color="7" fill="1" visible="yes" active="no"/>
-<layer number="23" name="tOrigins" color="15" fill="1" visible="yes" active="no"/>
-<layer number="24" name="bOrigins" color="15" fill="1" visible="yes" active="no"/>
-<layer number="25" name="tNames" color="7" fill="1" visible="yes" active="no"/>
-<layer number="26" name="bNames" color="7" fill="1" visible="yes" active="no"/>
-<layer number="27" name="tValues" color="7" fill="1" visible="yes" active="no"/>
-<layer number="28" name="bValues" color="7" fill="1" visible="yes" active="no"/>
+<layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
+<layer number="16" name="Bottom" color="1" fill="1" visible="no" active="no"/>
+<layer number="17" name="Pads" color="2" fill="1" visible="no" active="no"/>
+<layer number="18" name="Vias" color="2" fill="1" visible="no" active="no"/>
+<layer number="19" name="Unrouted" color="6" fill="1" visible="no" active="no"/>
+<layer number="20" name="Dimension" color="15" fill="1" visible="no" active="no"/>
+<layer number="21" name="tPlace" color="7" fill="1" visible="no" active="no"/>
+<layer number="22" name="bPlace" color="7" fill="1" visible="no" active="no"/>
+<layer number="23" name="tOrigins" color="15" fill="1" visible="no" active="no"/>
+<layer number="24" name="bOrigins" color="15" fill="1" visible="no" active="no"/>
+<layer number="25" name="tNames" color="7" fill="1" visible="no" active="no"/>
+<layer number="26" name="bNames" color="7" fill="1" visible="no" active="no"/>
+<layer number="27" name="tValues" color="7" fill="1" visible="no" active="no"/>
+<layer number="28" name="bValues" color="7" fill="1" visible="no" active="no"/>
 <layer number="29" name="tStop" color="7" fill="3" visible="no" active="no"/>
 <layer number="30" name="bStop" color="7" fill="6" visible="no" active="no"/>
 <layer number="31" name="tCream" color="7" fill="4" visible="no" active="no"/>
@@ -30,8 +30,8 @@
 <layer number="34" name="bFinish" color="6" fill="6" visible="no" active="no"/>
 <layer number="35" name="tGlue" color="7" fill="4" visible="no" active="no"/>
 <layer number="36" name="bGlue" color="7" fill="5" visible="no" active="no"/>
-<layer number="37" name="tTest" color="7" fill="1" visible="yes" active="no"/>
-<layer number="38" name="bTest" color="7" fill="1" visible="yes" active="no"/>
+<layer number="37" name="tTest" color="7" fill="1" visible="no" active="no"/>
+<layer number="38" name="bTest" color="7" fill="1" visible="no" active="no"/>
 <layer number="39" name="tKeepout" color="4" fill="11" visible="no" active="no"/>
 <layer number="40" name="bKeepout" color="1" fill="11" visible="no" active="no"/>
 <layer number="41" name="tRestrict" color="4" fill="10" visible="no" active="no"/>
@@ -39,16 +39,16 @@
 <layer number="43" name="vRestrict" color="2" fill="10" visible="no" active="no"/>
 <layer number="44" name="Drills" color="7" fill="1" visible="no" active="no"/>
 <layer number="45" name="Holes" color="7" fill="1" visible="no" active="no"/>
-<layer number="46" name="Milling" color="3" fill="1" visible="yes" active="no"/>
-<layer number="47" name="Measures" color="7" fill="1" visible="yes" active="no"/>
-<layer number="48" name="Document" color="7" fill="1" visible="yes" active="no"/>
-<layer number="49" name="Reference" color="7" fill="1" visible="yes" active="no"/>
-<layer number="50" name="dxf" color="7" fill="1" visible="yes" active="no"/>
-<layer number="51" name="tDocu" color="7" fill="1" visible="yes" active="no"/>
-<layer number="52" name="bDocu" color="7" fill="1" visible="yes" active="no"/>
-<layer number="53" name="tGND_GNDA" color="7" fill="9" visible="yes" active="no"/>
-<layer number="54" name="bGND_GNDA" color="1" fill="9" visible="yes" active="no"/>
-<layer number="56" name="wert" color="7" fill="1" visible="yes" active="no"/>
+<layer number="46" name="Milling" color="3" fill="1" visible="no" active="no"/>
+<layer number="47" name="Measures" color="7" fill="1" visible="no" active="no"/>
+<layer number="48" name="Document" color="7" fill="1" visible="no" active="no"/>
+<layer number="49" name="Reference" color="7" fill="1" visible="no" active="no"/>
+<layer number="50" name="dxf" color="7" fill="1" visible="no" active="no"/>
+<layer number="51" name="tDocu" color="7" fill="1" visible="no" active="no"/>
+<layer number="52" name="bDocu" color="7" fill="1" visible="no" active="no"/>
+<layer number="53" name="tGND_GNDA" color="7" fill="9" visible="no" active="no"/>
+<layer number="54" name="bGND_GNDA" color="1" fill="9" visible="no" active="no"/>
+<layer number="56" name="wert" color="7" fill="1" visible="no" active="no"/>
 <layer number="91" name="Nets" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="92" name="Busses" color="1" fill="1" visible="yes" active="yes"/>
 <layer number="93" name="Pins" color="2" fill="1" visible="no" active="yes"/>
@@ -18914,7 +18914,7 @@ Compensation Valid Up to 2099
 <part name="C15" library="rcl" deviceset="CPOL-EU" device="SMCB" value="10uF"/>
 <part name="R20" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="10K"/>
 <part name="R21" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="500K"/>
-<part name="R22" library="rcl" deviceset="R-EU_" device="R0805S" value="2M2"/>
+<part name="R22" library="rcl" deviceset="R-EU_" device="R0805S" value="33K"/>
 <part name="R23" library="rcl" deviceset="R-EU_" device="R0805S" value="0"/>
 <part name="GND19" library="supply1" deviceset="GND" device=""/>
 <part name="GND20" library="supply1" deviceset="GND" device=""/>
@@ -18930,7 +18930,7 @@ Compensation Valid Up to 2099
 <part name="C18" library="rcl" deviceset="CPOL-EU" device="SMCB" value="10uF"/>
 <part name="R28" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="10K"/>
 <part name="R29" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="500K"/>
-<part name="R30" library="rcl" deviceset="R-EU_" device="R0805S" value="2M2"/>
+<part name="R30" library="rcl" deviceset="R-EU_" device="R0805S" value="33K"/>
 <part name="R31" library="rcl" deviceset="R-EU_" device="R0805S" value="0"/>
 <part name="GND24" library="supply1" deviceset="GND" device=""/>
 <part name="GND25" library="supply1" deviceset="GND" device=""/>
@@ -18992,8 +18992,6 @@ Compensation Valid Up to 2099
 <part name="HEA2" library="wirepad" deviceset="1,6/0,8" device=""/>
 <part name="CAP-" library="wirepad" deviceset="2,54/0,8" device=""/>
 <part name="CAP+" library="wirepad" deviceset="2,54/0,8" device=""/>
-<part name="R47" library="0-rcl" deviceset="R-TRIMM" device="TS63Z"/>
-<part name="R39" library="0-rcl" deviceset="R-TRIMM" device="3314J"/>
 </parts>
 <sheets>
 <sheet>
@@ -19019,6 +19017,7 @@ Compensation Valid Up to 2099
 <wire x1="708.66" y1="68.58" x2="624.84" y2="68.58" width="0.1524" layer="94" style="shortdash"/>
 <wire x1="624.84" y1="68.58" x2="624.84" y2="149.86" width="0.1524" layer="94" style="shortdash"/>
 <text x="640.08" y="71.12" size="2.54" layer="97">RTC Clock</text>
+<text x="177.8" y="53.34" size="1.778" layer="91">todo: add jumper here</text>
 </plain>
 <instances>
 <instance part="TR1.2.TOP" gate="P" x="236.22" y="45.72"/>
@@ -19186,8 +19185,6 @@ Compensation Valid Up to 2099
 <instance part="HEA2" gate="P" x="327.66" y="109.22" rot="R270"/>
 <instance part="CAP-" gate="P" x="678.18" y="142.24" rot="R270"/>
 <instance part="CAP+" gate="P" x="670.56" y="142.24" rot="R270"/>
-<instance part="R47" gate="G$1" x="190.5" y="68.58"/>
-<instance part="R39" gate="G$1" x="190.5" y="83.82"/>
 </instances>
 <busses>
 </busses>
