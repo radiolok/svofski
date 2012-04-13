@@ -18905,39 +18905,39 @@ Compensation Valid Up to 2099
 <part name="R11" library="rcl" deviceset="R-EU_" device="R0805S" value="110K"/>
 <part name="R12" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="500K"/>
 <part name="R13" library="rcl" deviceset="R-EU_" device="R0805S" value="2M"/>
-<part name="R16" library="rcl" deviceset="R-EU_" device="R0805S" value="2M2"/>
-<part name="R17" library="rcl" deviceset="R-EU_" device="R0805S" value="4M7"/>
+<part name="R16" library="rcl" deviceset="R-EU_" device="R0805S" value="1M"/>
+<part name="R17" library="rcl" deviceset="R-EU_" device="R0805S" value="1M"/>
 <part name="Q1" library="SparkFun" deviceset="TRANSISTOR_NPN" device="SOT23-3"/>
 <part name="Q3" library="SparkFun" deviceset="TRANSISTOR_NPN" device="SOT23-3"/>
 <part name="R18" library="rcl" deviceset="R-EU_" device="R0805S" value="10K"/>
 <part name="R19" library="rcl" deviceset="R-EU_" device="R0805S" value="15K"/>
 <part name="C15" library="rcl" deviceset="CPOL-EU" device="SMCB" value="10uF"/>
 <part name="R20" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="10K"/>
-<part name="R21" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="500K"/>
-<part name="R22" library="rcl" deviceset="R-EU_" device="R0805S" value="33K"/>
+<part name="R21" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="5K"/>
+<part name="R22" library="rcl" deviceset="R-EU_" device="R0805S" value="10K"/>
 <part name="R23" library="rcl" deviceset="R-EU_" device="R0805S" value="0"/>
 <part name="GND19" library="supply1" deviceset="GND" device=""/>
 <part name="GND20" library="supply1" deviceset="GND" device=""/>
 <part name="GND23" library="supply1" deviceset="GND" device=""/>
 <part name="V3" library="supply2" deviceset="+5V" device=""/>
 <part name="V4" library="supply2" deviceset="+5V" device=""/>
-<part name="R24" library="rcl" deviceset="R-EU_" device="R0805S" value="2M2"/>
-<part name="R25" library="rcl" deviceset="R-EU_" device="R0805S" value="4M7"/>
+<part name="R24" library="rcl" deviceset="R-EU_" device="R0805S" value="1M"/>
+<part name="R25" library="rcl" deviceset="R-EU_" device="R0805S" value="1M"/>
 <part name="Q5" library="SparkFun" deviceset="TRANSISTOR_NPN" device="SOT23-3"/>
 <part name="Q6" library="SparkFun" deviceset="TRANSISTOR_NPN" device="SOT23-3"/>
 <part name="R26" library="rcl" deviceset="R-EU_" device="R0805S" value="10K"/>
 <part name="R27" library="rcl" deviceset="R-EU_" device="R0805S" value="15K"/>
 <part name="C18" library="rcl" deviceset="CPOL-EU" device="SMCB" value="10uF"/>
 <part name="R28" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="10K"/>
-<part name="R29" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="500K"/>
-<part name="R30" library="rcl" deviceset="R-EU_" device="R0805S" value="33K"/>
+<part name="R29" library="0-rcl" deviceset="R-TRIMM" device="4G/J" value="5K"/>
+<part name="R30" library="rcl" deviceset="R-EU_" device="R0805S" value="10K"/>
 <part name="R31" library="rcl" deviceset="R-EU_" device="R0805S" value="0"/>
 <part name="GND24" library="supply1" deviceset="GND" device=""/>
 <part name="GND25" library="supply1" deviceset="GND" device=""/>
 <part name="GND26" library="supply1" deviceset="GND" device=""/>
 <part name="V5" library="supply2" deviceset="+5V" device=""/>
 <part name="V9" library="supply2" deviceset="+5V" device=""/>
-<part name="IC1" library="0-tlv5626" deviceset="TL5626*" device="D"/>
+<part name="IC1" library="0-tlv5626" deviceset="TL5626*" device="D" value="TLV5626D"/>
 <part name="C19" library="rcl" deviceset="C-EU" device="C0603K" value="100nF"/>
 <part name="GND27" library="supply1" deviceset="GND" device=""/>
 <part name="V10" library="supply2" deviceset="+5V" device=""/>
