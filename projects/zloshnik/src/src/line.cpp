@@ -8,19 +8,29 @@ Tracer trazador;
 
 #define SWAP(a,b) {(a)^=(b);(b)^=(a);(a)^=(b);}
 
-void Tracer::clamp(int *x) 
+int Tracer::clamp(int *x) 
 {
-    if(*x < 0) *x = 0;
-    else if (*x > 255) *x = 255;
+    int clamped = 0;
+    if(*x < 0) {
+        *x = 0;
+        clamped = 1;
+    }
+    else if (*x > 255) {
+        *x = 255;
+        clamped = 1;
+    }
 }
 
-void Tracer::MoveTo(int x, int y) 
+int Tracer::MoveTo(int x, int y) 
 {
+    int clamped = 0;
     X = x;
     Y = y;
-    clamp(&x);
-    clamp(&y);
+    clamped = clamp(&x);
+    clamped |= clamp(&y);
     xyz.SetXY(x, y);
+
+    return clamped;
 }
 
 void Tracer::LineTo(int x1, int y1) 
@@ -32,6 +42,9 @@ void Tracer::LineTo(int x1, int y1)
     int steep = abs(Dy) >= abs(Dx);
     int xstep, ystep;
     int twoDy, twoDyTwoDx, E, x, y, xend;
+
+    MoveTo(x1, y1);
+    makePace();
 
     if (steep) {
         SWAP(x0, y0);
@@ -73,7 +86,6 @@ void Tracer::LineTo(int x1, int y1)
         } else {
             MoveTo(x, y);
         }
-        //for(int j = 0; j < 20; j++)
-        //    __asm volatile("nop");
+        makePace();
     }
 }

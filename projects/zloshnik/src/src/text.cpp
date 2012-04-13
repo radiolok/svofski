@@ -9,8 +9,6 @@ extern "C" PGM_P charset0[256];
 
 Text text;
 
-uint8_t text_angle = 0;
-
 void Text::Char(uint8_t c, int ox, int oy, uint8_t scale) 
 {
     int x = ox;
@@ -35,7 +33,7 @@ void Text::Char(uint8_t c, int ox, int oy, uint8_t scale)
         }
     }
 
-    x = ox + 5 * scale;
+    x = ox + 6 * scale;
     y = oy;
     irotate(&x, &y, ox, oy, text_angle);
     trazador.MoveTo(x, y);

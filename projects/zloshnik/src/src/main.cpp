@@ -22,8 +22,8 @@ uint16_t textangle = 0;
 uint8_t centre_x, centre_y;
 uint16_t centreangle = 0;
 
-#define XYXOR_WORD "3LO"
-#define XYXOR_LEN  3
+#define XYXOR_WORD "3LOSHA"
+#define XYXOR_LEN  6
 
 void draw_xyxor()
 {
@@ -55,20 +55,20 @@ void draw_xyxor()
     }
 
     int ts = textscale/16;
-    int ox = centre_x-5*ts*XYXOR_LEN/2;
-    int oy = centre_y-8*ts/2;
+    int ox = centre_x-TEXT_CHARWIDTH*ts*XYXOR_LEN/2;
+    int oy = centre_y-TEXT_CHARHEIGHT*ts/2;
     irotate(&ox, &oy, centre_x, centre_y, textangle/4);
+    trazador.SetPace(20);
     trazador.MoveTo(ox, oy);
     text.Str(XYXOR_WORD, ts, textangle/4);
-    trazador.MoveTo(ox+2, oy+2);
-    text.Str(XYXOR_WORD, ts, textangle/4);
+    trazador.SetPace(0);
     textangle--;
     textscale += d_textscale;
-    if (textscale > 200 || textscale < 3) d_textscale = -d_textscale;
+    if (textscale > 200 || textscale < 4) d_textscale = -d_textscale;
 
     centre_x = 128+isin(centreangle)/4;
     centre_y = 128+icos(centreangle)/4;
-    centreangle--;
+    centreangle+=16;
 
     if (++scale == 128) scale = 1;
 }
