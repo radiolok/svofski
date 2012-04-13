@@ -2,32 +2,31 @@
 #include <stdlib.h>
 
 #include "dac.h"
+#include "line.h"
 
+Tracer trazador;
 
 #define SWAP(a,b) {(a)^=(b);(b)^=(a);(a)^=(b);}
 
-int current_x, current_y;
-
-void clamp(int *x) 
+void Tracer::clamp(int *x) 
 {
     if(*x < 0) *x = 0;
     else if (*x > 255) *x = 255;
 }
 
-void move_to(int x, int y) 
+void Tracer::MoveTo(int x, int y) 
 {
-    current_x = x;
-    current_y = y;
+    X = x;
+    Y = y;
     clamp(&x);
     clamp(&y);
-    xyz_setdac(x, y);
+    xyz.SetXY(x, y);
 }
 
-
-void line_to(int x1, int y1) 
+void Tracer::LineTo(int x1, int y1) 
 {
-    int x0 = current_x;
-    int y0 = current_y;
+    int x0 = X;
+    int y0 = Y;
     int Dx = x1 - x0;
     int Dy = y1 - y0;
     int steep = abs(Dy) >= abs(Dx);
@@ -70,9 +69,9 @@ void line_to(int x1, int y1)
         x += xstep;
 
         if (steep) {
-            move_to(y, x);
+            MoveTo(y, x);
         } else {
-            move_to(x, y);
+            MoveTo(x, y);
         }
         //for(int j = 0; j < 20; j++)
         //    __asm volatile("nop");

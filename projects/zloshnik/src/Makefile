@@ -3,6 +3,7 @@ TARGET=3losh
 MCU = atmega8
 CLK = 20000000UL
 CC = avr-gcc
+CXX = avr-g++
 OBJCOPY=avr-objcopy
 HEX_FLASH_FLAGS=--pad-to 0x2000
 
@@ -14,10 +15,14 @@ SOURCES=src
 
 INCLUDES=src
 
-COMMON = -mmcu=$(MCU) -DF_CPU=$(CLK) -std=c99
-CFLAGS  = $(COMMON)
+COMMON = -mmcu=$(MCU) -DF_CPU=$(CLK)
+CFLAGS  = $(COMMON) -std=c99
 CFLAGS += $(WARNINGS) $(OPTIM) $(WARNINGS) $(INCLUDE)
 CFLAGS += -MD -MP -MT $(*F).o -MF $(DEPSDIR)/$(@F).d
+
+CXXFLAGS = $(COMMON)
+CXXFLAGS+= $(WARNINGS) $(OPTIM) $(WARNINGS) $(INCLUDE)
+CXXFLAGS+= -MD -MP -MT $(*F).o -MF $(DEPSDIR)/$(@F).d
 
 ## Assembly specific flags
 ASMFLAGS = $(COMMON)

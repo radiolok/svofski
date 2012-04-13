@@ -5,7 +5,6 @@
 
 #include "util.h"
 #include "config.h"
-#include "dac.h"
 
 
 //#define FREQDIV 125

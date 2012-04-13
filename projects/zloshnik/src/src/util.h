@@ -3,8 +3,7 @@
 ///
 /// Bit settings. BCD conversions. Calendar.
 ///
-#ifndef _UTIL_H
-#define _UTIL_H
+#pragma once
 
 #define BV2(a,b) (_BV(a)|_BV(b))
 #define BV3(a,b,c) (_BV(a)|_BV(b)|_BV(c))
@@ -19,6 +18,10 @@
 /// Convert to binary from BCD representation 
 /// \see frombcd
 #define _frombcd(x) ((x & 017) + (((x) & 0160)>>4) * 10)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// Convert to binary from BCD representation as a function.
 /// \see _frombcd
@@ -43,7 +46,7 @@ void blinkmode_set(uint8_t mode);
 uint8_t blinkmode_get();
 
 /// Called every blink, unless NULL
-void (*blinkhandler)(uint8_t);
+//void (*blinkhandler)(uint8_t);
 
 /// Sets fading mode and speed
 /// \see _fademode
@@ -69,5 +72,7 @@ void savingmode_next();
 // \see _dotmode
 void dotmode_set(uint8_t mode);
 
-
+#ifdef __cplusplus
+}
 #endif
+
