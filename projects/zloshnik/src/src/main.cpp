@@ -32,10 +32,10 @@ void draw_xyxor()
         int16_t x = 128 + isin(i);
         int16_t y = 128 + icos(i);
         if (i == -1 || ((f + textangle/4) % 2 == 0)) {
-            move_to(x, y);
+            trazador.MoveTo(x, y);
         }
         else {
-            line_to(x,y);
+            trazador.LineTo(x,y);
         }
     }
 
@@ -45,10 +45,10 @@ void draw_xyxor()
         x = 128 + (x * scale)/128;
         y = 128 + (y * scale)/128;
         if (i == -1) {
-            move_to(x, y);
+            trazador.MoveTo(x, y);
         }
         else {
-            line_to(x,y);
+            trazador.LineTo(x,y);
         }
         scale+=4;
         a+=8;
@@ -58,10 +58,10 @@ void draw_xyxor()
     int ox = centre_x-5*ts*XYXOR_LEN/2;
     int oy = centre_y-8*ts/2;
     irotate(&ox, &oy, centre_x, centre_y, textangle/4);
-    move_to(ox, oy);
-    text_str(XYXOR_WORD, ts, textangle/4);
-    move_to(ox+2, oy+2);
-    text_str(XYXOR_WORD, ts, textangle/4);
+    trazador.MoveTo(ox, oy);
+    text.Str(XYXOR_WORD, ts, textangle/4);
+    trazador.MoveTo(ox+2, oy+2);
+    text.Str(XYXOR_WORD, ts, textangle/4);
     textangle--;
     textscale += d_textscale;
     if (textscale > 200 || textscale < 3) d_textscale = -d_textscale;
@@ -73,17 +73,17 @@ void draw_xyxor()
     if (++scale == 128) scale = 1;
 }
 
-main() 
+int main() 
 {
     spi_setup();
     hvgen_setup();
     hvgen_enable();
 
-    xyz_setup();
+    xyz.Setup();
     _delay_ms(10);
-    xyz_setup();
+    xyz.Setup();
     _delay_ms(10);
-    xyz_setup();
+    xyz.Setup();
     _delay_ms(10);
 
     for(;;) {

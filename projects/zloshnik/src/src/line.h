@@ -2,8 +2,15 @@
 
 #include <inttypes.h>
 
-extern int current_x, current_y;
+class Tracer {
+public:
+    int X, Y;
 
-void move_to(int x, int y);
-void line_to(int x1, int y1);
-void clamp(int* x);
+    void MoveTo(int x, int y);
+    void LineTo(int x1, int y1);
+
+private:
+    void clamp(int* x);
+};
+
+extern Tracer trazador;

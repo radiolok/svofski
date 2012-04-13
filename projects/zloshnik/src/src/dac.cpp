@@ -5,6 +5,10 @@
 #include "config.h"
 #include "spi.h"
 
+#include "dac.h"
+
+Dac xyz;
+
 inline static void dacss_on()
 {
     PORT_DACSS &= ~DACSS_BV;
@@ -14,7 +18,6 @@ inline static void dacss_off()
 {
     PORT_DACSS |= DACSS_BV;
 }
-    
 
 void xyz_spi_setup() 
 {
@@ -29,7 +32,7 @@ static void xyz_spi(uint8_t hb, uint8_t lb)
     SPDR = lb; spi_wait();
 }
 
-void xyz_setup()
+void Dac::Setup(void)
 {
     xyz_spi_setup();
 
@@ -51,7 +54,7 @@ void xyz_setup()
     dacss_off();
 }
 
-void xyz_setdac(uint8_t dacA, uint8_t dacB) 
+void Dac::SetXY(uint8_t dacA, uint8_t dacB) 
 {
     dacss_on();
     xyz_spi(0xd0, 0x02);
@@ -74,4 +77,6 @@ void xyz_setdac(uint8_t dacA, uint8_t dacB)
     xyz_spi(0xc0 | ((dacA >> 4) & 0x0f), (dacA << 4) & 0xf0);
     dacss_off();
 }
+
+void Dac::SetZ(uint8_t z) { }
 
