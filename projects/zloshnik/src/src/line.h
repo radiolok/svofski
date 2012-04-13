@@ -3,14 +3,18 @@
 #include <inttypes.h>
 
 class Tracer {
+private:
+    uint8_t pace;
+    int clamp(int* x);
+    void makePace() const { for(uint8_t j = 0; j < pace; j++)
+                               __asm volatile("nop"); };
+
 public:
     int X, Y;
 
-    void MoveTo(int x, int y);
+    inline void SetPace(uint8_t pace) { this->pace = pace; }
+    int MoveTo(int x, int y);
     void LineTo(int x1, int y1);
-
-private:
-    void clamp(int* x);
 };
 
 extern Tracer trazador;
