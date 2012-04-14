@@ -19,6 +19,8 @@ int Tracer::clamp(int *x)
         *x = 255;
         clamped = 1;
     }
+
+    return clamped;
 }
 
 int Tracer::MoveTo(int x, int y) 
@@ -43,6 +45,15 @@ void Tracer::LineTo(int x1, int y1)
     int xstep, ystep;
     int twoDy, twoDyTwoDx, E, x, y, xend;
 
+
+    if ((x1 > 255 || x1 < 0 || y1 > 255 || y1 < 0) && 
+        (X  > 255 || X  < 0 || Y  > 255 || Y  < 0))  {
+        X = x1;
+        Y = y1;
+        return;
+    }
+
+    
     MoveTo(x1, y1);
     makePace();
 

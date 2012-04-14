@@ -12,21 +12,26 @@
 #include "pecado.h"
 #include "text.h"
 #include "line.h"
+#include "shape.h"
 
 int16_t scale = 0;
-int16_t textscale = 1;
-int8_t  d_textscale = 4;
+int16_t textscale = 4*256;
+int16_t  d_textscale = 100;
 uint8_t a;
 uint16_t textangle = 0;
 
 uint8_t centre_x, centre_y;
 uint16_t centreangle = 0;
 
-#define XYXOR_WORD "3LOSHA"
-#define XYXOR_LEN  6
+#define XYXOR_WORD "ZLOSHA"
+#define XYXOR_LEN  3
+
+Box box;
+Star star;
 
 void draw_xyxor()
 {
+    trazador.SetPace(80);
     scale = 0;
     for(int i = -1, f = 0; i < 256; i+=8, f++) {
         int16_t x = 128 + isin(i);
@@ -39,6 +44,7 @@ void draw_xyxor()
         }
     }
 
+/*
     for(int i = -1; i < 256; i+=8) {
         int16_t x = isin(a);
         int16_t y = icos(a);
@@ -53,24 +59,26 @@ void draw_xyxor()
         scale+=4;
         a+=8;
     }
+*/
 
-    int ts = textscale/16;
-    int ox = centre_x-TEXT_CHARWIDTH*ts*XYXOR_LEN/2;
-    int oy = centre_y-TEXT_CHARHEIGHT*ts/2;
-    irotate(&ox, &oy, centre_x, centre_y, textangle/4);
-    trazador.SetPace(20);
+    int ox = 128 - textscale*TEXT_CHARWIDTH*XYXOR_LEN/2/256;
+    int oy = 128 - textscale*TEXT_CHARHEIGHT/2/256;
+    irotate(&ox, &oy, 128, 128, textangle/5);
     trazador.MoveTo(ox, oy);
-    text.Str(XYXOR_WORD, ts, textangle/4);
-    trazador.SetPace(0);
+    text.Str(XYXOR_WORD, textscale, textangle/5);
+
     textangle--;
     textscale += d_textscale;
-    if (textscale > 200 || textscale < 4) d_textscale = -d_textscale;
+    if (textscale > 12*256 || textscale < 4*256) d_textscale = -d_textscale;
 
     centre_x = 128+isin(centreangle)/4;
     centre_y = 128+icos(centreangle)/4;
     centreangle+=16;
 
     if (++scale == 128) scale = 1;
+
+    star.SetTransform(centre_x, centre_y, textscale, textangle*5);
+    star.Trace();
 }
 
 int main() 
