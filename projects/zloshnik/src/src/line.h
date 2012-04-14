@@ -2,8 +2,19 @@
 
 #include <inttypes.h>
 
-extern int current_x, current_y;
+class Tracer {
+private:
+    uint8_t pace;
+    int clamp(int* x);
+    void makePace() const { for(uint8_t j = 0; j < pace; j++)
+                               __asm volatile("nop"); };
 
-void move_to(int x, int y);
-void line_to(int x1, int y1);
-void clamp(int* x);
+public:
+    int X, Y;
+
+    inline void SetPace(uint8_t pace) { this->pace = pace; }
+    int MoveTo(int x, int y);
+    void LineTo(int x1, int y1);
+};
+
+extern Tracer trazador;
