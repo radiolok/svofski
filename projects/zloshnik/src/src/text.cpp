@@ -9,7 +9,7 @@ extern "C" PGM_P charset0[256];
 
 Text text;
 
-void Text::Char(uint8_t c, int ox, int oy, uint8_t scale) 
+void Text::Char(uint8_t c, int ox, int oy, int16_t scale) 
 {
     int x = ox;
     int y = oy;
@@ -20,8 +20,8 @@ void Text::Char(uint8_t c, int ox, int oy, uint8_t scale)
     coffs = (PGM_P) pgm_read_word(&(charset0[c-0x20]));
     
     for (int i = 0; (encoded = pgm_read_byte(coffs)); coffs++, i++) {
-        x = ox + scale * ((encoded >> 4) & 007);
-        y = oy + scale * ((encoded & 017) - 4);
+        x = ox + (scale * ((encoded >> 4) & 007))/256;
+        y = oy + (scale * ((encoded & 017) - 4))/256;
         blanco = encoded & 0200 ? 1 : 0;
         
         irotate(&x, &y, ox, oy, text_angle);
@@ -33,13 +33,13 @@ void Text::Char(uint8_t c, int ox, int oy, uint8_t scale)
         }
     }
 
-    x = ox + 6 * scale;
+    x = ox + (6 * scale) / 256;
     y = oy;
     irotate(&x, &y, ox, oy, text_angle);
     trazador.MoveTo(x, y);
 }
 
-void Text::Str(const char *s, uint8_t scale, uint8_t angle)
+void Text::Str(const char *s, int16_t scale, uint8_t angle)
 {
     text_angle = angle;
     for (; *s != 0; s++) {
