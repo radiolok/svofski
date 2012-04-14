@@ -2,37 +2,60 @@
 #include <stdlib.h>
 
 #include "dac.h"
+#include "line.h"
 
+Tracer trazador;
 
 #define SWAP(a,b) {(a)^=(b);(b)^=(a);(a)^=(b);}
 
-int current_x, current_y;
-
-void clamp(int *x) 
+int Tracer::clamp(int *x) 
 {
-    if(*x < 0) *x = 0;
-    else if (*x > 255) *x = 255;
+    int clamped = 0;
+    if(*x < 0) {
+        *x = 0;
+        clamped = 1;
+    }
+    else if (*x > 255) {
+        *x = 255;
+        clamped = 1;
+    }
+
+    return clamped;
 }
 
-void move_to(int x, int y) 
+int Tracer::MoveTo(int x, int y) 
 {
-    current_x = x;
-    current_y = y;
-    clamp(&x);
-    clamp(&y);
-    xyz_setdac(x, y);
+    int clamped = 0;
+    X = x;
+    Y = y;
+    clamped = clamp(&x);
+    clamped |= clamp(&y);
+    xyz.SetXY(x, y);
+
+    return clamped;
 }
 
-
-void line_to(int x1, int y1) 
+void Tracer::LineTo(int x1, int y1) 
 {
-    int x0 = current_x;
-    int y0 = current_y;
+    int x0 = X;
+    int y0 = Y;
     int Dx = x1 - x0;
     int Dy = y1 - y0;
     int steep = abs(Dy) >= abs(Dx);
     int xstep, ystep;
     int twoDy, twoDyTwoDx, E, x, y, xend;
+
+
+    if ((x1 > 255 || x1 < 0 || y1 > 255 || y1 < 0) && 
+        (X  > 255 || X  < 0 || Y  > 255 || Y  < 0))  {
+        X = x1;
+        Y = y1;
+        return;
+    }
+
+    
+    MoveTo(x1, y1);
+    makePace();
 
     if (steep) {
         SWAP(x0, y0);
@@ -70,11 +93,10 @@ void line_to(int x1, int y1)
         x += xstep;
 
         if (steep) {
-            move_to(y, x);
+            MoveTo(y, x);
         } else {
-            move_to(x, y);
+            MoveTo(x, y);
         }
-        //for(int j = 0; j < 20; j++)
-        //    __asm volatile("nop");
+        makePace();
     }
 }

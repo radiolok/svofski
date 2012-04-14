@@ -3,8 +3,9 @@ TARGET=3losh
 MCU = atmega8
 CLK = 20000000UL
 CC = avr-gcc
+CXX = avr-g++
 OBJCOPY=avr-objcopy
-HEX_FLASH_FLAGS=--pad-to 0x2000
+#HEX_FLASH_FLAGS=--pad-to 0x2000
 
 OPTIM=-O2
 WARNINGS=-Wall
@@ -14,10 +15,15 @@ SOURCES=src
 
 INCLUDES=src
 
-COMMON = -mmcu=$(MCU) -DF_CPU=$(CLK) -std=c99
-CFLAGS  = $(COMMON)
+COMMON = -mmcu=$(MCU) -DF_CPU=$(CLK)
+CFLAGS  = $(COMMON) -std=c99
 CFLAGS += $(WARNINGS) $(OPTIM) $(WARNINGS) $(INCLUDE)
 CFLAGS += -MD -MP -MT $(*F).o -MF $(DEPSDIR)/$(@F).d
+
+CXXFLAGS = $(COMMON)
+CXXFLAGS+= $(WARNINGS) $(OPTIM) $(WARNINGS) $(INCLUDE)
+CXXFLAGS+= -MD -MP -MT $(*F).o -MF $(DEPSDIR)/$(@F).d
+CXXFLAGS+= -ffunction-sections -Wl,--gc-sections
 
 ## Assembly specific flags
 ASMFLAGS = $(COMMON)
@@ -105,7 +111,7 @@ $(OUTPUT).lss:	$(OUTPUT).elf
 	avr-objdump -h -S $< > $@
 
 $(OUTPUT).elf : $(OFILES) $(MAKEFILE)
-	$(CC) $(CFLAGS) $(OFILES) $(LINKER_FLAGS) -o$(OUTPUT).elf
+	$(CXX) $(CXXFLAGS) $(OFILES) $(LINKER_FLAGS) -o$(OUTPUT).elf
 
 %.o:    %.c
 	@echo $(notdir $<)
