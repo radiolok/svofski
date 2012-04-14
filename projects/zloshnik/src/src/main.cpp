@@ -26,12 +26,9 @@ uint16_t centreangle = 0;
 #define XYXOR_WORD "ZLOSHA"
 #define XYXOR_LEN  3
 
-Box box;
-Star star;
-
 void draw_xyxor()
 {
-    trazador.SetPace(80);
+    trazador.SetPace(0);
     scale = 0;
     for(int i = -1, f = 0; i < 256; i+=8, f++) {
         int16_t x = 128 + isin(i);
@@ -79,6 +76,10 @@ void draw_xyxor()
 
     star.SetTransform(centre_x, centre_y, textscale, textangle*5);
     star.Trace();
+
+    //    sinus.SetHalfPeriods(2);
+    //sinus.SetTransform(64, 128, 4*256, textangle*2);
+    //sinus.Trace();
 }
 
 int main() 
