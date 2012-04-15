@@ -8,14 +8,14 @@
 class Shape 
 {
 private:
-    int scale;
+    int scalex, scaley;
     int angle;
     int ox, oy;
 
 protected:
     virtual int GetXYZ(uint8_t n, int* x, int* y, int* z) = 0;
 public:
-    void SetTransform(int ox, int oy, int scale, uint8_t angle);
+    void SetTransform(int ox, int oy, int scalex, int scaley, uint8_t angle);
     void Trace(void);
 };
 
@@ -42,13 +42,18 @@ private:
     uint8_t step;
 
 public:
-    void SetHalfPeriods(uint8_t n) { 
-        npoints = n * SINSUBDIVS; 
-        step = 256/npoints;
-    }
+    void SetHalfPeriods(uint8_t n); 
 
 protected:
     virtual int GetXYZ(uint8_t n, int* x, int* y, int* z);
 };
 
 extern SinShape sinus;
+
+class GridShape : public Shape
+{
+protected:
+    virtual int GetXYZ(uint8_t n, int* x, int* y, int* z);
+};
+
+extern GridShape grid;

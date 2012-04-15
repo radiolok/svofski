@@ -5,9 +5,9 @@
 class Tracer {
 private:
     uint8_t pace;
-    int clamp(int* x);
-    void makePace() const { for(uint8_t j = 0; j < pace; j++)
-                               __asm volatile("nop"); };
+    int clamp(int* x) const;
+    inline void makePace() const { for(uint8_t j = 0; j < pace; j++)
+                                   __asm volatile("nop"); };
 
 public:
     int X, Y;
