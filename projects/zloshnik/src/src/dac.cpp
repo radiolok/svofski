@@ -56,9 +56,9 @@ void Dac::Setup(void)
 
 void Dac::SetXY(uint8_t dacA, uint8_t dacB) 
 {
-    dacss_on();
-    xyz_spi(0xd0, 0x02);
-    dacss_off();
+    //dacss_on();
+    //xyz_spi(0xd0, 0x02);
+    //dacss_off();
 
 
     // A) Write dacB to BUFFER
