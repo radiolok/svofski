@@ -80,11 +80,11 @@ void draw_xyxor()
 
     centre_x = 128+isin(centreangle)/4;
     centre_y = 128+icos(centreangle)/4;
-    centreangle+=16;
+    centreangle+=1;
 
     if (++scale == 128) scale = 1;
 
-    star.SetTransform(centre_x, centre_y, textscale, textscale, textangle*5);
+    //star.SetTransform(centre_x, centre_y, textscale/2, textscale/2, textangle/5);
     //star.Trace();
 
     sinus.SetHalfPeriods(2);
@@ -123,12 +123,10 @@ int main()
     hvgen_setup();
     hvgen_enable();
 
+    _delay_ms(500);
     xyz.Setup();
-    _delay_ms(10);
+    _delay_ms(500);
     xyz.Setup();
-    _delay_ms(10);
-    xyz.Setup();
-    _delay_ms(10);
 
     for(;;) {
         draw_xyxor();
