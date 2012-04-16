@@ -14,6 +14,7 @@ private:
 
 protected:
     virtual int GetXYZ(uint8_t n, int* x, int* y, int* z) = 0;
+    virtual void LineTo(int x, int y);
 public:
     void SetTransform(int ox, int oy, int scalex, int scaley, uint8_t angle);
     void Trace(void);
@@ -33,7 +34,7 @@ public:
 extern ContiguousShape box;
 extern ContiguousShape star;
 
-#define SINSUBDIVS 16
+#define SINSUBDIVS 8
 
 class SinShape : public Shape
 {
@@ -46,6 +47,7 @@ public:
 
 protected:
     virtual int GetXYZ(uint8_t n, int* x, int* y, int* z);
+    virtual void LineTo(int x, int y);
 };
 
 extern SinShape sinus;

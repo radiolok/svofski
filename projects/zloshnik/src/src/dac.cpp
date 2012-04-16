@@ -50,7 +50,7 @@ void Dac::Setup(void)
     // REF1: 1      REF1:0 =10, internal 2.048V ref
     // REF0: 0
     dacss_on();
-    xyz_spi(0xd0, 0x02);
+    xyz_spi(0xd0, 0x01);
     dacss_off();
 }
 
@@ -65,6 +65,8 @@ void Dac::SetXY(uint8_t dacA, uint8_t dacB)
     // R1:R0    0xx1
     // SPD      x1xx
     // PWR      xx0x
+    dacB = ~dacB;
+    dacA = ~dacA;
     dacss_on();
     xyz_spi(0x50 | ((dacB >> 4) & 0x0f), (dacB << 4) & 0xf0);
     dacss_off();

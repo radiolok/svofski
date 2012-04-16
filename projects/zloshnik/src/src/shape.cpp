@@ -20,22 +20,23 @@ void Shape::Trace(void)
     int x, y, z;
 
     for (int i = 0; GetXYZ(i, &x, &y, &z) != 0; i++) {
-        volatile int xx, yy;
+        x = x * scalex;  x = x/256;
+        y = y * scaley;  y = y/256;
 
-        xx = x * scalex;  x = xx/256;
-        yy = y * scaley;  y = yy/256;
-
-        //x *= scale; x/=256;
-        //y *= scale; x/=256;
         irotate(&x, &y, 0, 0, angle);
         x += ox;
         y += oy;
         if (i == 0 || z == 0) {
             trazador.MoveTo(x, y);
         } else {
-            trazador.LineTo(x, y);
+            LineTo(x, y);
         }
     }
+}
+
+void Shape::LineTo(int x, int y) 
+{
+    trazador.LineTo(x, y);
 }
 
 int ContiguousShape::GetXYZ(uint8_t n, int* x, int* y, int* z)
@@ -90,6 +91,11 @@ int SinShape::GetXYZ(uint8_t n, int* x, int* y, int* z)
     *x = n*step - 128;
 
     return 1;
+}
+
+void SinShape::LineTo(int x, int y) 
+{
+    trazador.LineTo(x, y);
 }
 
 SinShape sinus;
