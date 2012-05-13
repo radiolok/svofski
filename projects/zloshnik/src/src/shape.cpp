@@ -3,6 +3,7 @@
 #include "shape.h"
 #include "line.h"
 #include "pecado.h"
+#include "dac.h"
 
 #define SWAP(a,b) {(a)^=(b);(b)^=(a);(a)^=(b);}
 
@@ -27,11 +28,14 @@ void Shape::Trace(void)
         x += ox;
         y += oy;
         if (i == 0 || z == 0) {
+            xyz.SetZ(0);
             trazador.MoveTo(x, y);
         } else {
+            xyz.SetZ(1);
             LineTo(x, y);
         }
     }
+    xyz.SetZ(0);
 }
 
 void Shape::LineTo(int x, int y) 

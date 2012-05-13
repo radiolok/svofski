@@ -4,6 +4,7 @@
 #include "line.h"
 #include "pecado.h"
 #include "text.h"
+#include "dac.h"
 
 extern "C" PGM_P charset0[256];
 
@@ -26,12 +27,17 @@ void Text::Char(uint8_t c, int ox, int oy, int16_t scale)
         
         irotate(&x, &y, ox, oy, text_angle);
         if (i == 0 || !blanco) {
+            xyz.SetZ(0);
             trazador.MoveTo(x, y);
         } 
         else {
+            xyz.SetZ(1);
             trazador.LineTo(x, y);
         }
     }
+
+
+    xyz.SetZ(0);
 
     x = ox + (6 * scale) / 256;
     y = oy;

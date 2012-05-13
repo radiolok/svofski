@@ -1,6 +1,8 @@
 #include <avr/io.h>
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
+#include <string.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include <util/delay.h>
 
@@ -15,7 +17,7 @@
 #include "shape.h"
 
 int16_t scale = 0;
-int16_t scale_sin = 128;
+int16_t scale_sin = 1;
 int8_t  scale_sin_d = -1;
 int16_t textscale = 4*256;
 int16_t  d_textscale = 100;
@@ -60,8 +62,35 @@ void draw_spiral()
     }
 }
 
+char timetext[6];
+char bigtext[17];
+uint16_t time;
+uint16_t frameno;
+
+void updateText() 
+{
+    timetext[0] = '0' + (time >> 12);
+    timetext[1] = '0' + ((time >> 8) & 15);
+    timetext[2] = (frameno & 64) == 0 ? ':' : ' ';
+    timetext[3] = '0' + ((time >> 4) & 15);
+    timetext[4] = '0' + (time & 15);
+    timetext[5] = 0;
+
+    if ((frameno & 16) == 0) {
+        //for (int i = 0; i < 4; i++) {
+        int i = rand() % 4;
+            int rnd;
+            while ((rnd = rand() % 32) > 25);
+            bigtext[i] = 'A' + rnd;
+        //}
+        bigtext[4] = 0;
+    }
+}
+
 void draw_xyxor()
 {
+    frameno++;
+
     trazador.SetPace(0);
     scale = 0;
 
@@ -88,33 +117,36 @@ void draw_xyxor()
     //star.Trace();
 
     sinus.SetHalfPeriods(2);
-    sinus.SetTransform(128,128, 256, scale_sin, 0);
+    scale_sin += scale_sin_d;
+    if (scale_sin == 32 || scale_sin == -32) scale_sin_d = -scale_sin_d;
+    sinus.SetTransform(128,200, 100, scale_sin, 0);
     sinus.Trace();
 
-    scale_sin += scale_sin_d;
-    if (scale_sin == 128 || scale_sin == -128) scale_sin_d = -scale_sin_d;
-/*
-    trazador.MoveTo(80, 50);
-    text.Str("Gru..", 1024, 0);
-    trazador.MoveTo(80, 80);
-    text.Str("Gru..", 1024, 0);
-    trazador.MoveTo(80, 110);
-    text.Str("Gru..", 1024, 0);
-    trazador.MoveTo(80, 140);
-    text.Str("Gru..", 1024, 0);
-    trazador.MoveTo(80, 170);
-    text.Str("Gru..", 1024, 0);
-    trazador.MoveTo(80, 200);
-    text.Str("Gru..", 1024, 0);
-*/
+    //sinus.SetTransform(128,200, 256, scale_sin, 0);
+    //scale_sin += scale_sin_d;
+    //if (scale_sin == 128 || scale_sin == -128) scale_sin_d = -scale_sin_d;
+
     //draw_marchingborder();
+#if 0
     if ((textangle & 7) == 0) {
         grid.SetTransform(128, 128, 180, 180, 0);
         //grid.SetTransform(centre_x, centre_y, 180, 180, textangle);
         grid.Trace();
     }
-    trazador.MoveTo(80, 50);
-    text.Str("18:38", 1024, 0);
+#endif
+    
+    if (frameno % 16 == 0) {
+        time = (time & 0xff00) + bcd_increment(time & 0xff);
+        if ((time & 0xff) == 0x60) {
+            time = bcd_increment(time>>8)<<8;
+        }
+        updateText();
+    }
+
+    trazador.MoveTo(60, 50);
+    text.Str(timetext, 1024, 0);
+    trazador.MoveTo(30, 100);
+    text.Str(bigtext, 2048, 0);
 }
 
 int main() 
