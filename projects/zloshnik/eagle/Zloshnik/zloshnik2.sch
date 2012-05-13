@@ -18963,8 +18963,8 @@ Compensation Valid Up to 2099
 <part name="C22" library="rcl" deviceset="C-EU" device="C0805S" value="18pF"/>
 <part name="GND35" library="supply1" deviceset="GND" device=""/>
 <part name="Q7" library="SparkFun" deviceset="TRANSISTOR_NPN" device="SOT23-3"/>
-<part name="R33" library="rcl" deviceset="R-EU_" device="R0805S" value="2M2"/>
-<part name="R34" library="rcl" deviceset="R-EU_" device="R0805S" value="75-100K"/>
+<part name="R33" library="rcl" deviceset="R-EU_" device="R0805S" value="470K"/>
+<part name="R34" library="rcl" deviceset="R-EU_" device="R0805S" value="10K"/>
 <part name="GND36" library="supply1" deviceset="GND" device=""/>
 <part name="R35" library="rcl" deviceset="R-EU_" device="R0805S" value="1K"/>
 <part name="C23" library="0-rcl" deviceset="C-EU" device="C2220K" value="0,1 1kV"/>
@@ -19018,6 +19018,7 @@ Compensation Valid Up to 2099
 <wire x1="624.84" y1="68.58" x2="624.84" y2="149.86" width="0.1524" layer="94" style="shortdash"/>
 <text x="640.08" y="71.12" size="2.54" layer="97">RTC Clock</text>
 <text x="177.8" y="53.34" size="1.778" layer="91">todo: add jumper here</text>
+<text x="254" y="109.22" size="1.778" layer="91">Heater: 1 winding through 0.5ohm series</text>
 </plain>
 <instances>
 <instance part="TR1.2.TOP" gate="P" x="236.22" y="45.72"/>
