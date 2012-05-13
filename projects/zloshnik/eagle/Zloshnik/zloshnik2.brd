@@ -2751,8 +2751,8 @@ design rules under a new name.</description>
 <element name="C21" library="rcl" package="C0805S" value="18pF" x="15.9425" y="34.375" rot="R90"/>
 <element name="C22" library="rcl" package="C0805S" value="18pF" x="12.8275" y="34.375" rot="R270"/>
 <element name="Q7" library="SparkFun" package="SOT23-3" value="" x="93.6625" y="11.43" rot="R270"/>
-<element name="R33" library="rcl" package="R0805-SVO" value="2M2" x="94.34" y="16.885" rot="R270"/>
-<element name="R34" library="rcl" package="R0805-SVO" value="75-100K" x="93.6625" y="6.6675" rot="R270"/>
+<element name="R33" library="rcl" package="R0805-SVO" value="470K" x="94.34" y="16.885" rot="R270"/>
+<element name="R34" library="rcl" package="R0805-SVO" value="10K" x="93.6625" y="6.6675" rot="R270"/>
 <element name="R35" library="rcl" package="R0805-SVO" value="1K" x="40.3225" y="23.495"/>
 <element name="C23" library="0-rcl" package="C2220K" value="0,1 1kV" x="100.0125" y="13.0175" rot="R270"/>
 <element name="R36" library="rcl" package="R0805-SVO" value="1M" x="70.795" y="70.2" rot="R270"/>
