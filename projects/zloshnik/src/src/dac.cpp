@@ -57,7 +57,7 @@ void Dac::Setup(void)
 void Dac::SetXY(uint8_t dacA, uint8_t dacB) 
 {
     //dacss_on();
-    //xyz_spi(0xd0, 0x02);
+    //xyz_spi(0xd0, 0x01);
     //dacss_off();
 
 
@@ -80,5 +80,7 @@ void Dac::SetXY(uint8_t dacA, uint8_t dacB)
     dacss_off();
 }
 
-void Dac::SetZ(uint8_t z) { }
+void Dac::SetZ(uint8_t z) { 
+    PORT_ZDAC = (z) ? (PORT_ZDAC & ~ZDAC_BV) : (PORT_ZDAC | ZDAC_BV);
+}
 
