@@ -85,229 +85,92 @@ palette_loop:
     
 
 sprites:
-    lxi d, $e008
+    lxi d, $8008
     call onesprite
-    lxi d, $e018
+    lxi d, $8018
     call onesprite
-    lxi d, $e028
+    lxi d, $8028
     call onesprite
-    lxi d, $e038
+    lxi d, $8038
     call onesprite
-    lxi d, $e048
+    lxi d, $8048
     call onesprite
-    lxi d, $e058
+    lxi d, $8058
     call onesprite
-    lxi d, $e068
+    lxi d, $8068
     call onesprite
-    lxi d, $e078
+    lxi d, $8078
     call onesprite
-    lxi d, $e088
+    lxi d, $8088
     call onesprite
-    lxi d, $e098
-    call onesprite
-    lxi d, $e0a8
-    call onesprite
-    lxi d, $e0b8
-    call onesprite
-    lxi d, $e0c8
-    call onesprite
-    lxi d, $e0d8
-    call onesprite
-    lxi d, $e0e8
+    lxi d, $8098
     call onesprite
 
-;   ;
-    lxi d, $e608
+    lxi d, $8408
     call onesprite
-    lxi d, $e618
+    lxi d, $8418
     call onesprite
-    lxi d, $e628
+    lxi d, $8428
     call onesprite
-    lxi d, $e638
+    lxi d, $8438
     call onesprite
-    lxi d, $e648
+    lxi d, $8448
     call onesprite
-    lxi d, $e658
+    lxi d, $8458
     call onesprite
-    lxi d, $e668
+    lxi d, $8468
     call onesprite
-    lxi d, $e678
+    lxi d, $8478
     call onesprite
-    lxi d, $e688
+    lxi d, $8488
     call onesprite
-    lxi d, $e698
-    call onesprite
-    lxi d, $e6a8
-    call onesprite
-    lxi d, $e6b8
-    call onesprite
-    lxi d, $e6c8
-    call onesprite
-    lxi d, $e6d8
-    call onesprite
-    lxi d, $e6e8
-    call onesprite
-;
-;   ;
-    lxi d, $ec08
-    call onesprite
-    lxi d, $ec18
-    call onesprite
-    lxi d, $ec28
-    call onesprite
-    lxi d, $ec38
-    call onesprite
-    lxi d, $ec48
-    call onesprite
-    lxi d, $ec58
-    call onesprite
-    lxi d, $ec68
-    call onesprite
-    lxi d, $ec78
-    call onesprite
-    lxi d, $ec88
-    call onesprite
-    lxi d, $ec98
-    call onesprite
-    lxi d, $eca8
-    call onesprite
-    lxi d, $ecb8
-    call onesprite
-    lxi d, $ecc8
-    call onesprite
-    lxi d, $ecd8
-    call onesprite
-    lxi d, $ece8
+    lxi d, $8498
     call onesprite
 
-;
-    lxi d, $f208
+    lxi d, $8808
     call onesprite
-    lxi d, $f218
+    lxi d, $8818
     call onesprite
-    lxi d, $f228
+    lxi d, $8828
     call onesprite
-    lxi d, $f238
+    lxi d, $8838
     call onesprite
-    lxi d, $f248
+    lxi d, $8848
     call onesprite
-    lxi d, $f258
+    lxi d, $8858
     call onesprite
-    lxi d, $f268
+    lxi d, $8868
     call onesprite
-    lxi d, $f278
+    lxi d, $8878
     call onesprite
-    lxi d, $f288
+    lxi d, $8888
     call onesprite
-    lxi d, $f298
-    call onesprite
-    lxi d, $f2a8
-    call onesprite
-    lxi d, $f2b8
-    call onesprite
-    lxi d, $f2c8
-    call onesprite
-    lxi d, $f2d8
-    call onesprite
-    lxi d, $f2e8
+    lxi d, $8898
     call onesprite
 
-;
-    lxi d, $f708
+    lxi d, $8c08
     call onesprite
-    lxi d, $f718
+    lxi d, $8c18
     call onesprite
-    lxi d, $f728
+    lxi d, $8c28
     call onesprite
-    lxi d, $f738
+    lxi d, $8c38
     call onesprite
-    lxi d, $f748
+    lxi d, $8c48
     call onesprite
-    lxi d, $f758
+    lxi d, $8c58
     call onesprite
-    lxi d, $f768
+    lxi d, $8c68
     call onesprite
-    lxi d, $f778
+    lxi d, $8c78
     call onesprite
-    lxi d, $f788
+    lxi d, $8c88
     call onesprite
-    lxi d, $f798
-    call onesprite
-    lxi d, $f7a8
-    call onesprite
-    lxi d, $f7b8
-    call onesprite
-    lxi d, $f7c8
-    call onesprite
-    lxi d, $f7d8
-    call onesprite
-    lxi d, $f7e8
-    call onesprite
-
-;
-    lxi d, $fc08
-    call onesprite
-    lxi d, $fc18
-    call onesprite
-    lxi d, $fc28
-    call onesprite
-    lxi d, $fc38
-    call onesprite
-    lxi d, $fc48
-    call onesprite
-    lxi d, $fc58
-    call onesprite
-    lxi d, $fc68
-    call onesprite
-    lxi d, $fc78
-    call onesprite
-    lxi d, $fc88
-    call onesprite
-    lxi d, $fc98
-    call onesprite
-    lxi d, $fca8
-    call onesprite
-    lxi d, $fcb8
-    call onesprite
-    lxi d, $fcc8
-    call onesprite
-    lxi d, $fcd8
-    call onesprite
-    lxi d, $fce8
+    lxi d, $8c98
     call onesprite
 
 
     ret
-
-onesprite_soft:
-    lxi h, 0
-    dad sp
-    shld sprites_scratch    
-
-    mov a, e        ; save low (dest addr) in a
-    lxi sp, gorilla_0   ; sprite address
-    xchg //lxi h, $e000     ; start location
-    mvi b, $4       ; 4 columns
-spritehloop:
-    mvi c, $4       ; 4*2 lines high
-spritevloop:    
-    pop d
-    mov m, e
-    dcr l
-    mov m, d
-    dcr l
-    dcr c   
-    jnz spritevloop 
-    inr h
-    ;mvi l, $0
-    mov l, a
-    dcr b
-    jnz spritehloop
-
-    lhld sprites_scratch
-    sphl
-    ret
-
 
 sprites_scratch:    dw 0
 
@@ -316,52 +179,123 @@ hardsprite:
     lxi h, 0
     dad sp
     shld sprites_scratch    
-    xchg
+    
+    mov h, d
+    mov l, e
     sphl
-
-    lxi d, $76f6
-    push d
-    lxi d, $c666
-    push d
-    lxi d, $36f2
-    push d
-    lxi d, $e200
-    push d
-    lxi h, $100+8
+;; green
+    lxi b, $0000
+    push b
+    push b
+    push b
+    lxi b, $ff0f
+    push b
+    lxi h, 256+8
     dad sp
     sphl
-    lxi d, $ccda
-    push d
-    lxi d, $dada
-    push d
-    lxi d, $da9a
-    push d
-    lxi d, $0c00 
-    push d
-    lxi h, $100+8
+    lxi b, $0000
+    push b
+    push b
+    push b
+    lxi b, $ffff
+    push b
+    lxi h, 256+8
     dad sp
     sphl
-
-    lxi d, $3236
-    push d
-    lxi d, $1606
-    push d
-    lxi d, $0606
-    push d
-    lxi d, $0200
-    push d
-    lxi h, $100+8
+    lxi b, $0000
+    push b
+    push b
+    push b
+    lxi b, $fcfc
+    push b
+    lxi h, 256+8
     dad sp
     sphl
+    lxi b, $0000
+    push b
+    push b
+    push b
+    push b
+;;;; black/magenta layer 1
+    lxi h, $2000
+    dad d
+    sphl
+    lxi b, $0000
+    push b
+    lxi b, $000f
+    push b
+    lxi b, $ffff
+    push b
+    lxi b, $0000
+    push b
+    lxi h, 256+8
+    dad sp
+    sphl
+    lxi b, $0f0f
+    push b
+    lxi b, $ffff
+    push b
+    push b
+    lxi b, $0000
+    push b
+    lxi h, 256+8
+    dad sp
+    sphl
+    push b
+    lxi b, $00f0
+    push b
+    lxi b, $ffff
+    push b
+    lxi b, $0000
+    push b
+    lxi h, 256+8
+    dad sp
+    sphl
+    push b
+    push b
+    lxi b, $fff0
+    push b
+    lxi b, $0000
+    push b
+;;;; yellow/magenta layer 2
+    lxi h, $4000
+    dad d
+    sphl
+    lxi b, $0000
+    push b
+    push b
+    lxi b, $ffff
+    push b
+    lxi b, $0000
+    push b
+    lxi h, 256+8
+    dad sp
+    sphl
+    push b
+    push b
+    lxi b, $ffff
+    push b
+    lxi b, $0000
+    push b
+    lxi h, 256+8
+    dad sp
+    sphl
+    push b
+    push b
+    lxi b, $ffff
+    push b
+    lxi b, $0000
+    push b
+    lxi h, 256+8
+    dad sp
+    sphl
+    push b
+    push b
+    lxi b, $fff0
+    push b
+    lxi b, $0000
+    push b
 
-    lxi d, $8cda
-    push d
-    lxi d, $dace
-    push d
-    lxi d, $c2da
-    push d
-    lxi d, $8c00
-    push d
 
     lhld sprites_scratch
     sphl
@@ -398,4 +332,3 @@ db 08ch,0dah,0dah,0ceh,0c2h,0dah,08ch,00h,
 dactr:  equ .
 
 sintbl  equ $300 
-
