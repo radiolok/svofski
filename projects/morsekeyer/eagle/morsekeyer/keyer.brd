@@ -1153,7 +1153,7 @@ design rules under a new name.</description>
 </element>
 <element name="C25" library="rcl" package="SMC_B" value="10uF" x="18.7325" y="22.86" rot="MR0"/>
 <element name="Q7" library="SparkFun" package="SOT23-3" value="" x="17.4625" y="43.18" rot="MR0"/>
-<element name="R33" library="rcl" package="R0805-SVO" value="100" x="17.4625" y="48.26" rot="MR270"/>
+<element name="R33" library="rcl" package="R0805-SVO" value="150" x="17.4625" y="48.26" rot="MR270"/>
 <element name="R35" library="rcl" package="R0805-SVO" value="1K" x="31.75" y="40.64" rot="MR90"/>
 <element name="C1" library="rcl" package="D/7343-31R" value="220uF" x="10.16" y="47.625" rot="MR180"/>
 <element name="SL2" library="con-amp-quick" package="03P" value="" x="33.02" y="20.32" rot="R90">
