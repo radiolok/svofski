@@ -4,6 +4,7 @@ class Sprite:
         print '\tmov h, d'        
         print '\tmov l, e'        
         print '\tsphl'
+        print '\tlxi b, 0'
         print ';; green'
         self.makeLayer('v')     # base layer, only green
 
@@ -31,12 +32,16 @@ class Sprite:
             for y in xrange(0,height,2):
                 popor = pic[y][column*8:column*8+8] + pic[y+1][column*8:column*8+8]
                 b = self.filter(popor, layerchar)
-                if b != lastb:
-                    print '\tlxi b, $%04x' % b
-                    lastb = b
-                print '\tpush b'
+                if b == 0:
+                    print '\tpush b'
+                else:
+                    if b != lastb:
+                        print '\tlxi h, $%04x' % b
+                        lastb = b
+                    print '\tpush h'
             if column != columns - 1:
                 print '\tlxi h, 256+%d\n\tdad sp\n\tsphl' % height
+                lastb = -1
 
     def getPic(self):
         raw = self.getPicRaw()
