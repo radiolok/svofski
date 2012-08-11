@@ -1,334 +1,247 @@
-        ; i8080 assembler code
+    ; i8080 assembler code
 
-        .binfile asaltodelrio.rom
+    .binfile asaltodelrio.rom
 
-        .nodump
+    .nodump
 
-stacksave   equ $20
+stacksave	equ $20
 
-    .org $100
+	 
+	.org $100
 
 clrscr:
     di
-    lxi h, $8000
+	lxi h, $8000
 clearscreen:
-    xra a
-    out $10
-    mov m, a
-    inx h
-    ora h
-    jnz clearscreen
+	xra a
+	out $10
+	mov m, a
+	inx h
+	ora h
+	jnz clearscreen
 
-    ; init stack pointer
-    lxi sp, $100
+	; init stack pointer
+	lxi sp, $100
 
-    ; enable interrupts
+	; enable interrupts
 
-    ; write ret to rst 7 vector 
-    mvi a, $c9
-    sta $38
-    
-
-
+	; write ret to rst 7 vector	
+	mvi a, $c9
+	sta $38
 jamas:
-    ei
-    hlt
-    ; write death to rst 7 vector
-    mvi a, $c3
-    sta $38
-    lxi h, $38
-    shld $39
-    ei
+	ei
+	hlt
+	; write death to rst 7 vector
+	;;mvi a, $c3
+	;;sta $38
+	;;lxi h, $38
+	;;shld $39
+	ei
+	; do stuff
+	
+	call setpalette
+	call showlayers
+	call ship_oneframe
+	
+	jmp jamas
 
-    ; do stuff
-
-    call setpalette
-    call showlayers
-    call sprites
-
-    jmp jamas
-
-    ; pintar los colores
+	; pintar los colores
 showlayers:
-    lxi h, $ffff
-    ; verde     1 0 0 0
-    shld $81fe 
-    shld $81fc 
-    ; amarillo  0 0 1 0 
-    shld $c2fe
-    shld $c2fc
-    ; negro     0 1 0 0
-    shld $a3fe
-    shld $a3fc
-    ; rosa      0 1 1 0
-    shld $a4fe  
-    shld $c4fe
-    shld $a4fc  
-    shld $c4fc
-    ; blanco    0 0 0 1
-    shld $e5fe  
-    shld $e5fc
+	lxi h, $ffff
+	; verde		1 0 0 0
+	shld $81fe 
+	shld $81fc 
+	; amarillo	0 0 1 0 
+	shld $c2fe
+	shld $c2fc
+	; negro		0 1 0 0
+	shld $a3fe
+	shld $a3fc
+	; rosa		0 1 1 0
+	shld $a4fe	
+	shld $c4fe
+	shld $a4fc	
+	shld $c4fc
+	; blanco	0 0 0 1
+	shld $e5fe	
+	shld $e5fc
 
 setpalette:
-    lxi h, palette_data+15
-    mvi c, 16
+	lxi h, palette_data+15
+	mvi c, 16
 palette_loop:
-    mov a, c
-    dcr a
-    out $2
-    mov a, m
-    out $c
-    dcr c
-    dcx h
-    jnz palette_loop
-    ret
-    
+	mov a, c
+	dcr a
+	out $2
+	mov a, m
+	out $c
+	dcr c
+	dcx h
+	jnz palette_loop
+	ret
+	
 
-sprites:
-    lxi d, $8008
-    call onesprite
-    lxi d, $8018
-    call onesprite
-    lxi d, $8028
-    call onesprite
-    lxi d, $8038
-    call onesprite
-    lxi d, $8048
-    call onesprite
-    lxi d, $8058
-    call onesprite
-    lxi d, $8068
-    call onesprite
-    lxi d, $8078
-    call onesprite
-    lxi d, $8088
-    call onesprite
-    lxi d, $8098
-    call onesprite
-
-    lxi d, $8408
-    call onesprite
-    lxi d, $8418
-    call onesprite
-    lxi d, $8428
-    call onesprite
-    lxi d, $8438
-    call onesprite
-    lxi d, $8448
-    call onesprite
-    lxi d, $8458
-    call onesprite
-    lxi d, $8468
-    call onesprite
-    lxi d, $8478
-    call onesprite
-    lxi d, $8488
-    call onesprite
-    lxi d, $8498
-    call onesprite
-
-    lxi d, $8808
-    call onesprite
-    lxi d, $8818
-    call onesprite
-    lxi d, $8828
-    call onesprite
-    lxi d, $8838
-    call onesprite
-    lxi d, $8848
-    call onesprite
-    lxi d, $8858
-    call onesprite
-    lxi d, $8868
-    call onesprite
-    lxi d, $8878
-    call onesprite
-    lxi d, $8888
-    call onesprite
-    lxi d, $8898
-    call onesprite
-
-    lxi d, $8c08
-    call onesprite
-    lxi d, $8c18
-    call onesprite
-    lxi d, $8c28
-    call onesprite
-    lxi d, $8c38
-    call onesprite
-    lxi d, $8c48
-    call onesprite
-    lxi d, $8c58
-    call onesprite
-    lxi d, $8c68
-    call onesprite
-    lxi d, $8c78
-    call onesprite
-    lxi d, $8c88
-    call onesprite
-    lxi d, $8c98
-    call onesprite
+ship_oneframe:
+	lxi h, ship_x
+	mov c, m
+	inr m
+	lxi h, $8020
+	call ship_at_x
+	ret
+ship_x: db 0
 
 
-    ret
+	;; draw sprite at x,y coordinate
+	;; hl = base address (y)
+	;; c = x (0..255)
+ship_at_x:
+	; find out column number and add it to de
+	; column number = x/8
+	mov a, c
+	rar 
+	rar
+	rar
+	ani $1f
+	mov d, a
+	mvi e, 0
+	dad d 			; 
+	xchg			; de = column base address 
+	; offset 0..7
+	mov a, c
+	ani 7
+	mov c, a 		; c = offset
 
-sprites_scratch:    dw 0
+	jmp onesprite
 
+sprites_scratch:	dw 0
 onesprite:
-hardsprite:
-    lxi h, 0
-    dad sp
-    shld sprites_scratch    
-    
-    mov h, d
-    mov l, e
-    sphl
-;; green
-    lxi b, $0000
-    push b
-    push b
-    push b
-    lxi b, $ff0f
-    push b
-    lxi h, 256+8
-    dad sp
-    sphl
-    lxi b, $0000
-    push b
-    push b
-    push b
-    lxi b, $ffff
-    push b
-    lxi h, 256+8
-    dad sp
-    sphl
-    lxi b, $0000
-    push b
-    push b
-    push b
-    lxi b, $fcfc
-    push b
-    lxi h, 256+8
-    dad sp
-    sphl
-    lxi b, $0000
-    push b
-    push b
-    push b
-    push b
-;;;; black/magenta layer 1
-    lxi h, $2000
-    dad d
-    sphl
-    lxi b, $0000
-    push b
-    lxi b, $000f
-    push b
-    lxi b, $ffff
-    push b
-    lxi b, $0000
-    push b
-    lxi h, 256+8
-    dad sp
-    sphl
-    lxi b, $0f0f
-    push b
-    lxi b, $ffff
-    push b
-    push b
-    lxi b, $0000
-    push b
-    lxi h, 256+8
-    dad sp
-    sphl
-    push b
-    lxi b, $00f0
-    push b
-    lxi b, $ffff
-    push b
-    lxi b, $0000
-    push b
-    lxi h, 256+8
-    dad sp
-    sphl
-    push b
-    push b
-    lxi b, $fff0
-    push b
-    lxi b, $0000
-    push b
-;;;; yellow/magenta layer 2
-    lxi h, $4000
-    dad d
-    sphl
-    lxi b, $0000
-    push b
-    push b
-    lxi b, $ffff
-    push b
-    lxi b, $0000
-    push b
-    lxi h, 256+8
-    dad sp
-    sphl
-    push b
-    push b
-    lxi b, $ffff
-    push b
-    lxi b, $0000
-    push b
-    lxi h, 256+8
-    dad sp
-    sphl
-    push b
-    push b
-    lxi b, $ffff
-    push b
-    lxi b, $0000
-    push b
-    lxi h, 256+8
-    dad sp
-    sphl
-    push b
-    push b
-    lxi b, $fff0
-    push b
-    lxi b, $0000
-    push b
+	; c = offset
+	lxi h, ship_ltr_dispatch
+	xra a
+	mov b, a
+	mov a, c
+	ral 
+	mov c, a
+	dad b 		
+	;jmp [h]
+	shld .+4
+	lhld 0000	
+	pchl
+
+    .include ship.inc
 
 
-    lhld sprites_scratch
-    sphl
-    ret
+zero16:	dw 0
 
-
-zero16: dw 0
-
-c_black     equ $00
-c_blue      equ $c0
-c_green     equ $38
-c_yellow    equ $3f
-c_magenta   equ $c7
-c_white     equ $ff
+c_black		equ $00
+c_blue		equ $c0
+c_green 	equ $38
+c_yellow 	equ $3f
+c_magenta	equ $c7
+c_white		equ $ff
 
 palette_data:
-    db c_blue, c_white,  c_yellow, c_white
-    db c_black,c_white,  c_magenta, c_white
-    db c_green,c_white,  c_yellow, c_white
-    db c_black, c_white, c_magenta, c_white
+	db c_blue,  c_white,  c_yellow,  c_white
+	db c_black, c_white,  c_magenta, c_white
+	db c_green, c_white,  c_yellow,  c_white
+	db c_black, c_white,  c_magenta, c_white
 
-;palette_data:
-;   db $ff, $66, $ff, $66, $ff, $66, $ff, $66
-;   db $ff, $66, $ff, $66, $ff, $66, $ff, $66
+dactr:	equ .
 
-gorilla_columns equ 4
-gorilla_rows    equ 8
-gorilla_0:
-db 076h,0f6h,0c6h,066h,036h,0f2h,0e2h,00h,
-db 0cch,0dah,0dah,0dah,0dah,09ah,0ch,00h,
-db 032h,036h,016h,06h,06h,06h,02h,00h,
-db 08ch,0dah,0dah,0ceh,0c2h,0dah,08ch,00h,
+sintbl	equ $300 
 
-dactr:  equ .
+	mvi c, 0
+	lxi d, $8008
+	call onesprite
+	mvi c, 1
+	lxi d, $8018
+	call onesprite
+	mvi c, 2
+	lxi d, $8028
+	call onesprite
+	mvi c, 3
+	lxi d, $8038
+	call onesprite
+	mvi c, 4
+	lxi d, $8048
+	call onesprite
+	mvi c, 5
+	lxi d, $8058
+	call onesprite
+	mvi c, 6
+	lxi d, $8068
+	call onesprite
+	mvi c, 7
+	lxi d, $8078
+	call onesprite
+	mvi c, 0
+	lxi d, $8088
+	call onesprite
+	mvi c, 1
+	lxi d, $8098
+	call onesprite
 
-sintbl  equ $300 
+	lxi d, $8508
+	call onesprite
+	lxi d, $8518
+	call onesprite
+	lxi d, $8528
+	call onesprite
+	lxi d, $8538
+	call onesprite
+	lxi d, $8548
+	call onesprite
+	lxi d, $8558
+	call onesprite
+	lxi d, $8568
+	call onesprite
+	lxi d, $8578
+	call onesprite
+	lxi d, $8588
+	call onesprite
+	lxi d, $8598
+	call onesprite
+
+	lxi d, $8a08
+	call onesprite
+	lxi d, $8a18
+	call onesprite
+	lxi d, $8a28
+	call onesprite
+	lxi d, $8a38
+	call onesprite
+	lxi d, $8a48
+	call onesprite
+	lxi d, $8a58
+	call onesprite
+	lxi d, $8a68
+	call onesprite
+	lxi d, $8a78
+	call onesprite
+	lxi d, $8a88
+	call onesprite
+	lxi d, $8a98
+	call onesprite
+
+	lxi d, $8f08
+	call onesprite
+	lxi d, $8f18
+	call onesprite
+	lxi d, $8f28
+	call onesprite
+	lxi d, $8f38
+	call onesprite
+	lxi d, $8f48
+	call onesprite
+	lxi d, $8f58
+	call onesprite
+	lxi d, $8f68
+	call onesprite
+	lxi d, $8f78
+	call onesprite
+	lxi d, $8f88
+	call onesprite
+	lxi d, $8f98
+	call onesprite
+
+	ret
