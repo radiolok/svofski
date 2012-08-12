@@ -6,7 +6,7 @@ class Sprite:
         return '%s_%s%s' % (self.getName(), orientation, shiftstr[shift+1])
 
     def spriteRange(self, orientation):
-        return xrange([-1,0][orientation == 'rtl'],[8,9][orientation == 'rtl'])
+        return xrange([-1,0][orientation == 'rtl'],8) # [8,9][orientation == 'rtl'])
 
     def makeTable(self, orientation):
         print '%s_%s_dispatch:' % (self.getName(), orientation)
@@ -53,8 +53,10 @@ class Sprite:
         pic = self.getPic(shift, 
                 mirror = orientation == 'rtl', 
                 prepend = shift == -1, 
-                append = shift == 8)
+                append = (shift == 0) and (orientation == 'rtl'))
 
+        if (shift == -1):
+            for sss in pic: print ';[' + sss + ']'
 
         height = len(pic)
         width = len(pic[0])
@@ -78,12 +80,13 @@ class Sprite:
                 lastb = -1
 
     def getPic(self, shift, prepend = False, append = False, mirror = False):
+        if (shift == -1): shift = 0
         unshifted = self.getPicRaw()
+        if (self.isDoubleWidth()):
+            unshifted = map(self.doublify, unshifted)
         if (mirror):  unshifted = map(lambda x: x[::-1], unshifted)
         if (prepend): unshifted = map(lambda x: ' '*8 + x, unshifted)
         if (append):  unshifted = map(lambda x: x + ' '*8, unshifted)
-        if (self.isDoubleWidth()):
-            unshifted = map(self.doublify, unshifted)
         if shift == 0:
             return unshifted
         else:
