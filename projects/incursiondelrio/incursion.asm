@@ -41,8 +41,9 @@ jamas:
 	
 	call setpalette
 	call showlayers
+
 	call foe_0_frame
-	
+
 	jmp jamas
 
 	; pintar los colores
@@ -65,6 +66,23 @@ showlayers:
 	; blanco	0 0 0 1
 	shld $e5fe	
 	shld $e5fc
+
+	; test bounds
+	shld $8306
+	shld $8308
+	shld $830a
+	shld $830c
+	shld $830e
+	shld $8310
+	shld $8312
+
+	shld $9306
+	shld $9308
+	shld $930a
+	shld $930c
+	shld $930e
+	shld $9310
+	shld $9312
 
 setpalette:
 	lxi h, palette_data+15
@@ -165,7 +183,7 @@ foe_0_move_L1:
 	sta foe_0 + foeIndex
 	mov c, a
 	; not at column boundary -> skip bounce check
-	jmp foe_0_move_L3
+	jmp foe_0_move_nobounce
 foe_0_move_CheckBounce:
 	; check for bounce
 	; we are here if Index == 0 || Index == 7
@@ -175,7 +193,7 @@ foe_0_move_CheckBounce:
 	jz foe_0_move_yes_bounce
 	lda foe_0 + foeLeftStop
 	cmp e
-	jnz foe_0_move_L3
+	jnz foe_0_move_nobounce
 	; yes, bounce
 foe_0_move_yes_bounce:
 	; Bounce = 1
@@ -188,69 +206,90 @@ foe_0_move_yes_bounce:
 	sta foe_0 + foeDirection
 	; do the Move() once again
 	jmp foe_0_Move
-foe_0_move_L3: ; no bounce
+
+foe_0_move_nobounce: 
 	;; foe_0 movement calculation ends here
 
 	;; paint foe_0 
 
 	; de = base addr ($8000 + foe.Y)
-	; e already contains column
+	; e contains column
 	mov a, e
 	adi $80
 	mov d, a
 	lda foe_0 + foeY
 	mov e, a
 
-	; c already contains index
-	jmp onesprite
-
-	;; draw sprite at x,y coordinate
-	;; hl = base address (y)
-	;; c = x (0..255)
-ship_at_x:
-	; find out column number and add it to de
-	; column number = x/8
-	; offset 0..7
-	mov b, c
-	mov a, c
-	ani 7
-	mov c, a 		; c = offset
+	; de == base address
+	; c == index
+	; b == Direction
 	mov a, b
-	rar 
-	rar
-	rar
-	ani $1f
-inf: nop
-	mov d, a
-	mvi e, 0
-	dad d 			; 
-	xchg			; de = column base address 
 
+	; b = Bounce, Bounce = 0
+	lxi h, foe_0 + foeBounce
+	mov b, m
+	mvi m, 0
 
-	jmp onesprite
+	ora a
+	jm  ship_rtl
+	jmp ship_ltr
 
 sprites_scratch:	dw 0
-onesprite:
+
+ship_ltr:
 	; c = offset
 	; de = column base address
+	; b = bounce
+	
+	; if (Index != 0) -> regular, no pre-wipe
 	mov a, c
 	ora a
-	jnz onesprite_regular
+	jnz ship_ltr_regular
 
-;	lda ship_bounce
-;	ora a
-;	jnz onesprite_regular
+	; if (Bounce) -> regular, no pre-wipe 
+	mov a, b 	
+	ora a
+	jnz  ship_ltr_regular
 
-	dcr d
+	; Index == 0, no bounce -> wipe previous column
 	dcr d
 	jmp ship_ltr_inf
 
-onesprite_regular:
+	;; Draw ship without prepending column for wiping
+ship_ltr_regular:
 	lxi h, ship_ltr_dispatch+2
-onesprite_1:
+	jmp ship_ltr_rtl_dispatchjump
+
+ship_rtl:
+	; c = offset
+	; de = column base address
+	; b = bounce
+
+	jmp ship_rtl_regular
+	; if (Index != 7) -> regular, no wipe
+	mov a, c
+	;cpi 7
+	;jnz ship_rtl_regular
+	ora a
+	jz ship_rtl_sup
+	jmp ship_rtl_regular
+
+	; if (Bounce) -> regular, no wipe 
+	mov a, b
+	ora a
+	jnz  ship_rtl_regular
+
+	; Index == 7, no bounce -> draw and wipe the column to the right
+	jmp ship_rtl_sup
+
+ship_rtl_regular:
+	lxi h, ship_rtl_dispatch
+	;jmp ship_ltr_rtl_dispatchjump
+
+ship_ltr_rtl_dispatchjump:
 	mvi b, 0
 	mov a, c
-	ral 
+	rlc
 	mov c, a
 	dad b 		
 	;jmp [h]
@@ -278,100 +317,3 @@ palette_data:
 
 dactr:	equ .
 
-sintbl	equ $300 
-
-	mvi c, 0
-	lxi d, $8008
-	call onesprite
-	mvi c, 1
-	lxi d, $8018
-	call onesprite
-	mvi c, 2
-	lxi d, $8028
-	call onesprite
-	mvi c, 3
-	lxi d, $8038
-	call onesprite
-	mvi c, 4
-	lxi d, $8048
-	call onesprite
-	mvi c, 5
-	lxi d, $8058
-	call onesprite
-	mvi c, 6
-	lxi d, $8068
-	call onesprite
-	mvi c, 7
-	lxi d, $8078
-	call onesprite
-	mvi c, 0
-	lxi d, $8088
-	call onesprite
-	mvi c, 1
-	lxi d, $8098
-	call onesprite
-
-	lxi d, $8508
-	call onesprite
-	lxi d, $8518
-	call onesprite
-	lxi d, $8528
-	call onesprite
-	lxi d, $8538
-	call onesprite
-	lxi d, $8548
-	call onesprite
-	lxi d, $8558
-	call onesprite
-	lxi d, $8568
-	call onesprite
-	lxi d, $8578
-	call onesprite
-	lxi d, $8588
-	call onesprite
-	lxi d, $8598
-	call onesprite
-
-	lxi d, $8a08
-	call onesprite
-	lxi d, $8a18
-	call onesprite
-	lxi d, $8a28
-	call onesprite
-	lxi d, $8a38
-	call onesprite
-	lxi d, $8a48
-	call onesprite
-	lxi d, $8a58
-	call onesprite
-	lxi d, $8a68
-	call onesprite
-	lxi d, $8a78
-	call onesprite
-	lxi d, $8a88
-	call onesprite
-	lxi d, $8a98
-	call onesprite
-
-	lxi d, $8f08
-	call onesprite
-	lxi d, $8f18
-	call onesprite
-	lxi d, $8f28
-	call onesprite
-	lxi d, $8f38
-	call onesprite
-	lxi d, $8f48
-	call onesprite
-	lxi d, $8f58
-	call onesprite
-	lxi d, $8f68
-	call onesprite
-	lxi d, $8f78
-	call onesprite
-	lxi d, $8f88
-	call onesprite
-	lxi d, $8f98
-	call onesprite
-
-	ret
