@@ -42,9 +42,65 @@ jamas:
 	call setpalette
 	call showlayers
 
+	lxi h, foe_1
+	push h
+	call copyfoe
 	call foe_0_frame
+	pop h
+	call copyback
+
+	lxi h, foe_2
+	push h
+	call copyfoe
+	call foe_0_frame
+	pop h
+	call copyback
+
+	lxi h, foe_3
+	push h
+	call copyfoe
+	call foe_0_frame
+	pop h
+	call copyback
+
+	lxi h, foe_4
+	push h
+	call copyfoe
+	call foe_0_frame
+	pop h
+	call copyback
+
+	lxi h, foe_5
+	push h
+	call copyfoe
+	call foe_0_frame
+	pop h
+	call copyback
 
 	jmp jamas
+copyfoe:
+	lxi d, foe_0
+	mvi c, 8
+copyfoe_1:	
+	mov a, m
+	stax d
+	inx h
+	inx d
+	dcr c
+	jnz copyfoe_1
+	ret
+
+copyback:
+	lxi d, foe_0
+	mvi c, 8
+copyback_1:
+	ldax d
+	mov m, a
+	inx h
+	inx d
+	dcr c
+	jnz copyback_1
+	ret
 
 	; pintar los colores
 showlayers:
@@ -124,26 +180,27 @@ foeColumn		equ 0 			; X column
 foeIndex		equ 1 			; X offset 0..7
 foeDirection	equ 2 			; 1 = LTR, -1 RTL, 0 = not moving
 foeBounce		equ 3 			; bounce flag
-foeWidth		equ 4 			; width in columns
-foeHeight		equ 5 			; sprite height
-foeY			equ 6			; Y position of sprite start
-foeLeftStop		equ 7			; column # of left limit
-foeRightStop	equ 8 			; column # of right limit
+foeY			equ 4			; Y position of sprite start
+foeLeftStop		equ 5			; column # of left limit
+foeRightStop	equ 6 			; column # of right limit
+;--
+foeWidth		equ 7 			; width in columns
+foeHeight		equ 8 			; sprite height
 foeSizeOf		equ 9
 
 	;; foe 0 descriptor
 foe_0:
-	;db 3,0,1,0,0,0,20,0,30 		
-	db 3,0,1,0,0,0,20,3,15 		
-	;; foe 1 descriptor
+	db 5,0,1,0,$10,3,15,  4,8
 foe_1:
-	db 0,0,0,0,0,0,0,0,0 		
-	;; foe 2 descriptor
+	db 5,0,1,0,$10,3,15,  4,8
 foe_2:
-	db 0,0,0,0,0,0,0,0,0 		
-	;; foe 3 descriptor
+	db 5,0,1,0,$20,5,7,  4,8
 foe_3:
-	db 0,0,0,0,0,0,0,0,0 		
+	db 5,0,1,0,$30,3,25,  4,8
+foe_4:
+	db 7,0,1,0,$40,7,10,  4,8
+foe_5:
+	db 5,0,1,0,$50,2,8,  4,8
 
 foe_0_frame:
 foe_0_Move:
