@@ -85,11 +85,105 @@ ship_oneframe:
 	lxi h, ship_x
 	mov c, m
 	inr m
+
+	lxi h, $80f0
+;	lxi h, ship_y
+;	mov a, m
+;	mov b, a
+;	sui 8
+;	mov m, a
+;	mvi h, $80
+;	mov l, b
+	call ship_at_x
+
+	lda ship_x
+	adi 4
+	mov c, a
+	lxi h, $80e0
+	call ship_at_x
+
+	lda ship_x
+	adi 8
+	mov c, a
+	lxi h, $80d0
+	call ship_at_x
+
+	lda ship_x
+	adi 12
+	mov c, a
+	lxi h, $80c0
+	call ship_at_x
+
+	lda ship_x
+	adi 16
+	mov c, a
+	lxi h, $80b0
+	call ship_at_x
+
+	lda ship_x
+	adi 20
+	mov c, a
+	lxi h, $80a0
+	call ship_at_x
+
+	lda ship_x
+	adi 24
+	mov c, a
+	lxi h, $8090
+	call ship_at_x
+
+	lda ship_x
+	adi 28
+	mov c, a
+	lxi h, $8080
+	call ship_at_x
+
+	lda ship_x
+	adi 32
+	mov c, a
+	lxi h, $8070
+	call ship_at_x
+
+	lda ship_x
+	adi 36
+	mov c, a
+	lxi h, $8060
+	call ship_at_x
+
+	lda ship_x
+	adi 40
+	mov c, a
+	lxi h, $8050
+	call ship_at_x
+
+	lda ship_x
+	adi 44
+	mov c, a
+	lxi h, $8040
+	call ship_at_x
+
+	lda ship_x
+	adi 48
+	mov c, a
+	lxi h, $8030
+	call ship_at_x
+
+	lda ship_x
+	adi 52
+	mov c, a
 	lxi h, $8020
 	call ship_at_x
+
+	lda ship_x
+	adi 56
+	mov c, a
+	lxi h, $8010
+	call ship_at_x
+
+
 	ret
 ship_x: db 0
-
+ship_y: db f0
 
 	;; draw sprite at x,y coordinate
 	;; hl = base address (y)
@@ -97,28 +191,45 @@ ship_x: db 0
 ship_at_x:
 	; find out column number and add it to de
 	; column number = x/8
+	; offset 0..7
+	mov b, c
 	mov a, c
+	ani 7
+	mov c, a 		; c = offset
+	mov a, b
 	rar 
 	rar
 	rar
 	ani $1f
+inf: nop
 	mov d, a
 	mvi e, 0
 	dad d 			; 
 	xchg			; de = column base address 
-	; offset 0..7
-	mov a, c
-	ani 7
-	mov c, a 		; c = offset
+
 
 	jmp onesprite
 
 sprites_scratch:	dw 0
 onesprite:
 	; c = offset
-	lxi h, ship_ltr_dispatch
-	xra a
-	mov b, a
+	; de = column base address
+	mov a, c
+	ora a
+	jnz onesprite_regular
+
+;	lda ship_bounce
+;	ora a
+;	jnz onesprite_regular
+
+	dcr d
+	dcr d
+	jmp ship_ltr_inf
+
+onesprite_regular:
+	lxi h, ship_ltr_dispatch+2
+onesprite_1:
+	mvi b, 0
 	mov a, c
 	ral 
 	mov c, a
