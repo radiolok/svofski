@@ -41,7 +41,7 @@ jamas:
 	
 	call setpalette
 	call showlayers
-	call ship_oneframe
+	call foe_0_frame
 	
 	jmp jamas
 
@@ -82,11 +82,11 @@ palette_loop:
 	
 
 ship_oneframe:
-	lxi h, ship_x
-	mov c, m
-	inr m
+;	lxi h, ship_x
+;	mov c, m
+;	inr m
 
-	lxi h, $80f0
+;	lxi h, $80f0
 ;	lxi h, ship_y
 ;	mov a, m
 ;	mov b, a
@@ -94,96 +94,115 @@ ship_oneframe:
 ;	mov m, a
 ;	mvi h, $80
 ;	mov l, b
-	call ship_at_x
+;	call ship_at_x
+;	ret 
+	
 
-	lda ship_x
-	adi 4
-	mov c, a
-	lxi h, $80e0
-	call ship_at_x
-
-	lda ship_x
-	adi 8
-	mov c, a
-	lxi h, $80d0
-	call ship_at_x
-
-	lda ship_x
-	adi 12
-	mov c, a
-	lxi h, $80c0
-	call ship_at_x
-
-	lda ship_x
-	adi 16
-	mov c, a
-	lxi h, $80b0
-	call ship_at_x
-
-	lda ship_x
-	adi 20
-	mov c, a
-	lxi h, $80a0
-	call ship_at_x
-
-	lda ship_x
-	adi 24
-	mov c, a
-	lxi h, $8090
-	call ship_at_x
-
-	lda ship_x
-	adi 28
-	mov c, a
-	lxi h, $8080
-	call ship_at_x
-
-	lda ship_x
-	adi 32
-	mov c, a
-	lxi h, $8070
-	call ship_at_x
-
-	lda ship_x
-	adi 36
-	mov c, a
-	lxi h, $8060
-	call ship_at_x
-
-	lda ship_x
-	adi 40
-	mov c, a
-	lxi h, $8050
-	call ship_at_x
-
-	lda ship_x
-	adi 44
-	mov c, a
-	lxi h, $8040
-	call ship_at_x
-
-	lda ship_x
-	adi 48
-	mov c, a
-	lxi h, $8030
-	call ship_at_x
-
-	lda ship_x
-	adi 52
-	mov c, a
-	lxi h, $8020
-	call ship_at_x
-
-	lda ship_x
-	adi 56
-	mov c, a
-	lxi h, $8010
-	call ship_at_x
-
-
-	ret
 ship_x: db 0
-ship_y: db f0
+ship_y: db $f0
+
+	;; foe class
+foeColumn		equ 0 			; X column
+foeIndex		equ 1 			; X offset 0..7
+foeDirection	equ 2 			; 1 = LTR, -1 RTL, 0 = not moving
+foeBounce		equ 3 			; bounce flag
+foeWidth		equ 4 			; width in columns
+foeHeight		equ 5 			; sprite height
+foeY			equ 6			; Y position of sprite start
+foeLeftStop		equ 7			; column # of left limit
+foeRightStop	equ 8 			; column # of right limit
+foeSizeOf		equ 9
+
+	;; foe 0 descriptor
+foe_0:
+	;db 3,0,1,0,0,0,20,0,30 		
+	db 3,0,1,0,0,0,20,3,15 		
+	;; foe 1 descriptor
+foe_1:
+	db 0,0,0,0,0,0,0,0,0 		
+	;; foe 2 descriptor
+foe_2:
+	db 0,0,0,0,0,0,0,0,0 		
+	;; foe 3 descriptor
+foe_3:
+	db 0,0,0,0,0,0,0,0,0 		
+
+foe_0_frame:
+foe_0_Move:
+	; load Column to e
+	lda foe_0 + foeColumn
+	mov e, a 	
+
+	; index = index + direction
+	lda foe_0 + foeDirection
+	mov b, a
+	lda foe_0 + foeIndex
+	add b
+	; if (Index == -1  
+	cpi $ff 
+	jz foe_0_move_L4
+	;     || Index == 8)
+	cpi $8
+	jz foe_0_move_L4
+	jmp foe_0_move_L1
+foe_0_move_L4:
+	; {
+	; Index = Index % 8
+	ani $7
+	; save Index, update c
+	sta foe_0 + foeIndex
+	mov c, a
+	; Column = Column + Direction	
+	; column in e
+	mov a, e
+	add b	
+	sta foe_0 + foeColumn
+	mov e, a
+	; }
+	jmp foe_0_move_CheckBounce
+foe_0_move_L1:
+	; save Index, update c
+	sta foe_0 + foeIndex
+	mov c, a
+	; not at column boundary -> skip bounce check
+	jmp foe_0_move_L3
+foe_0_move_CheckBounce:
+	; check for bounce
+	; we are here if Index == 0 || Index == 7
+	; e = Column
+	lda foe_0 + foeRightStop
+	cmp e
+	jz foe_0_move_yes_bounce
+	lda foe_0 + foeLeftStop
+	cmp e
+	jnz foe_0_move_L3
+	; yes, bounce
+foe_0_move_yes_bounce:
+	; Bounce = 1
+	mvi a, 1
+	sta foe_0 + foeBounce
+	; Direction = -Direction
+	mov a, b
+	cma 
+	inr a
+	sta foe_0 + foeDirection
+	; do the Move() once again
+	jmp foe_0_Move
+foe_0_move_L3: ; no bounce
+	;; foe_0 movement calculation ends here
+
+	;; paint foe_0 
+
+	; de = base addr ($8000 + foe.Y)
+	; e already contains column
+	mov a, e
+	adi $80
+	mov d, a
+	lda foe_0 + foeY
+	mov e, a
+
+	; c already contains index
+	jmp onesprite
 
 	;; draw sprite at x,y coordinate
 	;; hl = base address (y)
