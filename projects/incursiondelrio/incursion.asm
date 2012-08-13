@@ -77,10 +77,59 @@ jamas:
 	pop h
 	call copyback
 
+	lxi h, foe_6
+	push h
+	call copyfoe
+	call foe_0_frame
+	pop h
+	call copyback
+
+	lxi h, foe_7
+	push h
+	call copyfoe
+	call foe_0_frame
+	pop h
+	call copyback
+
+	lxi h, foe_8
+	push h
+	call copyfoe
+	call foe_0_frame
+	pop h
+	call copyback
+
+
+	; animate the propeller
+	lda frame_number
+	ani $2
+	jz  propA
+propB:
+	lxi h, propellerB_ltr_dispatch
+	lxi d, propellerB_rtl_dispatch
+	jmp propC
+propA:
+	lxi h, propellerA_ltr_dispatch
+	lxi d, propellerA_rtl_dispatch
+propC:
+	shld foe_6 + foeLTRDispatch
+	shld foe_8 + foeLTRDispatch
+	xchg
+	shld foe_6 + foeRTLDispatch
+	shld foe_8 + foeRTLDispatch
+	;
+
+
+
+	lxi h, frame_number
+	inr m
 	jmp jamas
+
+frame_number:
+	db 0
+
 copyfoe:
 	lxi d, foe_0
-	mvi c, 8
+	mvi c, foeSizeOf
 copyfoe_1:	
 	mov a, m
 	stax d
@@ -92,7 +141,7 @@ copyfoe_1:
 
 copyback:
 	lxi d, foe_0
-	mvi c, 8
+	mvi c, foeSizeOf
 copyback_1:
 	ldax d
 	mov m, a
@@ -183,24 +232,50 @@ foeBounce		equ 3 			; bounce flag
 foeY			equ 4			; Y position of sprite start
 foeLeftStop		equ 5			; column # of left limit
 foeRightStop	equ 6 			; column # of right limit
-;--
-foeWidth		equ 7 			; width in columns
-foeHeight		equ 8 			; sprite height
-foeSizeOf		equ 9
+foeLTRDispatch  equ 7
+foeRTLDispatch  equ 9
+foeSizeOf 		equ 11
 
 	;; foe 0 descriptor
 foe_0:
-	db 5,0,1,0,$10,3,15,  4,8
+	db 5,0,1,0,$10,3,15
+	dw 0
+	dw 0
 foe_1:
-	db 5,0,1,0,$10,3,15,  4,8
+	db 5,0,1,0,$10,3,15
+	dw ship_ltr_dispatch
+	dw ship_rtl_dispatch
 foe_2:
-	db 5,0,1,0,$20,5,7,  4,8
+	db 5,0,1,0,$20,5,7
+	dw ship_ltr_dispatch
+	dw ship_rtl_dispatch
 foe_3:
-	db 5,0,1,0,$30,3,25,  4,8
+	db 5,0,1,0,$30,3,25
+	dw ship_ltr_dispatch
+	dw ship_rtl_dispatch
 foe_4:
-	db 7,0,1,0,$40,7,10,  4,8
+	db 7,0,1,0,$40,7,10
+	dw ship_ltr_dispatch
+	dw ship_rtl_dispatch
+
 foe_5:
-	db 5,0,1,0,$50,2,8,  4,8
+	db 5,0,1,0,$50,2,8
+	dw copter_ltr_dispatch
+	dw copter_rtl_dispatch
+foe_6:
+	db 5,0,1,0,$54,2,8
+	dw propellerA_ltr_dispatch
+	dw propellerA_rtl_dispatch
+
+foe_7:
+	db 5,0,1,0,$60,2,10
+	dw copter_ltr_dispatch
+	dw copter_rtl_dispatch
+foe_8:
+	db 5,0,1,0,$64,2,10
+	dw propellerA_ltr_dispatch
+	dw propellerA_rtl_dispatch
+
 
 foe_0_frame:
 foe_0_Move:
@@ -297,7 +372,10 @@ ship_ltr:
 	; c = offset
 	; de = column base address
 	; b = bounce
-	
+
+	; load dispatch table	
+	lhld foe_0 + foeLTRDispatch
+
 	; if (Index != 0) -> regular, no pre-wipe
 	mov a, c
 	ora a
@@ -310,11 +388,15 @@ ship_ltr:
 
 	; Index == 0, no bounce -> wipe previous column
 	dcr d
-	jmp ship_ltr_inf
+	; jump to _ltr_inf [dispatch - 2]
+
+	jmp ship_ltr_rtl_dispatchjump
 
 	;; Draw ship without prepending column for wiping
 ship_ltr_regular:
-	lxi h, ship_ltr_dispatch+2
+	; index 0..7 -> 1..8
+	inr c
+	;lxi h, ship_ltr_dispatch+2
 	jmp ship_ltr_rtl_dispatchjump
 
 ship_rtl:
@@ -322,26 +404,9 @@ ship_rtl:
 	; de = column base address
 	; b = bounce
 
-	jmp ship_rtl_regular
-	; if (Index != 7) -> regular, no wipe
-	mov a, c
-	;cpi 7
-	;jnz ship_rtl_regular
-	ora a
-	jz ship_rtl_sup
-	jmp ship_rtl_regular
-
-	; if (Bounce) -> regular, no wipe 
-	mov a, b
-	ora a
-	jnz  ship_rtl_regular
-
-	; Index == 7, no bounce -> draw and wipe the column to the right
-	jmp ship_rtl_sup
-
 ship_rtl_regular:
-	lxi h, ship_rtl_dispatch
-	;jmp ship_ltr_rtl_dispatchjump
+	;lxi h, ship_rtl_dispatch
+	lhld foe_0 + foeRTLDispatch
 
 ship_ltr_rtl_dispatchjump:
 	mvi b, 0

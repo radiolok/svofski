@@ -1,6 +1,15 @@
 import math
 
 class Sprite:
+    def makeAll(self):
+        self.makeTable('ltr')
+        self.makeGroup('ltr')
+        self.makeTable('rtl')
+        self.makeGroup('rtl')
+
+    def isWhite(self):
+        return False
+
     def getSpriteName(self, orientation, shift):
         shiftstr = ['_inf'] + range(0,8) + ['_sup']
         return '%s_%s%s' % (self.getName(), orientation, shiftstr[shift+1])
@@ -26,24 +35,35 @@ class Sprite:
         print '\tdad sp'
         print '\tshld sprites_scratch'    
 
-        print '\tmov h, d'        
-        print '\tmov l, e'        
-        print '\tsphl'
-        print '\tlxi b, 0'
-        print ';; green'
-        self.makeLayer('v', shift, orientation)     # base layer, only green
+        if not self.isWhite():
+            print '\tmov h, d'        
+            print '\tmov l, e'        
+            print '\tsphl'
+            print '\tlxi b, 0'
+            print ';; green'
+            self.makeLayer('v', shift, orientation)     # base layer, only green
 
-        print ';;;; black/magenta layer 1'
-        print '\tlxi h, $2000'
-        print '\tdad d'
-        print '\tsphl'
-        self.makeLayer('nm', shift, orientation)     # layer 1: magenta + black
+            print ';;;; black/magenta layer 1'
+            print '\tlxi h, $2000'
+            print '\tdad d'
+            print '\tsphl'
+            self.makeLayer('nm', shift, orientation)     # layer 1: magenta + black
 
-        print ';;;; yellow/magenta layer 2'
-        print '\tlxi h, $4000'
-        print '\tdad d'
-        print '\tsphl'
-        self.makeLayer('ma', shift, orientation)    # layer 2: magenta + yellow
+            print ';;;; yellow/magenta layer 2'
+            print '\tlxi h, $4000'
+            print '\tdad d'
+            print '\tsphl'
+            self.makeLayer('ma', shift, orientation)    # layer 2: magenta + yellow
+        else:
+            # only white layer
+            print '\txchg'        
+            print '\tlxi d, $6000'
+            print '\tdad d'
+            print '\tsphl'
+            print '\tlxi b, 0'
+            print ';; white'
+            self.makeLayer('w', shift, orientation)    
+
 
         print '\tlhld sprites_scratch'
         print '\tsphl'
@@ -120,14 +140,72 @@ class Ship(Sprite):
 
     def getName(self):
         return "ship"
+
+class Copter(Sprite):
+    pic = ['       nnnnnnn  ',
+           'nn   nnnnnnnnnnn',
+           'nn   nnnnnnnnnnn',
+           'vvvvvvvvvvvvvvvv', 
+           'nn     nnnnnnn  ', 
+           'nn     nnnnnnn  ',
+           '         nnn    ',
+           '       nnnnnnn  ']
+
+    def getPicRaw(self):
+        return self.pic
+
+    def isDoubleWidth(false):
+        return False
+
+    def getName(self):
+        return "copter"
+
+class PropellerA(Sprite):
+    pic = ['     wwwwww     ',
+           '         wwwwwww',
+           '         wwwwwww',
+           '         www    ']
+
+    def getPicRaw(self):
+        return self.pic
+
+    def isDoubleWidth(false):
+        return False
+
+    def getName(self):
+        return "propellerA"
+
+    def isWhite(self):
+        return True
+
+class PropellerB(Sprite):
+    pic = ['         wwwwwww',
+           '     wwwwwww    ',
+           '     wwwwwww    ',
+           '         www    ']
+
+    def getPicRaw(self):
+        return self.pic
+
+    def isDoubleWidth(false):
+        return False
+
+    def getName(self):
+        return "propellerB"
+
+    def isWhite(self):
+        return True
+
         
 print ';; Automatically generated file'
 print ';; see makesprites.py'
 
 a = Ship()
-a.makeTable('ltr')
-a.makeGroup('ltr')
+a.makeAll()
 
-a.makeTable('rtl')
-a.makeGroup('rtl')
-    
+a = Copter()
+a.makeAll()
+
+PropellerA().makeAll()
+PropellerB().makeAll()
+
