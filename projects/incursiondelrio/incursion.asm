@@ -14,7 +14,7 @@ clrscr:
 	lxi h, $8000
 clearscreen:
 	xra a
-	out $10
+	;out $10
 	mov m, a
 	inx h
 	ora h
@@ -28,73 +28,77 @@ clearscreen:
 	; write ret to rst 7 vector	
 	mvi a, $c9
 	sta $38
-jamas:
+
+	; initial stuff
 	ei
 	hlt
-	; write death to rst 7 vector
-	;;mvi a, $c3
-	;;sta $38
-	;;lxi h, $38
-	;;shld $39
-	ei
-	; do stuff
-	
 	call setpalette
 	call showlayers
+
+jamas:
+	mvi a, 4
+	out 2
+	ei
+	hlt
+	xra a
+	out 2
+
+	; keep interrupts enabled to make errors obvious
+	ei
 
 	lxi h, foe_1
 	push h
 	call copyfoe
-	call foe_0_frame
+	call foe_frame
 	pop h
 	call copyback
 
 	lxi h, foe_2
 	push h
 	call copyfoe
-	call foe_0_frame
+	call foe_frame
 	pop h
 	call copyback
 
 	lxi h, foe_3
 	push h
 	call copyfoe
-	call foe_0_frame
+	call foe_frame
 	pop h
 	call copyback
 
 	lxi h, foe_4
 	push h
 	call copyfoe
-	call foe_0_frame
+	call foe_frame
 	pop h
 	call copyback
 
 	lxi h, foe_5
 	push h
 	call copyfoe
-	call foe_0_frame
+	call foe_frame
 	pop h
 	call copyback
 
 	lxi h, foe_6
 	push h
 	call copyfoe
-	call foe_0_frame
+	call foe_frame
 	pop h
 	call copyback
 
 	lxi h, foe_7
 	push h
 	call copyfoe
-	call foe_0_frame
+	call foe_frame
 	pop h
 	call copyback
 
 	lxi h, foe_8
 	push h
 	call copyfoe
-	call foe_0_frame
+	call foe_frame
 	pop h
 	call copyback
 
@@ -128,7 +132,7 @@ frame_number:
 	db 0
 
 copyfoe:
-	lxi d, foe_0
+	lxi d, foeBlock
 	mvi c, foeSizeOf
 copyfoe_1:	
 	mov a, m
@@ -140,7 +144,7 @@ copyfoe_1:
 	ret
 
 copyback:
-	lxi d, foe_0
+	lxi d, foeBlock
 	mvi c, foeSizeOf
 copyback_1:
 	ldax d
@@ -188,6 +192,7 @@ showlayers:
 	shld $930e
 	shld $9310
 	shld $9312
+	ret
 
 setpalette:
 	lxi h, palette_data+15
@@ -203,27 +208,6 @@ palette_loop:
 	jnz palette_loop
 	ret
 	
-
-ship_oneframe:
-;	lxi h, ship_x
-;	mov c, m
-;	inr m
-
-;	lxi h, $80f0
-;	lxi h, ship_y
-;	mov a, m
-;	mov b, a
-;	sui 8
-;	mov m, a
-;	mvi h, $80
-;	mov l, b
-;	call ship_at_x
-;	ret 
-	
-
-ship_x: db 0
-ship_y: db $f0
-
 	;; foe class
 foeColumn		equ 0 			; X column
 foeIndex		equ 1 			; X offset 0..7
@@ -237,7 +221,7 @@ foeRTLDispatch  equ 9
 foeSizeOf 		equ 11
 
 	;; foe 0 descriptor
-foe_0:
+foeBlock:
 	db 5,0,1,0,$10,3,15
 	dw 0
 	dw 0
@@ -276,80 +260,79 @@ foe_8:
 	dw propellerA_ltr_dispatch
 	dw propellerA_rtl_dispatch
 
-
-foe_0_frame:
-foe_0_Move:
+foe_frame:
+foe_Move:
 	; load Column to e
-	lda foe_0 + foeColumn
+	lda foeBlock + foeColumn
 	mov e, a 	
 
 	; index = index + direction
-	lda foe_0 + foeDirection
+	lda foeBlock + foeDirection
 	mov b, a
-	lda foe_0 + foeIndex
+	lda foeBlock + foeIndex
 	add b
 	; if (Index == -1  
 	cpi $ff 
-	jz foe_0_move_L4
+	jz foe_move_L4
 	;     || Index == 8)
 	cpi $8
-	jz foe_0_move_L4
-	jmp foe_0_move_L1
-foe_0_move_L4:
+	jz foe_move_L4
+	jmp foe_move_L1
+foe_move_L4:
 	; {
 	; Index = Index % 8
 	ani $7
 	; save Index, update c
-	sta foe_0 + foeIndex
+	sta foeBlock + foeIndex
 	mov c, a
 	; Column = Column + Direction	
 	; column in e
 	mov a, e
 	add b	
-	sta foe_0 + foeColumn
+	sta foeBlock + foeColumn
 	mov e, a
 	; }
-	jmp foe_0_move_CheckBounce
-foe_0_move_L1:
+	jmp foe_move_CheckBounce
+foe_move_L1:
 	; save Index, update c
-	sta foe_0 + foeIndex
+	sta foeBlock + foeIndex
 	mov c, a
 	; not at column boundary -> skip bounce check
-	jmp foe_0_move_nobounce
-foe_0_move_CheckBounce:
+	jmp foe_move_nobounce
+foe_move_CheckBounce:
 	; check for bounce
 	; we are here if Index == 0 || Index == 7
 	; e = Column
-	lda foe_0 + foeRightStop
+	lda foeBlock + foeRightStop
 	cmp e
-	jz foe_0_move_yes_bounce
-	lda foe_0 + foeLeftStop
+	jz foe_move_yes_bounce
+	lda foeBlock + foeLeftStop
 	cmp e
-	jnz foe_0_move_nobounce
+	jnz foe_move_nobounce
 	; yes, bounce
-foe_0_move_yes_bounce:
+foe_move_yes_bounce:
 	; Bounce = 1
 	mvi a, 1
-	sta foe_0 + foeBounce
+	sta foeBlock + foeBounce
 	; Direction = -Direction
 	mov a, b
 	cma 
 	inr a
-	sta foe_0 + foeDirection
+	sta foeBlock + foeDirection
 	; do the Move() once again
-	jmp foe_0_Move
+	jmp foe_Move
 
-foe_0_move_nobounce: 
-	;; foe_0 movement calculation ends here
+foe_move_nobounce: 
+	;; foeBlock movement calculation ends here
 
-	;; paint foe_0 
+	;; paint foeBlock 
 
 	; de = base addr ($8000 + foe.Y)
 	; e contains column
 	mov a, e
 	adi $80
 	mov d, a
-	lda foe_0 + foeY
+	lda foeBlock + foeY
 	mov e, a
 
 	; de == base address
@@ -358,57 +341,55 @@ foe_0_move_nobounce:
 	mov a, b
 
 	; b = Bounce, Bounce = 0
-	lxi h, foe_0 + foeBounce
+	lxi h, foeBlock + foeBounce
 	mov b, m
 	mvi m, 0
 
 	ora a
-	jm  ship_rtl
-	jmp ship_ltr
+	jm  sprite_rtl
+	jmp sprite_ltr
 
 sprites_scratch:	dw 0
 
-ship_ltr:
-	; c = offset
-	; de = column base address
-	; b = bounce
-
+	;; c = offset
+	;; de = column base address
+	;; b = bounce
+sprite_ltr:
 	; load dispatch table	
-	lhld foe_0 + foeLTRDispatch
+	lhld foeBlock + foeLTRDispatch
 
 	; if (Index != 0) -> regular, no pre-wipe
 	mov a, c
 	ora a
-	jnz ship_ltr_regular
+	jnz sprite_ltr_regular
 
 	; if (Bounce) -> regular, no pre-wipe 
 	mov a, b 	
 	ora a
-	jnz  ship_ltr_regular
+	jnz  sprite_ltr_regular
 
 	; Index == 0, no bounce -> wipe previous column
 	dcr d
 	; jump to _ltr_inf [dispatch - 2]
 
-	jmp ship_ltr_rtl_dispatchjump
+	jmp sprite_ltr_rtl_dispatchjump
 
 	;; Draw ship without prepending column for wiping
-ship_ltr_regular:
+sprite_ltr_regular:
 	; index 0..7 -> 1..8
 	inr c
-	;lxi h, ship_ltr_dispatch+2
-	jmp ship_ltr_rtl_dispatchjump
+	;lxi h, sprite_ltr_dispatch+2
+	jmp sprite_ltr_rtl_dispatchjump
 
-ship_rtl:
-	; c = offset
-	; de = column base address
-	; b = bounce
+	;; c = offset
+	;; de = column base address
+	;; b = bounce
+sprite_rtl:
 
-ship_rtl_regular:
-	;lxi h, ship_rtl_dispatch
-	lhld foe_0 + foeRTLDispatch
+sprite_rtl_regular:
+	lhld foeBlock + foeRTLDispatch
 
-ship_ltr_rtl_dispatchjump:
+sprite_ltr_rtl_dispatchjump:
 	mvi b, 0
 	mov a, c
 	rlc
