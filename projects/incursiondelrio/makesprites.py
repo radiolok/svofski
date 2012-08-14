@@ -36,24 +36,30 @@ class Sprite:
         print '\tshld sprites_scratch'    
 
         if not self.isWhite():
-            print '\tmov h, d'        
-            print '\tmov l, e'        
-            print '\tsphl'
-            print '\tlxi b, 0'
-            print ';; green'
-            self.makeLayer('v', shift, orientation)     # base layer, only green
+            layer = self.makeLayer('v', shift, orientation)     # base layer, only green
+            if (len(layer) > 0):
+                print ';; green'
+                print '\tmov h, d'        
+                print '\tmov l, e'        
+                print '\tsphl'
+                print '\tlxi b, 0'
+                print layer
 
-            print ';;;; black/magenta layer 1'
-            print '\tlxi h, $2000'
-            print '\tdad d'
-            print '\tsphl'
-            self.makeLayer('nm', shift, orientation)     # layer 1: magenta + black
+            layer = self.makeLayer('nm', shift, orientation)     # layer 1: magenta + black
+            if (len(layer) > 0):
+                print ';;;; black/magenta layer 1'
+                print '\tlxi h, $2000'
+                print '\tdad d'
+                print '\tsphl'
+                print layer
 
-            print ';;;; yellow/magenta layer 2'
-            print '\tlxi h, $4000'
-            print '\tdad d'
-            print '\tsphl'
-            self.makeLayer('ma', shift, orientation)    # layer 2: magenta + yellow
+            layer = self.makeLayer('ma', shift, orientation)    # layer 2: magenta + yellow
+            if (len(layer) > 0):
+                print ';;;; yellow/magenta layer 2'
+                print '\tlxi h, $4000'
+                print '\tdad d'
+                print '\tsphl'
+                print layer
         else:
             # only white layer
             print '\txchg'        
@@ -62,7 +68,7 @@ class Sprite:
             print '\tsphl'
             print '\tlxi b, 0'
             print ';; white'
-            self.makeLayer('w', shift, orientation)    
+            print self.makeLayer('w', shift, orientation)    
 
 
         print '\tlhld sprites_scratch'
@@ -70,13 +76,24 @@ class Sprite:
         print '\tret'
 
     def makeLayer(self, layerchar, shift, orientation):
+        result = ''
+        comment = ''
+
         pic = self.getPic(shift, 
                 mirror = orientation == 'rtl', 
                 prepend = shift == -1, 
                 append = (shift == 0) and (orientation == 'rtl'))
 
-        if (shift == -1):
-            for sss in pic: print ';[' + sss + ']'
+        # pre-filter pic to find out its top and bottom boundaries
+
+        boundsmap = map(lambda x: self.filter(x, layerchar), pic)
+        for sss in zip(pic,boundsmap): 
+            comment = comment + (';[%s] %010x\n' % sss)
+
+        leading = self.countLeading(boundsmap, 0)/2
+        trailing = self.countTrailing(boundsmap, 0)/2
+        comment = comment + '; stripped pairs: leading: %d trailing: %d\n' % (leading,trailing)
+
 
         height = len(pic)
         width = len(pic[0])
@@ -84,20 +101,34 @@ class Sprite:
 
         lastb = -1
 
+        # skip initial leading count
+        if leading * 2 == height:
+            return result
+        if leading > 1:
+            result = result + '\tlxi h, $%x\n' % (0xffff - (leading*2 - 1))
+            result = result + '\tdad sp\n'
+            result = result + '\tsphl\n'
+        else:
+            for i in xrange(0, leading):
+                result = result + '\tpush b\n'
+
+
         for column in xrange(0,columns):
-            for y in xrange(0,height,2):
+            for y in xrange(leading * 2, height - trailing * 2, 2):   
                 popor = pic[y][column*8:column*8+8] + pic[y+1][column*8:column*8+8]
                 b = self.filter(popor, layerchar)
                 if b == 0:
-                    print '\tpush b'
+                    result = result + '\tpush b\n'
                 else:
                     if b != lastb:
-                        print '\tlxi h, $%04x' % b
+                        result = result +('\tlxi h, $%04x\n' % b)
                         lastb = b
-                    print '\tpush h'
+                    result = result + '\tpush h\n'
             if column != columns - 1:
-                print '\tlxi h, 256+%d\n\tdad sp\n\tsphl' % height
+                result = result + ('\tlxi h, 256+%d\n\tdad sp\n\tsphl\n' % (height - leading*2 - trailing * 2))
                 lastb = -1
+
+        return comment + result
 
     def getPic(self, shift, prepend = False, append = False, mirror = False):
         if (shift == -1): shift = 0
@@ -120,6 +151,18 @@ class Sprite:
 
     def filter(self, chars, charset):
         return reduce(lambda x,y: (x<<1)|y, [[0,1][x in charset] for x in chars])
+
+    def countLeading(self, lst, match):
+        lst = lst + [1]
+        for i in xrange(len(lst)):
+            if (lst[i] != match): 
+                break
+        return i
+
+    def countTrailing(self, lst, match):
+        for i in xrange(len(lst)):
+            if (lst[len(lst) - 1 - i] != match): break
+        return i
     
 
 class Ship(Sprite):
