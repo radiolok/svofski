@@ -48,52 +48,52 @@ jamas:
 
 	lxi h, foe_1
 	push h
-	call copyfoe
+	call copyfoe_x
 	call foe_byId
 	pop h
-	call copyback
+	call copyback_x
 
 	lxi h, foe_2
 	push h
-	call copyfoe
+	call copyfoe_x
 	call foe_byId
 	pop h
-	call copyback
+	call copyback_x
 
 	lxi h, foe_3
 	push h
-	call copyfoe
+	call copyfoe_x
 	call foe_byId
 	pop h
-	call copyback
+	call copyback_x
 
 	lxi h, foe_4
 	push h
-	call copyfoe
+	call copyfoe_x
 	call foe_byId
 	pop h
-	call copyback
+	call copyback_x
 
 	lxi h, foe_5
 	push h
-	call copyfoe
+	call copyfoe_x
 	call foe_byId
 	pop h
-	call copyback
+	call copyback_x
 
 	lxi h, foe_6
 	push h
-	call copyfoe
+	call copyfoe_x
 	call foe_byId
 	pop h
-	call copyback
+	call copyback_x
 
 	lxi h, foe_7
 	push h
-	call copyfoe
+	call copyfoe_x
 	call foe_byId
 	pop h
-	call copyback
+	call copyback_x
 
 	lxi h, frame_number
 	inr m
@@ -102,16 +102,55 @@ jamas:
 frame_number:
 	db 0
 
+
+copyback_x:
+	; h = destination
+	xchg
+	lxi h, 0 	
+	dad sp 		
+	shld sprites_scratch 
+	lxi h, foeBlock
+	sphl ; sp -> source
+	xchg ; h = dest
+	jmp copyfoe_x_0
+
+copyfoe_x:
+	xchg		; 8
+	lxi h, 0 	; 12
+	dad sp 		; 12
+	shld sprites_scratch ; 16
+	xchg		; 8
+	sphl		; 8
+	lxi h, foeBlock ; 12
+copyfoe_x_0:
+	mvi a, 2 	; 8  = 84
+copyfoe_x_1:
+	pop b       ; 12
+	pop d 		; 12
+	mov m, c    ; 8
+	inx h       ; 8
+	mov m, b    ; 8
+	inx h 	 	; 8
+	mov m, e 	; 8
+	inx h       ; 8
+	mov m, d    ; 8
+	inx h       ; 8
+	dcr a       ; 8
+	jnz copyfoe_x_1  ; 12  = 64 * 4 = 216
+	lhld sprites_scratch  ; 16
+	sphl				  ; 8  = 24  --> 84 + 216 + 24 = total 324
+	ret
+
 copyfoe:
-	lxi d, foeBlock
-	mvi c, foeSizeOf
+	lxi d, foeBlock 	; 12
+	mvi c, foeSizeOf	; 8
 copyfoe_1:	
-	mov a, m
-	stax d
-	inx h
-	inx d
-	dcr c
-	jnz copyfoe_1
+	mov a, m 			; 8
+	stax d  			; 8
+	inx h 				; 8
+	inx d 				; 8
+	dcr c 				; 8
+	jnz copyfoe_1 		; 12   = 20 + 52*8 = 436
 	ret
 
 copyback:
