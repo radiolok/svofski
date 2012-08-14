@@ -49,80 +49,51 @@ jamas:
 	lxi h, foe_1
 	push h
 	call copyfoe
-	call foe_frame
+	call foe_byId
 	pop h
 	call copyback
 
 	lxi h, foe_2
 	push h
 	call copyfoe
-	call foe_frame
+	call foe_byId
 	pop h
 	call copyback
 
 	lxi h, foe_3
 	push h
 	call copyfoe
-	call foe_frame
+	call foe_byId
 	pop h
 	call copyback
 
 	lxi h, foe_4
 	push h
 	call copyfoe
-	call foe_frame
+	call foe_byId
 	pop h
 	call copyback
 
 	lxi h, foe_5
 	push h
 	call copyfoe
-	call foe_frame
+	call foe_byId
 	pop h
 	call copyback
 
 	lxi h, foe_6
 	push h
 	call copyfoe
-	call foe_frame
+	call foe_byId
 	pop h
 	call copyback
 
 	lxi h, foe_7
 	push h
 	call copyfoe
-	call foe_frame
+	call foe_byId
 	pop h
 	call copyback
-
-	lxi h, foe_8
-	push h
-	call copyfoe
-	call foe_frame
-	pop h
-	call copyback
-
-
-	; animate the propeller
-	lda frame_number
-	ani $2
-	jz  propA
-propB:
-	lxi h, propellerB_ltr_dispatch
-	lxi d, propellerB_rtl_dispatch
-	jmp propC
-propA:
-	lxi h, propellerA_ltr_dispatch
-	lxi d, propellerA_rtl_dispatch
-propC:
-	shld foe_6 + foeLTRDispatch
-	shld foe_8 + foeLTRDispatch
-	xchg
-	shld foe_6 + foeRTLDispatch
-	shld foe_8 + foeRTLDispatch
-	;
-
-
 
 	lxi h, frame_number
 	inr m
@@ -192,6 +163,26 @@ showlayers:
 	shld $930e
 	shld $9310
 	shld $9312
+
+	; time marks
+	lxi h, $c0c0
+	shld $e000
+	shld $e010
+	shld $e020
+	shld $e030
+	shld $e040
+	shld $e050
+	shld $e060
+	shld $e070
+	shld $e080
+	shld $e090
+	shld $e0a0
+	shld $e0b0
+	shld $e0c0
+	shld $e0d0
+	shld $e0e0
+	shld $e0f0
+	shld $e0fe
 	ret
 
 setpalette:
@@ -208,6 +199,11 @@ palette_loop:
 	jnz palette_loop
 	ret
 	
+
+FOEID_NONE 		equ 0
+FOEID_SHIP 		equ 1
+FOEID_COPTER 	equ 2
+
 	;; foe class
 foeColumn		equ 0 			; X column
 foeIndex		equ 1 			; X offset 0..7
@@ -216,49 +212,95 @@ foeBounce		equ 3 			; bounce flag
 foeY			equ 4			; Y position of sprite start
 foeLeftStop		equ 5			; column # of left limit
 foeRightStop	equ 6 			; column # of right limit
-foeLTRDispatch  equ 7
-foeRTLDispatch  equ 9
-foeSizeOf 		equ 11
+foeId 			equ 7 			; id: 0 = none, 1 = ship, 2 = copter
+foeSizeOf 		equ 8
 
 	;; foe 0 descriptor
 foeBlock:
 	db 5,0,1,0,$10,3,15
-	dw 0
-	dw 0
+	db 0 						; id
+foeBlock_LTR:	
+	dw 0 						; dispatch to sprite LTR 
+foeBlock_RTL:
+	dw 0 						; dispatch to sprite RTL
+
 foe_1:
 	db 5,0,1,0,$10,3,15
-	dw ship_ltr_dispatch
-	dw ship_rtl_dispatch
+	db FOEID_SHIP
 foe_2:
 	db 5,0,1,0,$20,5,7
-	dw ship_ltr_dispatch
-	dw ship_rtl_dispatch
+	db FOEID_SHIP
 foe_3:
 	db 5,0,1,0,$30,3,25
-	dw ship_ltr_dispatch
-	dw ship_rtl_dispatch
+	db FOEID_SHIP
 foe_4:
 	db 7,0,1,0,$40,7,10
-	dw ship_ltr_dispatch
-	dw ship_rtl_dispatch
-
+	db FOEID_SHIP
 foe_5:
 	db 5,0,1,0,$50,2,8
-	dw copter_ltr_dispatch
-	dw copter_rtl_dispatch
+	db FOEID_COPTER
 foe_6:
-	db 5,0,1,0,$54,2,8
-	dw propellerA_ltr_dispatch
-	dw propellerA_rtl_dispatch
-
-foe_7:
 	db 5,0,1,0,$60,2,10
-	dw copter_ltr_dispatch
-	dw copter_rtl_dispatch
-foe_8:
-	db 5,0,1,0,$64,2,10
-	dw propellerA_ltr_dispatch
-	dw propellerA_rtl_dispatch
+	db FOEID_COPTER
+foe_7:
+	db 5,0,1,0,$70,3,25
+	db FOEID_COPTER
+
+foe_byId:
+	lda foeBlock + foeId
+	; if (foe.Id == 0) return;
+	ora a
+	rz		
+
+	; prepare dispatches
+	dcr a
+	jz  foe_byId_ship		; 1 == ship
+	dcr a
+	jz  foe_byId_copter		; 2 == copter
+	; default: return  
+	ret
+foe_byId_ship:
+	lxi h, ship_ltr_dispatch
+	shld foeBlock_LTR
+	lxi h, ship_rtl_dispatch
+	shld foeBlock_RTL
+	jmp foe_frame
+
+foe_byId_copter:
+	; draw the copter body
+	lxi h, copter_ltr_dispatch
+	shld foeBlock_LTR
+	lxi h, copter_rtl_dispatch
+	shld foeBlock_RTL
+	call foe_frame
+	
+	; animate the propeller
+	lda frame_number
+	ani $2
+	jz  foe_byId_propA
+	lxi h, propellerB_ltr_dispatch
+	lxi d, propellerB_rtl_dispatch
+	jmp foe_byId_propC
+foe_byId_propA:
+	lxi h, propellerA_ltr_dispatch
+	lxi d, propellerA_rtl_dispatch
+foe_byId_propC:
+	shld foeBlock_LTR
+	xchg
+	shld foeBlock_RTL
+
+	lxi h, foeBlock + foeY
+	mov a, m
+	push psw
+	adi 4
+	mov m, a
+	push h
+	; draw propeller
+	call foe_paint_preload
+	pop h
+	pop psw
+	mov m, a
+	ret
 
 foe_frame:
 foe_Move:
@@ -322,14 +364,25 @@ foe_move_yes_bounce:
 	; do the Move() once again
 	jmp foe_Move
 
+	;; additional entry point for sprites with precalculated position
+	;; used for propellers
+foe_paint_preload:
+	lda foeBlock + foeColumn
+	mov e, a
+	lda foeBlock + foeIndex
+	mov c, a
+	lda foeBlock + foeDirection
+	mov b, a
+
 foe_move_nobounce: 
 	;; foeBlock movement calculation ends here
 
-	;; paint foeBlock 
-
-	; de = base addr ($8000 + foe.Y)
+foe_paint:
+	;; paint foe
 	; e contains column
 	mov a, e
+
+	; de = base addr ($8000 + foe.Y)
 	adi $80
 	mov d, a
 	lda foeBlock + foeY
@@ -356,7 +409,7 @@ sprites_scratch:	dw 0
 	;; b = bounce
 sprite_ltr:
 	; load dispatch table	
-	lhld foeBlock + foeLTRDispatch
+	lhld foeBlock_LTR
 
 	; if (Index != 0) -> regular, no pre-wipe
 	mov a, c
@@ -387,7 +440,7 @@ sprite_ltr_regular:
 sprite_rtl:
 
 sprite_rtl_regular:
-	lhld foeBlock + foeRTLDispatch
+	lhld foeBlock_RTL
 
 sprite_ltr_rtl_dispatchjump:
 	mvi b, 0
