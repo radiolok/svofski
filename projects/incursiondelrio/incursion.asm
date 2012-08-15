@@ -43,6 +43,12 @@ jamas:
 	xra a
 	out 2
 
+	; scroll
+	mvi a, 88h
+	out 0
+	lda frame_scroll
+	out 3
+
 	; keep interrupts enabled to make errors obvious
 	ei
 
@@ -50,60 +56,40 @@ jamas:
 	call foe_animate
 
 	lxi h, foe_1
-	push h
-	call copyfoe_y
-	call foe_byId
-	pop h
-	call copyback_y
-
+	call foe_in_hl
 	lxi h, foe_2
-	push h
-	call copyfoe_y
-	call foe_byId
-	pop h
-	call copyback_y
-
+	call foe_in_hl
 	lxi h, foe_3
-	push h
-	call copyfoe_y
-	call foe_byId
-	pop h
-	call copyback_y
-
+	call foe_in_hl
 	lxi h, foe_4
-	push h
-	call copyfoe_y
-	call foe_byId
-	pop h
-	call copyback_y
-
+	call foe_in_hl
 	lxi h, foe_5
-	push h
-	call copyfoe_y
-	call foe_byId
-	pop h
-	call copyback_y
-
+	call foe_in_hl
 	lxi h, foe_6
-	push h
-	call copyfoe_y
-	call foe_byId
-	pop h
-	call copyback_y
-
+	call foe_in_hl
 	lxi h, foe_7
-	push h
-	call copyfoe_y
-	call foe_byId
-	pop h
-	call copyback_y
+	call foe_in_hl
+	lxi h, foe_8
+	call foe_in_hl
+
+	call clearblinds
+	call drawblinds_bottom
 
 	lxi h, frame_number
 	inr m
+
+	lxi h, frame_scroll
+	inr m
+
+	;di
+	;jmp .
+
 	jmp jamas
 
 frame_number:
 	db 0
+frame_scroll:
+	db $ff
 
 copyfoe_y:
 	xchg					; 8
@@ -152,23 +138,34 @@ copyback_y:
 	; pintar los colores
 showlayers:
 	lxi h, $ffff
-	; verde		1 0 0 0
+	; 1 0 0 0
 	shld $81fe 
-	shld $81fc 
-	; amarillo	0 0 1 0 
-	shld $c2fe
-	shld $c2fc
-	; negro		0 1 0 0
+
+	; 0 1 0 0 
+	shld $a2fe
+
+	; 1 1 0 0
+	shld $83fe
 	shld $a3fe
-	shld $a3fc
-	; rosa		0 1 1 0
-	shld $a4fe	
+
+	; 0 0 1 0
 	shld $c4fe
-	shld $a4fc	
-	shld $c4fc
-	; blanco	0 0 0 1
-	shld $e5fe	
-	shld $e5fc
+
+	; 1 0 1 0
+	shld $85fe	
+	shld $c5fe
+
+	; 0 1 1 0
+	shld $a6fe	
+	shld $c6fe
+
+	; 1 1 1 0
+	shld $87fe	
+	shld $a7fe
+	shld $c7fe
+
+	; x x x 1
+	shld $e8fe	
 
 	; test bounds
 	shld $8306
@@ -221,11 +218,40 @@ palette_loop:
 	dcx h
 	jnz palette_loop
 	ret
+
+;---
+drawblinds_bottom:
+	lxi h, $e000 + 70
+	mvi b, $ff
+	jmp clearblinds_entry2
+
+clearblinds:
+	lxi h, $e0ff-16
+	mvi b, 0
+clearblinds_entry2:
+	lda frame_scroll
+	add l
+	mov l, a
+
+	mvi c, 32
+	lxi d, 256+1
+clearblinds_L1:
+	mov m, b ; 8
+	dcx h    ; 8
+	mov m, b ; 8
+	dad d    ; 12
+
+	dcr c 	; 8
+	jnz clearblinds_L1 ; 12   (8+12+8+12)*32 = 1280, (8+12+8+12+8+8)*32=1792
+
+	ret	
+
 	
 
 FOEID_NONE 		equ 0
 FOEID_SHIP 		equ 1
 FOEID_COPTER 	equ 2
+FOEID_RCOPTER	equ 3
 
 	;; foe class
 foeColumn		equ 0 			; X column
@@ -256,23 +282,26 @@ foe_1:
 	db 5,0,1,0,$10,3,15
 	db FOEID_SHIP
 foe_2:
-	db 5,0,1,0,$20,5,7
+	db 5,0,1,0,$30,5,7
 	db FOEID_COPTER
 foe_3:
-	db 5,0,1,0,$30,3,25
+	db 5,0,1,0,$50,3,25
 	db FOEID_SHIP
 foe_4:
-	db 7,0,1,0,$40,7,10
-	db FOEID_COPTER
+	db 7,0,1,0,$70,7,10
+	db FOEID_RCOPTER
 foe_5:
-	db 5,0,1,0,$50,2,8
+	db 5,0,1,0,$90,2,8
 	db FOEID_SHIP
 foe_6:
-	db 5,0,1,0,$60,2,10
+	db 5,0,1,0,$b0,2,10
 	db FOEID_COPTER
 foe_7:
-	db 5,0,1,0,$70,3,25
+	db 5,0,1,0,$d0,3,25
 	db FOEID_SHIP
+foe_8:
+	db 9,0,1,0,$f0,8,23
+	db FOEID_COPTER
 
 	;; animate sprites
 	;; should be called once per frame, before the first sprite
@@ -293,6 +322,14 @@ foe_byId_propC:
 	shld foePropeller_RTL
 	ret
 
+foe_in_hl:
+	push h
+	call copyfoe_y
+	call foe_byId
+	pop h
+	call copyback_y
+	ret
+
 foe_byId:
 	lda foeBlock + foeId
 	; if (foe.Id == 0) return;
@@ -304,6 +341,8 @@ foe_byId:
 	jz  foe_byId_ship		; 1 == ship
 	dcr a
 	jz  foe_byId_copter		; 2 == copter
+	dcr a
+	jz  foe_byId_rcopter	; 3 == redcopter
 	; default: return  
 	ret
 foe_byId_ship:
@@ -313,6 +352,14 @@ foe_byId_ship:
 	shld foeBlock_RTL
 	jmp foe_frame
 
+foe_byId_rcopter:
+	; draw the copter body
+	lxi h, redcopter_ltr_dispatch
+	shld foeBlock_LTR
+	lxi h, redcopter_rtl_dispatch
+	shld foeBlock_RTL
+	call foe_frame
+	jmp foe_byId_copterpropeller
 foe_byId_copter:
 	; draw the copter body
 	lxi h, copter_ltr_dispatch
@@ -320,7 +367,7 @@ foe_byId_copter:
 	lxi h, copter_rtl_dispatch
 	shld foeBlock_RTL
 	call foe_frame
-	
+foe_byId_copterpropeller:
 	; animate the propeller
 	lhld foePropeller_LTR
 	shld foeBlock_LTR
@@ -499,17 +546,27 @@ sprite_ltr_rtl_dispatchjump:
 zero16:	dw 0
 
 c_black		equ $00
-c_blue		equ $c0
-c_green 	equ $38
-c_yellow 	equ $3f
-c_magenta	equ $c7
-c_white		equ $ff
+c_blue		equ $c1
+c_green 	equ $73 ; 01 110 011
+c_yellow 	equ $bf ; 
+c_magenta 	equ $8d ;
+c_white		equ $f6
+c_grey		equ $09 ; 00 010 010
+c_cyan		equ $f4	; 10 011 001
+c_dkblue	equ $81	; 10 010 001
+
+;palette_data:
+;	db c_blue,  c_white,  c_yellow,  c_white
+;	db c_black, c_white,  c_magenta, c_white
+;	db c_green, c_white,  c_yellow,  c_white
+;	db c_black, c_white,  c_magenta, c_white
 
 palette_data:
-	db c_blue,  c_white,  c_yellow,  c_white
-	db c_black, c_white,  c_magenta, c_white
-	db c_green, c_white,  c_yellow,  c_white
-	db c_black, c_white,  c_magenta, c_white
+	db c_blue,   	c_black,  c_white,  	c_black
+	db $8d, 	c_black,  c_cyan,		c_black
+	db c_green, 	c_black,  c_grey,  		c_black
+	db c_yellow,    c_black,  c_dkblue, 	c_black
+
 
 dactr:	equ .
 
