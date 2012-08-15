@@ -36,39 +36,47 @@ class Sprite:
         print '\tshld sprites_scratch'    
 
         if not self.isWhite():
-            layer = self.makeLayer('v', shift, orientation)     # base layer, only green
+            layer = self.makeLayer('13578', shift, orientation)     # layer 0
             if (len(layer) > 0):
-                print ';; green'
+                print ';; layer 0 (8000)'
                 print '\tmov h, d'        
                 print '\tmov l, e'        
                 print '\tsphl'
                 print '\tlxi b, 0'
                 print layer
 
-            layer = self.makeLayer('nm', shift, orientation)     # layer 1: magenta + black
+            layer = self.makeLayer('2367', shift, orientation)      # layer 1
             if (len(layer) > 0):
-                print ';;;; black/magenta layer 1'
+                print ';; layer 1 (a000)'
                 print '\tlxi h, $2000'
                 print '\tdad d'
                 print '\tsphl'
                 print layer
 
-            layer = self.makeLayer('ma', shift, orientation)    # layer 2: magenta + yellow
+            layer = self.makeLayer('4567', shift, orientation)        # layer 2
             if (len(layer) > 0):
-                print ';;;; yellow/magenta layer 2'
+                print ';; layer 2 (c000)'
                 print '\tlxi h, $4000'
+                print '\tdad d'
+                print '\tsphl'
+                print layer
+
+            layer = self.makeLayer('8', shift, orientation)        # layer 3
+            if (len(layer) > 0):
+                print ';; layer 3 (e000)'
+                print '\tlxi h, $6000'
                 print '\tdad d'
                 print '\tsphl'
                 print layer
         else:
             # only white layer
             print '\txchg'        
-            print '\tlxi d, $6000'
+            print '\tlxi d, $4000'
             print '\tdad d'
             print '\tsphl'
             print '\tlxi b, 0'
             print ';; white'
-            print self.makeLayer('w', shift, orientation)    
+            print self.makeLayer('4', shift, orientation)    
 
 
         print '\tlhld sprites_scratch'
@@ -166,14 +174,14 @@ class Sprite:
     
 
 class Ship(Sprite):
-    pic = ['      nn        ',
-           '      nn        ',
-           '    nnnn        ',
-           '  nnnnnnnn      ',
-           'mmmmmmmmmmmmmmmm',
-           'mmmmmmmmmmmmmm  ',
-           'vvvvvvvvvvv     ',
-           '  vvvvvvvvv     ']
+    pic = ['      55        ',
+           '      55        ',
+           '    5555        ',
+           '  55555555      ',
+           '2222222222222222',
+           '22222222222222  ',
+           '66666666666     ',
+           '  66666666      ']
 
     def getPicRaw(self):
         return self.pic
@@ -185,14 +193,14 @@ class Ship(Sprite):
         return "ship"
 
 class Copter(Sprite):
-    pic = ['       nnnnnnn  ',
-           'nn   nnnnnnnnnnn',
-           'nn   nnnnnnnnnnn',
-           'vvvvvvvvvvvvvvvv', 
-           'nn     nnnnnnn  ', 
-           'nn     nnnnnnn  ',
-           '         nnn    ',
-           '       nnnnnnn  ']
+    pic = ['       7777777  ',
+           '77   77777777777',
+           '77   77777777777',
+           '5555555555555555', 
+           '77     7777777  ', 
+           '77     7777777  ',
+           '         777    ',
+           '       7777777  ']
 
     def getPicRaw(self):
         return self.pic
@@ -203,11 +211,31 @@ class Copter(Sprite):
     def getName(self):
         return "copter"
 
+class RedCopter(Sprite):
+    pic = ['       2222222  ',
+           '22   22222222222',
+           '22   22222222222',
+           '3333333333333333', 
+           '22     2222222  ', 
+           '22     2222222  ',
+           '         222    ',
+           '       2222222  ']
+
+    def getPicRaw(self):
+        return self.pic
+
+    def isDoubleWidth(false):
+        return False
+
+    def getName(self):
+        return "redcopter"
+
+
 class PropellerA(Sprite):
-    pic = ['     wwwwww     ',
-           '         wwwwwww',
-           '         wwwwwww',
-           '         www    ']
+    pic = ['     444444     ',
+           '         4444444',
+           '         4444444',
+           '         444    ']
 
     def getPicRaw(self):
         return self.pic
@@ -222,10 +250,10 @@ class PropellerA(Sprite):
         return True
 
 class PropellerB(Sprite):
-    pic = ['         wwwwwww',
-           '     wwwwwww    ',
-           '     wwwwwww    ',
-           '         www    ']
+    pic = ['         4444444',
+           '     4444444    ',
+           '     4444444    ',
+           '         444    ']
 
     def getPicRaw(self):
         return self.pic
@@ -248,6 +276,8 @@ a.makeAll()
 
 a = Copter()
 a.makeAll()
+
+RedCopter().makeAll()
 
 PropellerA().makeAll()
 PropellerB().makeAll()
