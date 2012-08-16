@@ -135,75 +135,6 @@ copyback_y:
 	sphl				 
 	ret
 
-	; pintar los colores
-showlayers:
-	lxi h, $ffff
-	; 1 0 0 0
-	shld $81fe 
-
-	; 0 1 0 0 
-	shld $a2fe
-
-	; 1 1 0 0
-	shld $83fe
-	shld $a3fe
-
-	; 0 0 1 0
-	shld $c4fe
-
-	; 1 0 1 0
-	shld $85fe	
-	shld $c5fe
-
-	; 0 1 1 0
-	shld $a6fe	
-	shld $c6fe
-
-	; 1 1 1 0
-	shld $87fe	
-	shld $a7fe
-	shld $c7fe
-
-	; x x x 1
-	shld $e8fe	
-
-	; test bounds
-	shld $8306
-	shld $8308
-	shld $830a
-	shld $830c
-	shld $830e
-	shld $8310
-	shld $8312
-
-	shld $9306
-	shld $9308
-	shld $930a
-	shld $930c
-	shld $930e
-	shld $9310
-	shld $9312
-
-	; time marks
-	lxi h, $c0c0
-	shld $e000
-	shld $e010
-	shld $e020
-	shld $e030
-	shld $e040
-	shld $e050
-	shld $e060
-	shld $e070
-	shld $e080
-	shld $e090
-	shld $e0a0
-	shld $e0b0
-	shld $e0c0
-	shld $e0d0
-	shld $e0e0
-	shld $e0f0
-	shld $e0fe
-	ret
 
 setpalette:
 	lxi h, palette_data+15
@@ -253,6 +184,7 @@ FOEID_NONE 		equ 0
 FOEID_SHIP 		equ 1
 FOEID_COPTER 	equ 2
 FOEID_RCOPTER	equ 3
+FOEID_JET 		equ 4
 
 	;; foe class
 foeColumn		equ 0 			; X column
@@ -295,8 +227,8 @@ foe_5:
 	db 5,0,1,0,$90,2,8
 	db FOEID_SHIP
 foe_6:
-	db 5,0,1,0,$b0,2,10
-	db FOEID_COPTER
+	db 5,0,4,0,$b0,255,30
+	db FOEID_JET
 foe_7:
 	db 5,0,1,0,$d0,3,25
 	db FOEID_SHIP
@@ -344,12 +276,21 @@ foe_byId:
 	jz  foe_byId_copter		; 2 == copter
 	dcr a
 	jz  foe_byId_rcopter	; 3 == redcopter
+	dcr a
+	jz 	foe_byId_jet 		; 4 == jet
 	; default: return  
 	ret
 foe_byId_ship:
 	lxi h, ship_ltr_dispatch
 	shld foeBlock_LTR
 	lxi h, ship_rtl_dispatch
+	shld foeBlock_RTL
+	jmp foe_frame
+
+foe_byId_jet:
+	lxi h, jet_ltr_dispatch
+	shld foeBlock_LTR
+	lxi h, jet_rtl_dispatch
 	shld foeBlock_RTL
 	jmp foe_frame
 
@@ -404,6 +345,8 @@ foe_Move:
 	; if (Index == -1  
 	cpi $ff 
 	jz foe_move_L4
+	cpi $fe
+	jz foe_move_L4
 	;     || Index == 8)
 	cpi $8
 	jz foe_move_L4
@@ -415,10 +358,18 @@ foe_move_L4:
 	; save Index, update c
 	sta foeBlock + foeIndex
 	mov c, a
-	; Column = Column + Direction	
+	; Column = Column + sgn(Direction)
 	; column in e
-	mov a, e
-	add b	
+
+	mov a, b
+	; find direction sign
+	ral
+	mvi a, 1
+	jnc foe_move_diradd
+	mvi a, $ff
+foe_move_diradd:
+	add e
+
 	sta foeBlock + foeColumn
 	mov e, a
 	; }
@@ -543,9 +494,6 @@ sprite_ltr_rtl_dispatchjump:
 
     .include ship.inc
 
-
-zero16:	dw 0
-
 c_black		equ $00
 c_blue		equ $c1
 c_green 	equ $73 ; 01 110 011
@@ -563,5 +511,75 @@ palette_data:
 	db c_yellow,    c_black,  c_dkblue, 	c_black
 
 
-dactr:	equ .
+	;; Depuración y basura
+
+	; pintar los colores
+showlayers:
+	lxi h, $ffff
+	; 1 0 0 0
+	shld $81fe 
+
+	; 0 1 0 0 
+	shld $a2fe
+
+	; 1 1 0 0
+	shld $83fe
+	shld $a3fe
+
+	; 0 0 1 0
+	shld $c4fe
+
+	; 1 0 1 0
+	shld $85fe	
+	shld $c5fe
+
+	; 0 1 1 0
+	shld $a6fe	
+	shld $c6fe
+
+	; 1 1 1 0
+	shld $87fe	
+	shld $a7fe
+	shld $c7fe
+
+	; x x x 1
+	shld $e8fe	
+
+	; test bounds
+	shld $8306
+	shld $8308
+	shld $830a
+	shld $830c
+	shld $830e
+	shld $8310
+	shld $8312
+
+	shld $9306
+	shld $9308
+	shld $930a
+	shld $930c
+	shld $930e
+	shld $9310
+	shld $9312
+
+	; time marks
+	lxi h, $c0c0
+	shld $e000
+	shld $e010
+	shld $e020
+	shld $e030
+	shld $e040
+	shld $e050
+	shld $e060
+	shld $e070
+	shld $e080
+	shld $e090
+	shld $e0a0
+	shld $e0b0
+	shld $e0c0
+	shld $e0d0
+	shld $e0e0
+	shld $e0f0
+	shld $e0fe
+	ret
 

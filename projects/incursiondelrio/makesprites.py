@@ -267,6 +267,27 @@ class PropellerB(Sprite):
     def isWhite(self):
         return True
 
+class Jet(Sprite):
+    pic = ['44              ',
+           '4444      4444  ',
+           '4444444444444444', 
+           '  4444   4444444', 
+           '      44444     ',
+           '    4444        ']
+
+    def getPicRaw(self):
+        return self.pic
+
+    def isDoubleWidth(false):
+        return False
+
+    def isWhite(self):
+        return True
+
+    def getName(self):
+        return "jet"
+
+
         
 print ';; Automatically generated file'
 print ';; see makesprites.py'
@@ -281,4 +302,5 @@ RedCopter().makeAll()
 
 PropellerA().makeAll()
 PropellerB().makeAll()
+Jet().makeAll()
 
