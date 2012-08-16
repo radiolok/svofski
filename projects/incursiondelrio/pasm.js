@@ -41,6 +41,7 @@
 //        tab scroll fixed
 // Rev.G: $ can now work as hex prefix
 // Rev.H: Fixed spaces in reg-reg, .binfile, .hexfile
+// Rev.I: Fixed bug in evaluation of hex literals ending with d
 //
 // TODO: evaluation should ignore precedence, it's all left-to-right
 //
@@ -48,6 +49,8 @@
 // -- global DOM elements
 
 var debug = false;
+
+var debugOut = '';
 
 var inTheOpera = false;
 
@@ -1114,6 +1117,7 @@ function evaluateExpression(input, addr) {
         return -1;
     }
     input = input;
+
     var expr = '';
     for (var ident = 0; ident < q.length; ident++) {
         var qident = q[ident].trim();
@@ -1133,7 +1137,7 @@ function evaluateExpression(input, addr) {
     }
     //console.log('0 input=',  input);
     //console.log('1 expr=', expr);
-    expr += input.replace(/[0-9][0-9a-fA-F]*[hbqdHBQD]|'.'/g,
+    expr += input.replace(/0x[0-9a-fA-F]+|[0-9][0-9a-fA-F]*[hbqdHBQD]|'.'/g,
         function(m) {
             return resolveNumber(m);
         });

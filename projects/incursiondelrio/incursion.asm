@@ -223,17 +223,18 @@ palette_loop:
 drawblinds_bottom:
 	lxi h, $e000 + 70
 	mvi b, $ff
+	mvi c, 32
 	jmp clearblinds_entry2
 
 clearblinds:
-	lxi h, $e0ff-16
+	lxi h, $e2ff-16
 	mvi b, 0
+	mvi c, 28
 clearblinds_entry2:
 	lda frame_scroll
 	add l
 	mov l, a
 
-	mvi c, 32
 	lxi d, 256+1
 clearblinds_L1:
 	mov m, b ; 8
@@ -555,16 +556,10 @@ c_grey		equ $09 ; 00 010 010
 c_cyan		equ $f4	; 10 011 001
 c_dkblue	equ $81	; 10 010 001
 
-;palette_data:
-;	db c_blue,  c_white,  c_yellow,  c_white
-;	db c_black, c_white,  c_magenta, c_white
-;	db c_green, c_white,  c_yellow,  c_white
-;	db c_black, c_white,  c_magenta, c_white
-
 palette_data:
 	db c_blue,   	c_black,  c_white,  	c_black
-	db $8d, 	c_black,  c_cyan,		c_black
-	db c_green, 	c_black,  c_grey,  		c_black
+	db c_magenta, 	c_black,  c_grey,		c_black
+	db c_green, 	c_black,  c_cyan,  		c_black
 	db c_yellow,    c_black,  c_dkblue, 	c_black
 
 
