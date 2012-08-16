@@ -227,7 +227,7 @@ foe_5:
 	db 5,0,1,0,$90,2,8
 	db FOEID_SHIP
 foe_6:
-	db 5,0,4,0,$b0,255,30
+	db 5,0,1,0,$b0,255,30
 	db FOEID_JET
 foe_7:
 	db 5,0,1,0,$d0,3,25
@@ -344,14 +344,19 @@ foe_Move:
 	add b
 	; if (Index == -1  
 	cpi $ff 
-	jz foe_move_L4
-	cpi $fe
-	jz foe_move_L4
+	jz foe_move_indexoverrun
 	;     || Index == 8)
 	cpi $8
-	jz foe_move_L4
-	jmp foe_move_L1
-foe_move_L4:
+	jz foe_move_indexoverrun
+
+	; index within column boundary
+	; save Index, update c
+	sta foeBlock + foeIndex
+	mov c, a
+	; not at column boundary -> skip bounce check
+	jmp foe_move_nobounce
+
+foe_move_indexoverrun:
 	; {
 	; Index = Index % 8
 	ani $7
@@ -360,26 +365,11 @@ foe_move_L4:
 	mov c, a
 	; Column = Column + sgn(Direction)
 	; column in e
-
 	mov a, b
-	; find direction sign
-	ral
-	mvi a, 1
-	jnc foe_move_diradd
-	mvi a, $ff
-foe_move_diradd:
 	add e
-
 	sta foeBlock + foeColumn
 	mov e, a
 	; }
-	jmp foe_move_CheckBounce
-foe_move_L1:
-	; save Index, update c
-	sta foeBlock + foeIndex
-	mov c, a
-	; not at column boundary -> skip bounce check
-	jmp foe_move_nobounce
 foe_move_CheckBounce:
 	; check for bounce
 	; we are here if Index == 0 || Index == 7
@@ -439,9 +429,7 @@ foe_paint:
 
 	ora a
 	jm  sprite_rtl
-	jmp sprite_ltr
-
-sprites_scratch:	dw 0
+	; fallthrough to sprite_ltr
 
 	;; c = offset
 	;; de = column base address
@@ -462,22 +450,18 @@ sprite_ltr:
 
 	; Index == 0, no bounce -> wipe previous column
 	dcr d
-	; jump to _ltr_inf [dispatch - 2]
-
 	jmp sprite_ltr_rtl_dispatchjump
 
 	;; Draw ship without prepending column for wiping
 sprite_ltr_regular:
 	; index 0..7 -> 1..8
 	inr c
-	;lxi h, sprite_ltr_dispatch+2
 	jmp sprite_ltr_rtl_dispatchjump
 
 	;; c = offset
 	;; de = column base address
 	;; b = bounce
 sprite_rtl:
-
 sprite_rtl_regular:
 	lhld foeBlock_RTL
 
@@ -491,6 +475,8 @@ sprite_ltr_rtl_dispatchjump:
 	shld .+4
 	lhld 0000	
 	pchl
+
+sprites_scratch:	dw 0 	; saved SP for various stack-abusing routines
 
     .include ship.inc
 
