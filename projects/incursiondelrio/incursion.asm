@@ -218,8 +218,8 @@ foe_2:
 	db 5,0,1,0,$30,5,7
 	db FOEID_COPTER
 foe_3:
-	db 5,0,1,0,$50,3,25
-	db FOEID_SHIP
+	db 5,0,$ff,0,$50,3,25
+	db FOEID_JET
 foe_4:
 	db 7,0,1,0,$70,7,10
 	db FOEID_RCOPTER
@@ -292,7 +292,7 @@ foe_byId_jet:
 	shld foeBlock_LTR
 	lxi h, jet_rtl_dispatch
 	shld foeBlock_RTL
-	jmp foe_frame
+	jmp jet_frame 			; jet has a separate handler
 
 foe_byId_rcopter:
 	; draw the copter body
@@ -331,6 +331,76 @@ foe_byId_copterpropeller:
 	mov m, a
 	ret
 
+;; --------------------------
+;; Jet frame
+;; --------------------------
+jet_frame:
+	; load Column to e
+	lda foeBlock + foeColumn
+	mov e, a 	
+
+	; index = index + direction
+	lda foeBlock + foeIndex
+	mov b, a
+	lda foeBlock + foeDirection
+	mov c, a   ; keep direction in c
+	ral
+	mvi a, 4
+	jnc jet_move_diradd
+	mvi a, $fc ; -4
+jet_move_diradd:
+	add b
+	mov b, c   ; restore direction in b
+	; if (Index == -1  
+	cpi $fc 
+	jz jet_move_indexoverrun
+	;     || Index == 8)
+	cpi $8
+	jz jet_move_indexoverrun
+
+	; index within column boundary
+	; save Index, update c
+	sta foeBlock + foeIndex
+	mov c, a
+	; not at column boundary
+	jmp jet_move_continue
+
+jet_move_indexoverrun:
+	; {
+	; Index = Index % 8
+	ani $7
+	; save Index, update c
+	sta foeBlock + foeIndex
+	mov c, a
+	; Column = Column + Direction 
+	; column in e
+	mov a, b
+	add e
+	sta foeBlock + foeColumn
+	mov e, a
+	; }
+jet_move_checklimits:
+	; check for screen limits
+	; we are here if Index == 0 || Index == 7
+	; e = Column
+	mvi a, 30 	; right side
+	cmp e
+	mvi a, 0
+	jz jet_move_reset_to_a
+	xra a 		; left side
+	mvi a, $ff
+	cmp e
+	mvi a, 29
+	jnz jet_move_continue
+jet_move_reset_to_a:
+	sta foeBlock + foeColumn
+	mov e, a
+jet_move_continue:
+	jmp foe_paint
+
+;; ----------------------------------------------
+;; Frame routine for a regular foe: ship, copters
+;; ----------------------------------------------
 foe_frame:
 foe_Move:
 	; load Column to e
