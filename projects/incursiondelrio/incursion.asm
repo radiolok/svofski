@@ -93,6 +93,12 @@ frame_number:
 frame_scroll:
 	db $ff
 
+;;
+;; Process foe with descriptor in HL
+;;
+foe_in_hl:
+	push h
+
 copyfoe_y:
 	xchg					; 8
 	lxi h, 0 				; 12
@@ -112,7 +118,9 @@ copyfoe_y:
 
 	lhld sprites_scratch  	; 16
 	sphl				  	; 8  = 24  --> 84 + 68 + 24 = total 176
-	ret
+
+	call foe_byId
+	pop h
 
 	; only the first 4 bytes of foeBlock need to be copied back
 copyback_y:
@@ -261,14 +269,6 @@ foe_byId_propC:
 	shld foePropeller_RTL
 	ret
 
-foe_in_hl:
-	push h
-	call copyfoe_y
-	call foe_byId
-	pop h
-	call copyback_y
-	ret
-
 foe_byId:
 	lda foeBlock + foeId
 	; if (foe.Id == 0) return;
@@ -358,9 +358,9 @@ jet_frame:
 jet_move_diradd:
 	add b
 	mov b, c   ; restore direction in b
-	; if (Index == -1  
-	cpi $fc 
-	jz jet_move_indexoverrun
+	; if (Index < 0  
+	ora a
+	jm jet_move_indexoverrun
 	;     || Index == 8)
 	cpi $8
 	jz jet_move_indexoverrun
