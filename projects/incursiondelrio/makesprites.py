@@ -17,6 +17,9 @@ class Sprite:
     def spriteRange(self, orientation):
         return xrange([-1,0][orientation == 'rtl'],8) # [8,9][orientation == 'rtl'])
 
+    def includeShift(self, shift):
+        return True
+
     def makeTable(self, orientation):
         print '%s_%s_dispatch:' % (self.getName(), orientation)
         print '\n'.join(['\tdw %s' % self.getSpriteName(orientation, x) for x in self.spriteRange(orientation)])
@@ -27,7 +30,10 @@ class Sprite:
 
         for shift in self.spriteRange(orientation):
             print '%s:' % self.getSpriteName(orientation, shift)
-            self.makeAsm(shift, orientation)
+            if (self.includeShift(shift)):
+                self.makeAsm(shift, orientation)
+            else:
+                print '  ; (shift %d skipped)' % shift
         print ';; end of sprite group %s' % self.getName()
 
     def makeAsm(self, shift, orientation):
@@ -286,6 +292,10 @@ class Jet(Sprite):
 
     def getName(self):
         return "jet"
+
+    def includeShift(self, shift):
+        return shift in [-1, 0, 4]
+
 
 
         
