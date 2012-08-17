@@ -114,20 +114,21 @@ copyfoe_y:
 	sphl				  	; 8  = 24  --> 84 + 68 + 24 = total 176
 	ret
 
+	; only the first 4 bytes of foeBlock need to be copied back
 copyback_y:
 	xchg		
 	lxi h, 0 	
 	dad sp 		
 	shld sprites_scratch 
 	xchg		
-	lxi d, 8
+	lxi d, 4 				; foeBlock size
 	dad d
 	sphl		
 
-	lhld foeBlock + 6
-	push h
-	lhld foeBlock + 4
-	push h
+	;lhld foeBlock + 6 		
+	;push h
+	;lhld foeBlock + 4
+	;push h
 	lhld foeBlock + 2
 	push h
 	lhld foeBlock
@@ -192,14 +193,14 @@ FOEID_RCOPTER	equ 3
 FOEID_JET 		equ 4
 
 	;; foe class
-foeColumn		equ 0 			; X column
-foeIndex		equ 1 			; X offset 0..7
-foeDirection	equ 2 			; 1 = LTR, -1 RTL, 0 = not moving
-foeBounce		equ 3 			; bounce flag
+foeId 			equ 0 			; id: 0 = none, 1 = ship, 2 = copter
+foeColumn		equ 1 			; X column
+foeIndex		equ 2 			; X offset 0..7
+foeDirection	equ 3 			; 1 = LTR, -1 RTL, 0 = not moving
 foeY			equ 4			; Y position of sprite start
 foeLeftStop		equ 5			; column # of left limit
 foeRightStop	equ 6 			; column # of right limit
-foeId 			equ 7 			; id: 0 = none, 1 = ship, 2 = copter
+foeBounce		equ 7 			; bounce flag
 foeSizeOf 		equ 8
 
 	;; foe 0 descriptor
@@ -217,29 +218,29 @@ foePropeller_RTL:
 	dw 0
 
 foe_1:
-	db 5,0,1,0,$10,3,15
 	db FOEID_SHIP
+	db 5,0,1,$10,3,15,0
 foe_2:
-	db 6,0,1,0,$30,5,7
 	db FOEID_COPTER
+	db 6,0,1,$30,5,7,0
 foe_3:
-	db 5,0,$ff,0,$50,3,25
 	db FOEID_JET
+	db 5,0,$ff,$50,3,25,0
 foe_4:
-	db 8,0,1,0,$70,7,10
 	db FOEID_RCOPTER
+	db 8,0,1,$70,7,10,0
 foe_5:
-	db 5,0,1,0,$90,2,8
 	db FOEID_SHIP
+	db 5,0,1,$90,2,8,0
 foe_6:
-	db 5,0,1,0,$b0,0,0
 	db FOEID_JET
+	db 5,0,1,$b0,0,0,0
 foe_7:
-	db 5,0,1,0,$d0,3,25
 	db FOEID_SHIP
+	db 5,0,1,$d0,3,25,0
 foe_8:
-	db 9,0,1,0,$f0,8,23
 	db FOEID_COPTER
+	db 9,0,1,$f0,8,23,0
 
 	;; animate sprites
 	;; should be called once per frame, before the first sprite
