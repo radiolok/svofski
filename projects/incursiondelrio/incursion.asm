@@ -150,7 +150,10 @@ palette_loop:
 	jnz palette_loop
 	ret
 
-;---
+;------------------------------------------------------
+; Draw 2 lines of black at the bottom of game field
+; Clear them at the top, leave 16+16 of black at sides
+;------------------------------------------------------
 drawblinds_bottom:
 	lxi h, $e000 + 70
 	mvi b, $ff
@@ -358,12 +361,23 @@ jet_move_diradd:
 	cpi $8
 	jz jet_move_indexoverrun
 
+	; for right screen limit 
+	; a here can be only 0 or 4 (we're looking for 4)
+	; so check if a + 30 == 34
+	mov c, a
+	add e
+	cpi 34
+	jnz jet_move_normal
+	xra a
+	jmp jet_move_reset_to_a
+
+jet_move_normal:
 	; index within column boundary
 	; save Index, update c
+	mov a, c
 	sta foeBlock + foeIndex
-	mov c, a
-	; not at column boundary
-	jmp jet_move_continue
+	; all done, paint
+	jmp foe_paint
 
 jet_move_indexoverrun:
 	; {
@@ -380,18 +394,12 @@ jet_move_indexoverrun:
 	mov e, a
 	; }
 jet_move_checklimits:
-	; check for screen limits
+	; check for left screen limit
 	; we are here if Index == 0 || Index == 7
 	; e = Column
-	mvi a, 30 	; right side
-	cmp e
-	mvi a, 0
-	jz jet_move_reset_to_a
-	xra a 		; left side
-	mvi a, $ff
-	cmp e
+	ora a 		; if (a >= 0) 
 	mvi a, 29
-	jnz jet_move_continue
+	jp jet_move_continue ; -->
 jet_move_reset_to_a:
 	sta foeBlock + foeColumn
 	mov e, a
@@ -433,7 +441,7 @@ foe_move_indexoverrun:
 	; save Index, update c
 	sta foeBlock + foeIndex
 	mov c, a
-	; Column = Column + sgn(Direction)
+	; Column = Column + Direction
 	; column in e
 	mov a, b
 	add e
