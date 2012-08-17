@@ -12,10 +12,12 @@ stacksave	equ $20
 clrscr:
     di
 	lxi h, $8000
+	; good for seeing sprite scratch area 
+	; mvi b, $ff
+	mvi b, 0
 clearscreen:
 	xra a
-	;out $10
-	mov m, a
+	mov m, b
 	inx h
 	ora h
 	jnz clearscreen
@@ -33,7 +35,7 @@ clearscreen:
 	ei
 	hlt
 	call setpalette
-	call showlayers
+	;call showlayers
 
 jamas:
 	mvi a, 4
@@ -169,10 +171,10 @@ clearblinds_entry2:
 	add l
 	mov l, a
 
-	lxi d, 256+1
+	lxi d, 256-1
 clearblinds_L1:
 	mov m, b ; 8
-	dcx h    ; 8
+	inr l    ; 8
 	mov m, b ; 8
 	dad d    ; 12
 
@@ -218,19 +220,19 @@ foe_1:
 	db 5,0,1,0,$10,3,15
 	db FOEID_SHIP
 foe_2:
-	db 5,0,1,0,$30,5,7
+	db 6,0,1,0,$30,5,7
 	db FOEID_COPTER
 foe_3:
 	db 5,0,$ff,0,$50,3,25
 	db FOEID_JET
 foe_4:
-	db 7,0,1,0,$70,7,10
+	db 8,0,1,0,$70,7,10
 	db FOEID_RCOPTER
 foe_5:
 	db 5,0,1,0,$90,2,8
 	db FOEID_SHIP
 foe_6:
-	db 5,0,1,0,$b0,255,30
+	db 5,0,1,0,$b0,0,0
 	db FOEID_JET
 foe_7:
 	db 5,0,1,0,$d0,3,25
@@ -338,6 +340,7 @@ foe_byId_copterpropeller:
 ;; Jet frame
 ;; --------------------------
 jet_frame:
+	mvi h, 0
 	; load Column to e
 	lda foeBlock + foeColumn
 	mov e, a 	
@@ -410,6 +413,7 @@ jet_move_continue:
 ;; Frame routine for a regular foe: ship, copters
 ;; ----------------------------------------------
 foe_frame:
+	mvi h, 0 ; bounce flag in h
 foe_Move:
 	; load Column to e
 	lda foeBlock + foeColumn
@@ -421,8 +425,8 @@ foe_Move:
 	lda foeBlock + foeIndex
 	add b
 	; if (Index == -1  
-	cpi $ff 
-	jz foe_move_indexoverrun
+	ora a
+	jm foe_move_indexoverrun
 	;     || Index == 8)
 	cpi $8
 	jz foe_move_indexoverrun
@@ -432,7 +436,7 @@ foe_Move:
 	sta foeBlock + foeIndex
 	mov c, a
 	; not at column boundary -> skip bounce check
-	jmp foe_move_nobounce
+	jmp foe_paint
 
 foe_move_indexoverrun:
 	; {
@@ -457,12 +461,13 @@ foe_move_CheckBounce:
 	jz foe_move_yes_bounce
 	lda foeBlock + foeLeftStop
 	cmp e
-	jnz foe_move_nobounce
+	jnz foe_paint
 	; yes, bounce
 foe_move_yes_bounce:
 	; Bounce = 1
 	mvi a, 1
-	sta foeBlock + foeBounce
+	; ---- sta foeBlock + foeBounce
+	mov h, a ; h = bounce
 	; Direction = -Direction
 	mov a, b
 	cma 
@@ -480,10 +485,10 @@ foe_paint_preload:
 	mov c, a
 	lda foeBlock + foeDirection
 	mov b, a
-
-foe_move_nobounce: 
+	mvi h, 1 ; 
 	;; foeBlock movement calculation ends here
 
+	;; actual paint
 foe_paint:
 	;; paint foe
 	; e contains column
@@ -501,9 +506,10 @@ foe_paint:
 	mov a, b
 
 	; b = Bounce, Bounce = 0
-	lxi h, foeBlock + foeBounce
-	mov b, m
-	mvi m, 0
+	;lxi h, foeBlock + foeBounce
+	;mov b, m
+	;mvi m, 0
+	mov b, h ; bounce 
 
 	ora a
 	jm  sprite_rtl
