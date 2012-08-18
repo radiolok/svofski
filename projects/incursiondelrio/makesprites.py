@@ -31,15 +31,15 @@ class Sprite:
         for shift in self.spriteRange(orientation):
             print '%s:' % self.getSpriteName(orientation, shift)
             if (self.includeShift(shift)):
-                self.makeAsm(shift, orientation)
+                self.makeAsm(shift, orientation, self.getSpriteName(orientation, shift) + '_ret')
             else:
                 print '  ; (shift %d skipped)' % shift
         print ';; end of sprite group %s' % self.getName()
 
-    def makeAsm(self, shift, orientation):
+    def makeAsm(self, shift, orientation, returnLabel):
         print '\tlxi h, 0'
         print '\tdad sp'
-        print '\tshld sprites_scratch'    
+        print '\tshld %s+1' % returnLabel    
 
         if not self.isWhite():
             layer = self.makeLayer('13578', shift, orientation)     # layer 0
@@ -85,8 +85,8 @@ class Sprite:
             print self.makeLayer('4', shift, orientation)    
 
 
-        print '\tlhld sprites_scratch'
-        print '\tsphl'
+        print '%s:' % returnLabel
+        print '\tlxi sp, 0'
         print '\tret'
 
     def makeLayer(self, layerchar, shift, orientation):
