@@ -6,6 +6,10 @@
 
 stacksave	equ $20
 
+BOTTOM_HEIGHT 		equ 60
+TOP_HEIGHT			equ 16
+SCREEN_WIDTH_BYTES	equ 32
+
 	 
 	.org $100
 
@@ -76,7 +80,7 @@ jamas:
 
 	call clearblinds
 	call update_line
-	;call produce_line
+	;-- no - call produce_line
 	call drawblinds_bottom
 
 	lxi h, frame_number
@@ -165,13 +169,36 @@ palette_loop:
 ; Clear them at the top, leave 16+16 of black at sides
 ;------------------------------------------------------
 drawblinds_bottom:
-	lxi h, $e000 + 70
-	mvi b, $ff
-	mvi c, 16 ; 32
-	jmp clearblinds_entry2
+	lxi h, $8000 + BOTTOM_HEIGHT - 22 ; 22 ~ enemy height
+	mvi e, $00
+	mvi c, 16*3 ; wipe first 3 layers 
+	lda frame_scroll
+	add l
+	mov l, a
+	call drawblinds_L1
+	
+	mvi e, $ff
+	mvi c, 16
+	mov a, l
+	adi 22
+	mov l, a
+
+	; fill 2 lines in a meander-like pattern y,y+1,x+1,y+1
+drawblinds_L1:
+	mov m, e
+	inr l    
+	mov m, e 
+	inr h
+	mov m, e
+	dcr l
+	mov m, e
+	inr h
+	dcr c 	
+	jnz drawblinds_L1 
+	ret	
 
 clearblinds:
-	lxi h, $e2ff-16
+	lxi h, $e2ff-TOP_HEIGHT
 	mvi b, 0
 	mvi c, 14 ; 28
 clearblinds_entry2:
@@ -179,7 +206,7 @@ clearblinds_entry2:
 	add l
 	mov l, a
 
-	; fill in a meander-like pattern y,y+1,x+1,y+1
+	; fill 2 lines in a meander-like pattern y,y+1,x+1,y+1
 clearblinds_L1:
 	mov m, b 
 	inr l    
@@ -222,7 +249,7 @@ update_line_otravez:
 	sta terrain_next_left
 	ral
 	mov b, a
-	mvi a, 32
+	mvi a, SCREEN_WIDTH_BYTES
 	sub b
 	sta terrain_next_water
 
@@ -247,7 +274,7 @@ uss2:
 uss1:
 
 produce_line:
-	lxi h, $80ff-16
+	lxi h, $80ff-TOP_HEIGHT+2
 
 	lda frame_scroll
 	add l
@@ -290,7 +317,7 @@ produce_loop_rightwater:
 	jnz produce_loop_rightwater
 
 produce_rightbank:
-	mvi a, $80+32
+	mvi a, $80+SCREEN_WIDTH_BYTES
 	sub h
 produce_loop_rightbank:
 	mov m, b
@@ -519,6 +546,17 @@ jet_move_continue:
 foe_frame:
 	mvi h, 0 ; bounce flag in h
 foe_Move:
+	; check Y and reset the foe if below the bottom line
+	lda frame_scroll
+	mov l, a
+	lda foeBlock + foeY 			 
+	sub l
+	cpi BOTTOM_HEIGHT
+	jnc foe_infield
+	xra a
+	sta foeBlock + foeId
+	ret
+foe_infield:
 	; load Column to e
 	lda foeBlock + foeColumn
 	mov e, a 	
