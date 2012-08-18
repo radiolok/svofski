@@ -10,6 +10,8 @@ BOTTOM_HEIGHT 		equ 60
 TOP_HEIGHT			equ 16
 SCREEN_WIDTH_BYTES	equ 32
 
+FOE_MAX				equ 8  
+
 	 
 	.org $100
 
@@ -230,21 +232,123 @@ terrain_next:
 terrain_next_left: db 4
 terrain_next_water: db 24
 
+create_new_foe:
+	push psw
+	; get current foe index
+	lxi h, foeTableIndex
+	mov a, m
+	mov b, a
+	inr a  			; advance the index
+	cpi FOE_MAX
+	jnz create_new_foe_L1
+	xra a
+create_new_foe_L1:
+	mov m, a
+	; use the original foeTableIndex
+	mov a, b
+	; get offset foe_1 + foeTableIndex*8
+	lxi h, foe_1
+	ora a
+	ral
+	ral
+	ral 
+	mvi b, 0
+	mov c, a
+	dad b 		; hl = foe[foeTableIndex]: Id, Column, Index, Direction, Y, Left, Right
+
+	lda randomHi
+	mov b, a
+	ani $3
+	mov m, a 	; random foe id 
+	mov d, a 	; d = foe id
+	inx h
+
+	; width
+	lda line_fieldA
+	mov c, a
+	mov a, d
+	cpi FOEID_SHIP
+	mov a, c
+	jnz cnf_width_2
+	sui 2
+cnf_width_2:
+	sui 1
+	mov e, a
+	; now a = available width
+
+	; get normalized random 0 <= rand < a
+	call randomNormA
+
+	; Column == leftmost
+	lda line_left
+	add c
+	mov c, a
+	mov m, a
+	inx h
+
+	; Index = 0
+	mvi m, 0
+	inx h
+
+	; Direction = 1
+	mvi m, 1
+	inx h
+
+	; Y = current
+	lda frame_scroll
+	mov b, a
+	sui TOP_HEIGHT
+	mov m, a
+	inx h
+	; Left
+	lda line_left
+	dcr a
+	mov m, a
+	mov c, a
+	inx h
+
+	; Right
+	mov a, e
+	add c
+	mov m, a
+createnewfoe_ret:
+	pop psw
+    ret
+
+	lda line_fieldA
+	add c
+	mov e, a
+	mov a, d
+	cpi FOEID_SHIP
+	mov a, e
+	jnz create_new_foe_regualrwidth
+	sui 2 
+ create_new_foe_regualrwidth:	
+	dcr a
+	mov m, a
+
+	pop psw
+	ret
+
 update_line:
+	call nextRandom16
 	lda frame_scroll
 	ani $7f
 	jz update_next_block
+	ani $1f
+	cz create_new_foe
 	ani $1
 	jz update_step
 	jmp produce_line
 
 update_next_block:
 update_line_otravez:
-	call nextRandom16
 	mov a, l
 	ani $f
 	cpi 12
-	jp update_line_otravez
+	jm update_line_randok; update_line_otravez
+	sui 4
+update_line_randok:
 	adi 3
 	sta terrain_next_left
 	ral
@@ -358,6 +462,9 @@ foePropeller_LTR:
 foePropeller_RTL:
 	dw 0
 
+foeTableIndex:
+	db 0
+
 foe_1:
 	db FOEID_SHIP
 	db 5,0,1,$10,	3,8,0
@@ -406,16 +513,29 @@ foe_byId:
 	lda foeBlock + foeId
 	; if (foe.Id == 0) return;
 	ora a
-	rz		
+	rz
+	mov b, a	
 
+	; check Y and clear the foe if below the bottom line
+	lda frame_scroll
+	mov l, a
+	lda foeBlock + foeY 			 
+	sub l
+	cpi BOTTOM_HEIGHT
+	jnc foe_infield
+	xra a
+	sta foeBlock + foeId
+	ret
+
+foe_infield:
 	; prepare dispatches
-	dcr a
+	dcr b
 	jz  foe_byId_ship		; 1 == ship
-	dcr a
+	dcr b
 	jz  foe_byId_copter		; 2 == copter
-	dcr a
+	dcr b
 	jz  foe_byId_rcopter	; 3 == redcopter
-	dcr a
+	dcr b
 	jz 	foe_byId_jet 		; 4 == jet
 	; default: return  
 	ret
@@ -546,17 +666,6 @@ jet_move_continue:
 foe_frame:
 	mvi h, 0 ; bounce flag in h
 foe_Move:
-	; check Y and reset the foe if below the bottom line
-	lda frame_scroll
-	mov l, a
-	lda foeBlock + foeY 			 
-	sub l
-	cpi BOTTOM_HEIGHT
-	jnc foe_infield
-	xra a
-	sta foeBlock + foeId
-	ret
-foe_infield:
 	; load Column to e
 	lda foeBlock + foeColumn
 	mov e, a 	

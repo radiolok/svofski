@@ -18,6 +18,12 @@ nextRandom16:
 		mov h, a
 		shld random
 		ret
+
+randomNormA:
+		xra a
+		mov c, a
+		ret
+
 random:
 randomLo:	db $14
 randomHi:	db $a8
