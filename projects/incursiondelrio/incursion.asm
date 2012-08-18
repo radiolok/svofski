@@ -315,39 +315,36 @@ foe_byId_copter:
 	shld foeBlock_RTL
 	call foe_frame
 foe_byId_copterpropeller:
-	; animate the propeller
+	; load animated propeller
 	lhld foePropeller_LTR
 	shld foeBlock_LTR
 	lhld foePropeller_RTL
 	shld foeBlock_RTL
 
 	; offset propeller Y position
-	lxi h, foeBlock + foeY
-	mov a, m
-	push psw
-	adi 4
-	mov m, a
-	push h
+	lda foeBlock + foeY ; 16
+	adi 4 				; 8
+	sta foeBlock + foeY ; 16
+	push psw 			; 12
 	; draw propeller
-	call foe_paint_preload
+	call foe_paint_preload 
 	; restore copter Y position in the foe block
-	pop h
-	pop psw
-	mov m, a
+	pop psw 			; 12
+	sta foeBlock + foeY ; 16 = 64
 	ret
+
 
 ;; --------------------------
 ;; Jet frame
 ;; --------------------------
 jet_frame:
-	mvi h, 0
 	; load Column to e
-	lda foeBlock + foeColumn
-	mov e, a 	
 
-	; index = index + direction
-	lda foeBlock + foeIndex
-	mov b, a
+	lhld foeBlock + foeColumn
+	mov e, l ; e = foeColumn
+	mov b, h ; b = foeIndex
+	mvi h, 0 ; bounce = 0
+
 	lda foeBlock + foeDirection
 	mov c, a   ; keep direction in c
 	ral
@@ -418,7 +415,6 @@ foe_Move:
 	; load Column to e
 	lda foeBlock + foeColumn
 	mov e, a 	
-
 	; index = index + direction
 	lda foeBlock + foeDirection
 	mov b, a
@@ -465,9 +461,7 @@ foe_move_CheckBounce:
 	; yes, bounce
 foe_move_yes_bounce:
 	; Bounce = 1
-	mvi a, 1
-	; ---- sta foeBlock + foeBounce
-	mov h, a ; h = bounce
+	mvi h, 1 
 	; Direction = -Direction
 	mov a, b
 	cma 
@@ -479,10 +473,11 @@ foe_move_yes_bounce:
 	;; additional entry point for sprites with precalculated position
 	;; used for propellers
 foe_paint_preload:
-	lda foeBlock + foeColumn
-	mov e, a
-	lda foeBlock + foeIndex
-	mov c, a
+
+	lhld foeBlock + foeColumn
+	mov e, l ; e = foeColumn
+	mov c, h ; c = foeIndex
+	mvi h, 0 ; bounce = 0
 	lda foeBlock + foeDirection
 	mov b, a
 	mvi h, 1 ; 
@@ -503,48 +498,37 @@ foe_paint:
 	; de == base address
 	; c == index
 	; b == Direction
-	mov a, b
-
-	; b = Bounce, Bounce = 0
-	;lxi h, foeBlock + foeBounce
-	;mov b, m
-	;mvi m, 0
-	mov b, h ; bounce 
-
-	ora a
+	xra a
+	ora b
 	jm  sprite_rtl
 	; fallthrough to sprite_ltr
 
-	;; c = offset
+	;; c = Index
 	;; de = column base address
-	;; b = bounce
+	;; h = bounce
 sprite_ltr:
-	; load dispatch table	
-	lhld foeBlock_LTR
-
-	; if (Index != 0) -> regular, no pre-wipe
-	mov a, c
-	ora a
+	; if (index != 0 || Bounce) regular();
+	xra a
+	ora c
+	ora h
 	jnz sprite_ltr_regular
-
-	; if (Bounce) -> regular, no pre-wipe 
-	mov a, b 	
-	ora a
-	jnz  sprite_ltr_regular
 
 	; Index == 0, no bounce -> wipe previous column
 	dcr d
+	; load dispatch table	
+	lhld foeBlock_LTR
 	jmp sprite_ltr_rtl_dispatchjump
 
 	;; Draw ship without prepending column for wiping
 sprite_ltr_regular:
+	; load dispatch table	
+	lhld foeBlock_LTR
 	; index 0..7 -> 1..8
 	inr c
 	jmp sprite_ltr_rtl_dispatchjump
 
 	;; c = offset
 	;; de = column base address
-	;; b = bounce
 sprite_rtl:
 sprite_rtl_regular:
 	lhld foeBlock_RTL
