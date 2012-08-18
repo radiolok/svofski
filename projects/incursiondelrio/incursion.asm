@@ -75,6 +75,7 @@ jamas:
 	call foe_in_de
 
 	call clearblinds
+	call produce_line
 	call drawblinds_bottom
 
 	lxi h, frame_number
@@ -190,7 +191,57 @@ clearblinds_L1:
 	dcr c 	
 	jnz clearblinds_L1 
 	ret	
-	
+
+line_left:	db 4
+line_fieldA: db 8
+line_island: db 8
+line_fieldB: db 8
+
+produce_line:
+	lxi h, $80ff-16
+
+	lda frame_scroll
+	add l
+	mov l, a
+
+	lxi b, $ff00
+	lda line_left
+produce_loop_leftbank:
+	mov m, b
+	inr h
+	dcr a
+	jnz produce_loop_leftbank
+
+	lda line_fieldA
+produce_loop_leftwater:
+	mov m, c
+	inr h
+	dcr a
+	jnz produce_loop_leftwater
+
+	lda line_island
+produce_loop_island:
+	mov m, b
+	inr h
+	dcr a
+	jnz produce_loop_island
+
+	lda line_fieldB
+produce_loop_rightwater:
+	mov m, c
+	inr h
+	dcr a
+	jnz produce_loop_rightwater
+
+	mvi a, $80+32
+	sub h
+produce_loop_rightbank:
+	mov m, b
+	inr h
+	dcr a
+	jnz produce_loop_rightbank
+
+	ret
 
 FOEID_NONE 		equ 0
 FOEID_SHIP 		equ 1
@@ -225,28 +276,28 @@ foePropeller_RTL:
 
 foe_1:
 	db FOEID_SHIP
-	db 5,0,1,$10,3,15,0
+	db 5,0,1,$10,	3,8,0
 foe_2:
 	db FOEID_COPTER
-	db 6,0,1,$30,5,7,0
+	db 6,0,1,$30,	3,10,0
 foe_3:
 	db FOEID_JET
-	db 5,0,$ff,$50,3,25,0
+	db 5,0,$ff,$50,	3,25,0
 foe_4:
 	db FOEID_RCOPTER
-	db 8,0,1,$70,7,10,0
+	db 8,0,1,$70,	3,10,0
 foe_5:
 	db FOEID_SHIP
-	db 5,0,1,$90,2,8,0
+	db 19,0,1,$90,	19,24,0
 foe_6:
 	db FOEID_JET
-	db 5,0,1,$b0,0,0,0
+	db 5,0,1,$b0,	0,0,0
 foe_7:
 	db FOEID_SHIP
-	db 5,0,1,$d0,3,25,0
+	db 21,0,1,$d0,	19,24,0
 foe_8:
 	db FOEID_COPTER
-	db 9,0,1,$f0,8,23,0
+	db 9,0,1,$f0,	3,10,0
 
 	;; animate sprites
 	;; should be called once per frame, before the first sprite
