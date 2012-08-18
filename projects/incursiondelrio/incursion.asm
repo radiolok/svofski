@@ -75,7 +75,8 @@ jamas:
 	call foe_in_de
 
 	call clearblinds
-	call produce_line
+	call update_line
+	;call produce_line
 	call drawblinds_bottom
 
 	lxi h, frame_number
@@ -193,9 +194,33 @@ clearblinds_L1:
 	ret	
 
 line_left:	db 4
-line_fieldA: db 8
-line_island: db 8
-line_fieldB: db 8
+line_fieldA: db 24
+line_island: db 0
+line_fieldB: db 0
+
+terrain_next_left: db 4
+terrain_next_water: db 24
+
+update_line:
+	lda frame_scroll
+	ani $3f
+	jnz produce_line
+
+
+update_line_otravez:
+	call nextRandom16
+	mov a, h
+	ani $f
+	cpi 12
+	jp update_line_otravez
+	adi 3
+	sta line_left
+	ral
+	mov b, a
+	mvi a, 32
+	sub b
+	sta line_fieldA
+
 
 produce_line:
 	lxi h, $80ff-16
@@ -213,26 +238,34 @@ produce_loop_leftbank:
 	jnz produce_loop_leftbank
 
 	lda line_fieldA
+	ora a
+	jz produce_island
 produce_loop_leftwater:
 	mov m, c
 	inr h
 	dcr a
 	jnz produce_loop_leftwater
 
+produce_island:
 	lda line_island
+	ora a
+	jz produce_rightwater
 produce_loop_island:
 	mov m, b
 	inr h
 	dcr a
 	jnz produce_loop_island
-
+produce_rightwater:
 	lda line_fieldB
+	ora a
+	jz produce_rightbank
 produce_loop_rightwater:
 	mov m, c
 	inr h
 	dcr a
 	jnz produce_loop_rightwater
 
+produce_rightbank:
 	mvi a, $80+32
 	sub h
 produce_loop_rightbank:
@@ -597,6 +630,7 @@ sprite_ltr_rtl_dispatchjump:
 sprites_scratch:	dw 0 	; saved SP for various stack-abusing routines
 
     .include ship.inc
+    .include random.inc
 
 c_black		equ $00
 c_blue		equ $c1
