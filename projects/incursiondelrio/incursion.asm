@@ -193,34 +193,58 @@ clearblinds_L1:
 	jnz clearblinds_L1 
 	ret	
 
+terrain_current:
 line_left:	db 4
 line_fieldA: db 24
 line_island: db 0
 line_fieldB: db 0
 
+terrain_next:
 terrain_next_left: db 4
 terrain_next_water: db 24
 
 update_line:
 	lda frame_scroll
-	ani $3f
-	jnz produce_line
+	ani $7f
+	jz update_next_block
+	ani $1
+	jz update_step
+	jmp produce_line
 
-
+update_next_block:
 update_line_otravez:
 	call nextRandom16
-	mov a, h
+	mov a, l
 	ani $f
 	cpi 12
 	jp update_line_otravez
 	adi 3
-	sta line_left
+	sta terrain_next_left
 	ral
 	mov b, a
 	mvi a, 32
 	sub b
-	sta line_fieldA
+	sta terrain_next_water
 
+update_step:
+	lhld terrain_next
+	xchg
+	lhld terrain_current
+	mov a, l
+	cmp e
+	jz uss1
+	jm uss2
+	dcr l
+	inr h
+	inr h
+	shld terrain_current
+	jmp uss1
+uss2:
+	inr l
+	dcr h
+	dcr h
+	shld terrain_current
+uss1:
 
 produce_line:
 	lxi h, $80ff-16
