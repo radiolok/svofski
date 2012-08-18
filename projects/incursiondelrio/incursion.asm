@@ -103,7 +103,7 @@ copyfoe_y:
 	xchg					; 8
 	lxi h, 0 				; 12
 	dad sp 					; 12
-	shld sprites_scratch 	; 16
+	shld copyfoe_restoresp+1	; 16
 	xchg					; 8
 	sphl					; 8  = 64
 
@@ -115,9 +115,8 @@ copyfoe_y:
 	shld foeBlock + 4 		; 16
 	pop h       			; 12
 	shld foeBlock + 6 		; 16  = 68
-
-	lhld sprites_scratch  	; 16
-	sphl				  	; 8  = 24  --> 84 + 68 + 24 = total 176
+copyfoe_restoresp:
+	lxi sp, 0
 
 	call foe_byId
 	pop h
@@ -127,7 +126,7 @@ copyback_y:
 	xchg		
 	lxi h, 0 	
 	dad sp 		
-	shld sprites_scratch 
+	shld copyback_return+1 
 	xchg		
 	lxi d, 4 				; foeBlock size
 	dad d
@@ -142,8 +141,8 @@ copyback_y:
 	lhld foeBlock
 	push h           
 
-	lhld sprites_scratch 
-	sphl				 
+copyback_return:
+	lxi sp, 0
 	ret
 
 
