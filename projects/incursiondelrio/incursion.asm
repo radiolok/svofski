@@ -57,22 +57,22 @@ jamas:
 	; prepare animated sprites
 	call foe_animate
 
-	lxi h, foe_1
-	call foe_in_hl
-	lxi h, foe_2
-	call foe_in_hl
-	lxi h, foe_3
-	call foe_in_hl
-	lxi h, foe_4
-	call foe_in_hl
-	lxi h, foe_5
-	call foe_in_hl
-	lxi h, foe_6
-	call foe_in_hl
-	lxi h, foe_7
-	call foe_in_hl
-	lxi h, foe_8
-	call foe_in_hl
+	lxi d, foe_1
+	call foe_in_de
+	lxi d, foe_2
+	call foe_in_de
+	lxi d, foe_3
+	call foe_in_de
+	lxi d, foe_4
+	call foe_in_de
+	lxi d, foe_5
+	call foe_in_de
+	lxi d, foe_6
+	call foe_in_de
+	lxi d, foe_7
+	call foe_in_de
+	lxi d, foe_8
+	call foe_in_de
 
 	call clearblinds
 	call drawblinds_bottom
@@ -96,11 +96,10 @@ frame_scroll:
 ;;
 ;; Process foe with descriptor in HL
 ;;
-foe_in_hl:
-	push h
+foe_in_de:
+	push d
 
 copyfoe_y:
-	xchg					; 8
 	lxi h, 0 				; 12
 	dad sp 					; 12
 	shld copyfoe_restoresp+1	; 16
@@ -119,11 +118,10 @@ copyfoe_restoresp:
 	lxi sp, 0
 
 	call foe_byId
-	pop h
+	pop d
 
 	; only the first 4 bytes of foeBlock need to be copied back
 copyback_y:
-	xchg		
 	lxi h, 0 	
 	dad sp 		
 	shld copyback_return+1 
