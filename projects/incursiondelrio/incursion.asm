@@ -165,30 +165,31 @@ palette_loop:
 drawblinds_bottom:
 	lxi h, $e000 + 70
 	mvi b, $ff
-	mvi c, 32
+	mvi c, 16 ; 32
 	jmp clearblinds_entry2
 
 clearblinds:
 	lxi h, $e2ff-16
 	mvi b, 0
-	mvi c, 28
+	mvi c, 14 ; 28
 clearblinds_entry2:
 	lda frame_scroll
 	add l
 	mov l, a
 
-	lxi d, 256-1
+	; fill in a meander-like pattern y,y+1,x+1,y+1
 clearblinds_L1:
-	mov m, b ; 8
-	inr l    ; 8
-	mov m, b ; 8
-	dad d    ; 12
-
-	dcr c 	; 8
-	jnz clearblinds_L1 ; 12   (8+12+8+12)*32 = 1280, (8+12+8+12+8+8)*32=1792
-
+	mov m, b 
+	inr l    
+	mov m, b 
+	inr h
+	mov m, b
+	dcr l
+	mov m, b
+	inr h
+	dcr c 	
+	jnz clearblinds_L1 
 	ret	
-
 	
 
 FOEID_NONE 		equ 0
