@@ -20,7 +20,16 @@ nextRandom16:
 		ret
 
 randomNormA:
-		xra a
+		mov c, a
+		lda randomLo
+randomNormA_retry:
+		cmp c
+		jc randomNormA_return
+		stc
+		cmc
+		rar
+		jmp randomNormA_retry
+randomNormA_return:
 		mov c, a
 		ret
 

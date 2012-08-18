@@ -82,7 +82,6 @@ jamas:
 
 	call clearblinds
 	call update_line
-	;-- no - call produce_line
 	call drawblinds_bottom
 
 	lxi h, frame_number
@@ -259,9 +258,8 @@ create_new_foe_L1:
 	lda randomHi
 	mov b, a
 	ani $3
-	mov m, a 	; random foe id 
+	inr a
 	mov d, a 	; d = foe id
-	inx h
 
 	; width
 	lda line_fieldA
@@ -277,6 +275,10 @@ cnf_width_2:
 	; now a = available width
 
 	; get normalized random 0 <= rand < a
+	dcr a
+	rz  ; bad luck: passage too narrow for this foe
+	mov m, d 	; should fit: store foe id 
+	inx h
 	call randomNormA
 
 	; Column == leftmost
@@ -297,7 +299,7 @@ cnf_width_2:
 	; Y = current
 	lda frame_scroll
 	mov b, a
-	sui TOP_HEIGHT
+	sui TOP_HEIGHT-16 ; make foes appear above the top curtain
 	mov m, a
 	inx h
 	; Left
