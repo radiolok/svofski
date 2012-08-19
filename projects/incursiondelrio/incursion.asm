@@ -172,20 +172,22 @@ palette_loop:
 drawblinds_bottom:
 	lxi h, $8000 + BOTTOM_HEIGHT - 22 ; 22 ~ enemy height
 	mvi e, $00
-	mvi c, 16*3 ; wipe first 3 layers 
+	; wipe the first 3 layers with zeroes...
+	mvi c, 16*3 
 	lda frame_scroll
 	add l
 	mov l, a
-	call drawblinds_L1
+	call drawblinds_fill
 	
-	mvi e, $ff
+	; ...and the black layer with $ff
+	mvi e, $ff 
 	mvi c, 16
 	mov a, l
 	adi 22
 	mov l, a
 
 	; fill 2 lines in a meander-like pattern y,y+1,x+1,y+1
-drawblinds_L1:
+drawblinds_fill:
 	mov m, e
 	inr l    
 	mov m, e 
@@ -195,31 +197,18 @@ drawblinds_L1:
 	mov m, e
 	inr h
 	dcr c 	
-	jnz drawblinds_L1 
+	jnz drawblinds_fill
 	ret	
 
 clearblinds:
 	lxi h, $e2ff-TOP_HEIGHT
-	mvi b, 0
+	mvi e, 0
 	mvi c, 14 ; 28
 clearblinds_entry2:
 	lda frame_scroll
 	add l
 	mov l, a
-
-	; fill 2 lines in a meander-like pattern y,y+1,x+1,y+1
-clearblinds_L1:
-	mov m, b 
-	inr l    
-	mov m, b 
-	inr h
-	mov m, b
-	dcr l
-	mov m, b
-	inr h
-	dcr c 	
-	jnz clearblinds_L1 
-	ret	
+	jmp drawblinds_fill
 
 terrain_current:
 line_left:	db 4
@@ -313,24 +302,8 @@ cnf_width_2:
 	mov a, e
 	add c
 	mov m, a
-createnewfoe_ret:
 	pop psw
     ret
-
-	lda line_fieldA
-	add c
-	mov e, a
-	mov a, d
-	cpi FOEID_SHIP
-	mov a, e
-	jnz create_new_foe_regualrwidth
-	sui 2 
- create_new_foe_regualrwidth:	
-	dcr a
-	mov m, a
-
-	pop psw
-	ret
 
 update_line:
 	call nextRandom16
@@ -344,11 +317,10 @@ update_line:
 	jmp produce_line
 
 update_next_block:
-update_line_otravez:
 	mov a, l
 	ani $f
 	cpi 12
-	jm update_line_randok; update_line_otravez
+	jm update_line_randok
 	sui 4
 update_line_randok:
 	adi 3
