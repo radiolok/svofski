@@ -211,15 +211,20 @@ clearblinds_entry2:
 	jmp drawblinds_fill
 
 terrain_current:
-line_left:	db 4
-line_fieldA: db 24
-line_island: db 0
-line_fieldB: db 0
+terrain_left:					db 4
+terrain_water: 				db 12 ; 24
+terrain_islandwidth: 		db 0
 
 terrain_next:
-terrain_next_left: db 4
-terrain_next_water: db 24
+terrain_next_left: 			db 4
+terrain_next_water: 		db 24
+terrain_next_islandwidth: 	db 0
+;terrain_next_islandcould:	db 0
+	
 
+	;; ---------------
+	;; Create new foe
+	;; ---------------
 create_new_foe:
 	push psw
 	; get current foe index
@@ -251,7 +256,7 @@ create_new_foe_L1:
 	mov d, a 	; d = foe id
 
 	; width
-	lda line_fieldA
+	lda terrain_water
 	mov c, a
 	mov a, d
 	cpi FOEID_SHIP
@@ -271,7 +276,7 @@ cnf_width_2:
 	call randomNormA
 
 	; Column == leftmost
-	lda line_left
+	lda terrain_left
 	add c
 	mov c, a
 	mov m, a
@@ -292,7 +297,7 @@ cnf_width_2:
 	mov m, a
 	inx h
 	; Left
-	lda line_left
+	lda terrain_left
 	dcr a
 	mov m, a
 	mov c, a
@@ -305,51 +310,96 @@ cnf_width_2:
 	pop psw
     ret
 
+    ;;--------------------------------
+    ;; Update line: terrain formation
+    ;;--------------------------------
+
 update_line:
-	call nextRandom16
+	; random should be moved outside to make sure that it gets called every frame
+	call nextRandom16 ; result in randomHi/randomLo and HL
 	lda frame_scroll
 	ani $7f
 	jz update_next_block
 	ani $1f
-	cz create_new_foe
+	;cz create_new_foe
 	ani $1
 	jz update_step
 	jmp produce_line
 
 update_next_block:
-	mov a, l
-	ani $f
-	cpi 12
-	jm update_line_randok
-	sui 4
-update_line_randok:
+	; 
+	mov a, h
+	ani $7
 	adi 3
 	sta terrain_next_left
 	ral
 	mov b, a
 	mvi a, SCREEN_WIDTH_BYTES
 	sub b
+	; divide water/2
+	ora a
+	rar 
 	sta terrain_next_water
 
+	cpi 9
+	jc updateblock_noisland
+updateblock_yesisland:
+	mov a, l
+	rar
+	rar
+	ani $7
+	adi $2
+	sta terrain_next_islandwidth
+	jmp updateblock_out
+
+updateblock_noisland:
+	xra a
+	sta terrain_next_islandwidth
+	jmp updateblock_out
+
+updateblock_out:
+	; -- fall through to update_step
+
 update_step:
+	; widen/narrow the banks
 	lhld terrain_next
 	xchg
-	lhld terrain_current
+	lhld terrain_current	; d = next_left, e = next_width
 	mov a, l
 	cmp e
 	jz uss1
 	jm uss2
-	dcr l
-	inr h
-	inr h
+	dcr l 		; move left bank 1 left
+	inr h 		; make water 1 wider
 	shld terrain_current
 	jmp uss1
 uss2:
-	inr l
-	dcr h
-	dcr h
+	inr l 		; move left bank 1 right
+	dcr h 		; make water 1 narrower 
 	shld terrain_current
 uss1:
+	; do the same with the island
+	lda terrain_next_islandwidth
+	mov b, a
+	lda terrain_islandwidth
+	cmp b
+	jz  uss4 ; next == current, no update
+	jp  uss5
+	; move island wider, water narrower
+	dcr h  ; less water
+	inr a  ; more island
+	shld terrain_current
+	sta terrain_islandwidth
+	jmp uss4
+uss5:
+	inr h  ; more water
+	dcr a  ; less island
+	shld terrain_current
+	sta terrain_islandwidth
+uss4:
+
+ustep_noisland:
+ustep_out:
 
 produce_line:
 	lxi h, $80ff-TOP_HEIGHT+2
@@ -359,14 +409,14 @@ produce_line:
 	mov l, a
 
 	lxi b, $ff00
-	lda line_left
+	lda terrain_left
 produce_loop_leftbank:
 	mov m, b
 	inr h
 	dcr a
 	jnz produce_loop_leftbank
 
-	lda line_fieldA
+	lda terrain_water
 	ora a
 	jz produce_island
 produce_loop_leftwater:
@@ -376,16 +426,17 @@ produce_loop_leftwater:
 	jnz produce_loop_leftwater
 
 produce_island:
-	lda line_island
+	lda terrain_islandwidth
 	ora a
 	jz produce_rightwater
+	ral
 produce_loop_island:
 	mov m, b
 	inr h
 	dcr a
 	jnz produce_loop_island
 produce_rightwater:
-	lda line_fieldB
+	lda terrain_water
 	ora a
 	jz produce_rightbank
 produce_loop_rightwater:
