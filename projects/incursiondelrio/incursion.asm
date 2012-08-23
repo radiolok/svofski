@@ -11,7 +11,8 @@ TOP_HEIGHT			equ 16
 SCREEN_WIDTH_BYTES	equ 32
 
 FOE_MAX				equ 8  
-
+BLOCKS_IN_LEVEL 	equ 16
+HALFBRIDGE_WIDTH	equ 4
 	 
 	.org $100
 
@@ -211,7 +212,7 @@ clearblinds_entry2:
 	jmp drawblinds_fill
 
 terrain_current:
-terrain_left:					db 4
+terrain_left:				db 4
 terrain_water: 				db 12 ; 24
 terrain_islandwidth: 		db 0
 
@@ -219,9 +220,11 @@ terrain_next:
 terrain_next_left: 			db 4
 terrain_next_water: 		db 24
 terrain_next_islandwidth: 	db 0
-;terrain_next_islandcould:	db 0
 terrain_islandcould: 		db 0
 terrain_prev_water:			db 0
+
+pf_blockcount:				db 1; BLOCKS_IN_LEVEL
+pf_bridgeflag:				db 0
 
 	;; ---------------
 	;; Create new foe
@@ -319,15 +322,39 @@ update_line:
 	; random should be moved outside to make sure that it gets called every frame
 	call nextRandom16 ; result in randomHi/randomLo and HL
 	lda frame_scroll
-	ani $7f
+	;ani $7f
+	ani $3f
 	jz update_next_block
 	ani $1f
-	;cz create_new_foe
+	cz create_new_foe
 	ani $1
 	jz update_step
 	jmp produce_line
 
 update_next_block:
+	; update block count
+	xra a
+	sta pf_bridgeflag
+	lda pf_blockcount
+	dcr a
+	sta pf_blockcount
+	jz unb_setbridge
+	cpi 1
+	jnz unb_nosetbridge
+	sta pf_bridgeflag
+	jmp unb_nosetbridge
+
+unb_setbridge:
+	; end the island and set passage to bridge width
+	mvi a, BLOCKS_IN_LEVEL
+	sta pf_blockcount
+	mvi a, HALFBRIDGE_WIDTH
+	sta terrain_next_water
+	mvi a, SCREEN_WIDTH_BYTES/2 - HALFBRIDGE_WIDTH
+	sta terrain_next_left
+	jmp updateblock_out
+
+unb_nosetbridge:
 	; 
 	lda terrain_next_water
 	sta terrain_prev_water
@@ -343,18 +370,18 @@ update_next_block:
 	ora a
 	rar 
 	sta terrain_next_water
-	;cpi 9
-	;jnc updateblock_yesisland
 
 	; if we're to terminate the island, make sure the passage is wide enough
 	; water - island - 6 >= 0
 	mov b, a  ; b = terrain_next_water
 	lda terrain_islandwidth
+	ora a
+	jz uupupu
 	mov c, a  ; c = terrain_islandwidth
 	mov a, b
 	sub c
 	sbi 6
-	jp  uupupu ; updateblock_noisland
+	jp  uupupu 
 	; terrain_next_left = screen/2 - island - 6
 	; water_next_left = 6
 	mvi a, 6
@@ -367,6 +394,13 @@ update_next_block:
 	jmp uupupu ; updateblock_noisland
 
 uupupu:
+	lda pf_bridgeflag
+	ora a
+	jz updateblock_skipterminateisland
+	; terminate the island: inject a random value == 0
+	jmp updateblock_noisland
+
+updateblock_skipterminateisland:
 	lda terrain_next_water
 	cpi 9
 	jnc updateblock_yesisland
@@ -374,7 +408,10 @@ uupupu:
 
 	; we have enough room for island
 updateblock_yesisland:
-	lda terrain_islandcould
+	; not sure if it's a good idea to skip the entire block here
+	jmp updateblock_makeisland
+	; but keeping it just in case...
+	;lda terrain_islandcould
 	ora a 						; check if the last time the island could fit
 	jnz updateblock_makeisland  ; if it could, make island now
 	sta terrain_islandwidth     ; otherwise make sure that island width = 0
@@ -388,6 +425,7 @@ updateblock_makeisland:
 	rar
 	ani $7
 	adi $2
+updateblock_makeisland_backdoor:
 	; make sure that water - island > 6
 	mov b, a
 	lda terrain_water 
@@ -400,9 +438,6 @@ updateblock_makeisland:
 	sbi 6
 	jm  updateblock_makeisland_morewater
 	jz  updateblock_makeisland_morewater
-
-	;cpi 6
-	;jp updateblock_makeisland_ok
 updateblock_makeisland_morewater:
 	; d = max(terrain_left, terrain_next_left)
 	lda terrain_left 
@@ -424,6 +459,9 @@ updateblock_makeisland_morewater:
 	mov b, a 
 updateblock_makeisland_ok:
 	mov a, b
+	; check that island width is > 0
+	ora a
+	jm updateblock_noisland
 	sta terrain_next_islandwidth
 	jmp updateblock_out
 
@@ -476,7 +514,8 @@ uss4:
 
 ustep_noisland:
 ustep_out:
-
+	; bridge combo: 0xc, 0x4, 0x0
+	; killer combo: 0xb, 0x6, 0xff
 produce_line:
 	lxi h, $80ff-TOP_HEIGHT+2
 
@@ -908,7 +947,7 @@ c_black		equ $00
 c_blue		equ $c1
 c_green 	equ $73 ; 01 110 011
 c_yellow 	equ $bf ; 
-c_magenta 	equ $8d ;
+c_magenta 	equ $94 ; $8d ;
 c_white		equ $f6
 c_grey		equ $09 ; 00 010 010
 c_cyan		equ $f4	; 10 011 001
