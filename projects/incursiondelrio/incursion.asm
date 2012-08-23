@@ -220,7 +220,8 @@ terrain_next_left: 			db 4
 terrain_next_water: 		db 24
 terrain_next_islandwidth: 	db 0
 ;terrain_next_islandcould:	db 0
-	
+terrain_islandcould: 		db 0
+terrain_prev_water:			db 0
 
 	;; ---------------
 	;; Create new foe
@@ -328,6 +329,8 @@ update_line:
 
 update_next_block:
 	; 
+	lda terrain_next_water
+	sta terrain_prev_water
 	mov a, h
 	ani $7
 	adi 3
@@ -340,21 +343,94 @@ update_next_block:
 	ora a
 	rar 
 	sta terrain_next_water
+	;cpi 9
+	;jnc updateblock_yesisland
 
+	; if we're to terminate the island, make sure the passage is wide enough
+	; water - island - 6 >= 0
+	mov b, a  ; b = terrain_next_water
+	lda terrain_islandwidth
+	mov c, a  ; c = terrain_islandwidth
+	mov a, b
+	sub c
+	sbi 6
+	jp  uupupu ; updateblock_noisland
+	; terrain_next_left = screen/2 - island - 6
+	; water_next_left = 6
+	mvi a, 6
+	sta terrain_next_water
+	lda terrain_next_left
+	mvi a, 16
+	sub c
+	sbi 6
+	sta terrain_next_left
+	jmp uupupu ; updateblock_noisland
+
+uupupu:
+	lda terrain_next_water
 	cpi 9
-	jc updateblock_noisland
+	jnc updateblock_yesisland
+	jmp updateblock_noisland
+
+	; we have enough room for island
 updateblock_yesisland:
+	lda terrain_islandcould
+	ora a 						; check if the last time the island could fit
+	jnz updateblock_makeisland  ; if it could, make island now
+	sta terrain_islandwidth     ; otherwise make sure that island width = 0
+	inr a 
+	sta terrain_islandcould 	; and set the island could fit flag 
+	jmp updateblock_out
+
+updateblock_makeisland:
 	mov a, l
 	rar
 	rar
 	ani $7
 	adi $2
+	; make sure that water - island > 6
+	mov b, a
+	lda terrain_water 
+	sub b
+	sbi 6
+	jm  updateblock_makeisland_morewater
+	jz  updateblock_makeisland_morewater
+	lda terrain_next_water
+	sub b
+	sbi 6
+	jm  updateblock_makeisland_morewater
+	jz  updateblock_makeisland_morewater
+
+	;cpi 6
+	;jp updateblock_makeisland_ok
+updateblock_makeisland_morewater:
+	; d = max(terrain_left, terrain_next_left)
+	lda terrain_left 
+    mov d, a
+    lda terrain_next_left
+    cmp d
+    jm .+4 
+    mov d, a
+ 
+	; make passage 6 wide: water = 6; island = screen/2 - (water+left)
+	mvi a, 6
+	sta terrain_next_water
+	mov c, a
+	mov a, d
+	add c   
+	mov c, a  ; c = next_water + current_left
+	mvi a, 16
+	sub c 
+	mov b, a 
+updateblock_makeisland_ok:
+	mov a, b
 	sta terrain_next_islandwidth
 	jmp updateblock_out
 
 updateblock_noisland:
 	xra a
 	sta terrain_next_islandwidth
+	sta terrain_islandcould
 	jmp updateblock_out
 
 updateblock_out:
