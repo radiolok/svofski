@@ -233,6 +233,7 @@ pf_blockline:				db 0
 
 foe_left: db 0
 foe_water: db 0
+foe_right: db 0
 
 	;; ---------------
 	;; Create new foe
@@ -249,43 +250,18 @@ create_new_foe:
 	jnz cnf_return
 
 
-	; find leftmost column
-	lda terrain_left
-	;inr a
+	; update bounce boundaries
+	lxi h, pf_tableft
+	lda frame_scroll
+	add l
+	sui 8 ; offset to where the terrain is already generated
+	mov l, a
+	mov a, m
 	sta foe_left
-	lda terrain_water
+	inr h ; --> pf_tabwater
+	mov a, m
 	sta foe_water
 	jmp cnf_leftandwaterskip
-
-	lda terrain_left
-	mov b, a
-	lda terrain_next_left
-	cmp b
-	jp cnf_a2
-	mov a, b
-cnf_a2:
-	sta foe_left
-
-	; find water width
-	lda terrain_water
-	mov b, a
-	lda terrain_next_water
-	cmp b
-	jm cnf_a3
-	mov a, b
-cnf_a3:
-	mov b, a
-	lda terrain_islandwidth
-	ora a
-	jnz cnf_a4
-	mov a, b
-	ora a
-	;ral
-	mov b, a
-cnf_a4:
-	mov a, b
-cnf_a5:
-	sta foe_water
 
 cnf_leftandwaterskip:
 
@@ -938,34 +914,6 @@ jet_move_continue:
 ;; Frame routine for a regular foe: ship, copters
 ;; ----------------------------------------------
 foe_frame:
-
-	; update bounce boundaries
-	lxi h, pf_tableft
-	lda foeBlock + foeY
-	add l
-	sui 4
-	mov l, a
-	mov d, m
-	dcr d
-	inr h ; --> pf_tabwater
-	mov a, m
-	add d
-	dcr a
-	jp fbound_1
-	mvi a, 28
-fbound_1:
-	;mvi a ,$18	
-	mov b, a
-	lda foeBlock + foeId
-	cpi FOEID_SHIP
-	mov a, b
-	jnz fbound_11
-	sui 2
-fbound_11:
-	sta foeBlock + foeRightStop
-	mov a, d
-	sta foeBlock + foeLeftStop
-
 	mvi h, 0 ; bounce flag in h
 foe_Move:
 	; load Column to e
