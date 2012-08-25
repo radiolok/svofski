@@ -45,7 +45,7 @@ clearscreen:
 	ei
 	hlt
 	call setpalette
-	;call showlayers
+	call showlayers
 
 jamas:
 	mvi a, 4
@@ -63,7 +63,6 @@ jamas:
 
 	; keep interrupts enabled to make errors obvious
 	ei
-
 	; prepare animated sprites
 	call foe_animate
 
@@ -102,7 +101,7 @@ jamas:
 frame_number:
 	db 0
 frame_scroll:
-	db $ff
+	db $10
 
 ;;
 ;; Process foe with descriptor in HL
@@ -231,6 +230,10 @@ pf_bridgeflag:				db 0;
 pf_roadflag:				db 0
 pf_blockline:				db 0
 
+
+foe_left: db 0
+foe_water: db 0
+
 	;; ---------------
 	;; Create new foe
 	;; ---------------
@@ -241,9 +244,50 @@ create_new_foe:
 	mov b, a
 	ani $4
 	jz  cnf_return
-	lda pf_bridgeflag
+	lda pf_roadflag
 	ora a
 	jnz cnf_return
+
+
+	; find leftmost column
+	lda terrain_left
+	;inr a
+	sta foe_left
+	lda terrain_water
+	sta foe_water
+	jmp cnf_leftandwaterskip
+
+	lda terrain_left
+	mov b, a
+	lda terrain_next_left
+	cmp b
+	jp cnf_a2
+	mov a, b
+cnf_a2:
+	sta foe_left
+
+	; find water width
+	lda terrain_water
+	mov b, a
+	lda terrain_next_water
+	cmp b
+	jm cnf_a3
+	mov a, b
+cnf_a3:
+	mov b, a
+	lda terrain_islandwidth
+	ora a
+	jnz cnf_a4
+	mov a, b
+	ora a
+	;ral
+	mov b, a
+cnf_a4:
+	mov a, b
+cnf_a5:
+	sta foe_water
+
+cnf_leftandwaterskip:
 
 	; get current foe index
 	lxi h, foeTableIndex
@@ -274,7 +318,7 @@ create_new_foe_L1:
 	mov d, a 	; d = foe id
 
 	; width
-	lda terrain_water
+	lda foe_water
 	mov c, a
 	mov a, d
 	cpi FOEID_SHIP
@@ -287,15 +331,17 @@ cnf_width_2:
 	; now a = available width
 
 	; get normalized random 0 <= rand < a
-	dcr a
-	rz  ; bad luck: passage too narrow for this foe
+	;dcr a
+	sui 2
+	jz cnf_return  ; bad luck: passage too narrow for this foe
+	jm cnf_return 
 	mov m, d 	; should fit: store foe id 
 	inx h
 	call randomNormA
 
-	; Column == leftmost
-	lda terrain_left
-	add c
+	; Column
+	lda foe_left
+	;add c         ; offset the foe right
 	mov c, a
 	mov m, a
 	inx h
@@ -311,11 +357,11 @@ cnf_width_2:
 	; Y = current
 	lda frame_scroll
 	mov b, a
-	sui TOP_HEIGHT-16 ; make foes appear above the top curtain
+	;sui TOP_HEIGHT-16 ; make foes appear above the top curtain
 	mov m, a
 	inx h
 	; Left
-	lda terrain_left
+	lda foe_left
 	dcr a
 	mov m, a
 	mov c, a
@@ -348,11 +394,12 @@ updl_1:
 	ora a
 	jz update_next_block
 	; create new foe every 32 lines
+	;lda frame_scroll
 	ani $f
 	cz create_new_foe
 	ani $1
 	jz update_step
-	jmp produce_line_main
+	jmp ustep_out
 
 update_next_block:
 	; update block count
@@ -384,6 +431,7 @@ unb_nosetbridge:
 	mov a, h
 	ani $7
 	adi 3
+	;mvi a, 2
 	sta terrain_next_left
 	ral
 	mov b, a
@@ -496,7 +544,6 @@ update_step:
 uss_x1:
 	sta pf_roadflag
 
-
 	; widen/narrow the banks
 	lhld terrain_next
 	xchg
@@ -534,8 +581,18 @@ uss5:
 	sta terrain_islandwidth
 uss4:
 
-ustep_noisland:
 ustep_out:
+	; update boundary tables
+	lxi h, pf_tableft
+	lda frame_scroll
+	;sui 4 ; offset the index hoping that it will be ~ at the middle of foe height
+	add l
+	mov l, a
+	lda terrain_left
+	mov m, a
+	inr h
+	lda terrain_water
+	mov m, a
 
 produce_line_main:
 	; if no road, just produce regular line
@@ -561,28 +618,35 @@ produce_line_road:
 	jm plr_asphalt
 	jmp plr_yellow
 plr_asphalt:
-	lxi h, $c0ff-TOP_HEIGHT+2   ; c+8 = cyan, c+a = near black
+	lxi h, $c0ff+2   ; c+8 = cyan, c+a = near black
+	mvi d, $c0+SCREEN_WIDTH_BYTES
 	call produce_line_e2
-	lxi h, $80ff-TOP_HEIGHT+2
+	lxi h, $80ff+2
+	mvi d, $80+SCREEN_WIDTH_BYTES
 	call produce_line_e2
 	ret
 plr_yellow:
-	lxi h, $80ff-TOP_HEIGHT+2 	; 8+a = yellow
+	lxi h, $80ff+2 	; 8+a = yellow
+	mvi d, $80+SCREEN_WIDTH_BYTES
 	call produce_line_e2
-	lxi h, $a0ff-TOP_HEIGHT+2
+	lxi h, $a0ff+2
+	mvi d, $a0+SCREEN_WIDTH_BYTES
 	call produce_line_e2
 	ret
 
 plr_border:
-	lxi h, $c0ff-TOP_HEIGHT+2 	
+	lxi h, $c0ff+2 	
+	mvi d, $c0+SCREEN_WIDTH_BYTES
 	call produce_line_e2
-	lxi h, $a0ff-TOP_HEIGHT+2
+	lxi h, $a0ff+2
+	mvi d, $a0+SCREEN_WIDTH_BYTES
 	call produce_line_e2
 	ret
 
 
 produce_line:
-	lxi h, $80ff-TOP_HEIGHT+2
+	lxi h, $80ff+2; $80ff-TOP_HEIGHT+2
+	mvi d, $80+SCREEN_WIDTH_BYTES
 produce_line_e2:
 	lda frame_scroll
 	add l
@@ -590,6 +654,7 @@ produce_line_e2:
 
 	lxi b, $ff00
 	lda terrain_left
+	dcr a
 produce_loop_leftbank:
 	mov m, b
 	inr h
@@ -625,9 +690,12 @@ produce_loop_rightwater:
 	dcr a
 	jnz produce_loop_rightwater
 
-	ret
+	;ret
 produce_rightbank:
-	mvi a, $80+SCREEN_WIDTH_BYTES
+	;mvi a, $80+SCREEN_WIDTH_BYTES
+	mov a, d
+	;add SCREEN_WIDTH_BYTES
+	;mov a, d
 	sub h
 produce_loop_rightbank:
 	mov m, b
@@ -672,28 +740,28 @@ foeTableIndex:
 	db 0
 
 foe_1:
-	db FOEID_SHIP
+	db 0 ;FOEID_SHIP
 	db 5,0,1,$10,	3,8,0
 foe_2:
-	db FOEID_COPTER
+	db 0 ; FOEID_COPTER
 	db 6,0,1,$30,	3,10,0
 foe_3:
-	db FOEID_JET
+	db 0; FOEID_JET
 	db 5,0,$ff,$50,	3,25,0
 foe_4:
-	db FOEID_RCOPTER
+	db 0; FOEID_RCOPTER
 	db 8,0,1,$70,	3,10,0
 foe_5:
-	db FOEID_SHIP
+	db 0; FOEID_SHIP
 	db 19,0,1,$90,	19,24,0
 foe_6:
-	db FOEID_JET
+	db 0; FOEID_JET
 	db 5,0,1,$b0,	0,0,0
 foe_7:
-	db FOEID_SHIP
+	db 0; FOEID_SHIP
 	db 21,0,1,$d0,	19,24,0
 foe_8:
-	db FOEID_COPTER
+	db 0; FOEID_COPTER
 	db 9,0,1,$f0,	3,10,0
 
 	;; animate sprites
@@ -870,6 +938,34 @@ jet_move_continue:
 ;; Frame routine for a regular foe: ship, copters
 ;; ----------------------------------------------
 foe_frame:
+
+	; update bounce boundaries
+	lxi h, pf_tableft
+	lda foeBlock + foeY
+	add l
+	sui 4
+	mov l, a
+	mov d, m
+	dcr d
+	inr h ; --> pf_tabwater
+	mov a, m
+	add d
+	dcr a
+	jp fbound_1
+	mvi a, 28
+fbound_1:
+	;mvi a ,$18	
+	mov b, a
+	lda foeBlock + foeId
+	cpi FOEID_SHIP
+	mov a, b
+	jnz fbound_11
+	sui 2
+fbound_11:
+	sta foeBlock + foeRightStop
+	mov a, d
+	sta foeBlock + foeLeftStop
+
 	mvi h, 0 ; bounce flag in h
 foe_Move:
 	; load Column to e
@@ -915,6 +1011,16 @@ foe_move_CheckBounce:
 	lda foeBlock + foeRightStop
 	cmp e
 	jz foe_move_yes_bounce
+
+	; emergency door stopper
+	jp fm_noemergency
+	dcr e
+	mov a, e
+	sta foeBlock + foeColumn
+	xra a
+	sta foeBlock + foeDirection
+	sta foeBlock + foeIndex
+fm_noemergency:
 	lda foeBlock + foeLeftStop
 	cmp e
 	jnz foe_paint
@@ -1098,3 +1204,9 @@ showlayers:
 	shld $e0fe
 	ret
 
+pf_tableft		equ $7800
+pf_tabwater		equ $7900
+;pf_tableft:					
+;							.org .+$100
+;pf_tabwater:
+;							.org .+$100
