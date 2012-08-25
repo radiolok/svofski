@@ -101,7 +101,7 @@ jamas:
 frame_number:
 	db 0
 frame_scroll:
-	db $10
+	db $ff; $10
 
 ;;
 ;; Process foe with descriptor in HL
@@ -245,9 +245,9 @@ create_new_foe:
 	mov b, a
 	ani $4
 	jz  cnf_return
-	lda pf_roadflag
-	ora a
-	jnz cnf_return
+	;lda pf_roadflag
+	;ora a
+	;jnz cnf_return
 
 
 	; update bounce boundaries
@@ -257,10 +257,36 @@ create_new_foe:
 	sui 8 ; offset to where the terrain is already generated
 	mov l, a
 	mov a, m
+	mov d, a
 	sta foe_left
 	inr h ; --> pf_tabwater
 	mov a, m
+	mov e, a
 	sta foe_water
+
+	; island?
+	add d
+	cpi SCREEN_WIDTH_BYTES/2
+	jz ubb_doublewater
+	; foe_left = width - (left+water)
+	mov d, a
+	mov a, b
+	lda randomLo
+	ani $2
+	jz cnf_leftandwaterskip
+
+	mov a, d
+	cma
+	inr a
+	adi SCREEN_WIDTH_BYTES
+	sta foe_left
+	jmp cnf_leftandwaterskip
+ubb_doublewater:
+	mov a, e
+	ora a
+	ral
+	sta foe_water
+
 	jmp cnf_leftandwaterskip
 
 cnf_leftandwaterskip:
@@ -287,12 +313,36 @@ create_new_foe_L1:
 	mov c, a
 	dad b 		; hl = foe[foeTableIndex]: Id, Column, Index, Direction, Y, Left, Right
 
+	lda pf_roadflag
+	ora a
+	jz cnf_4
+
+	; create bridge
+	lda pf_blockline
+	cpi 32
+	jnz cnf_return
+
+	mvi m, FOEID_BRIDGE
+	inx h
+	mvi m, 13 ; column
+	inx h
+	mvi m, 0 ; index
+	inx h
+	mvi m, 0 ; direction
+	inx h
+	lda frame_scroll
+	;adi 10 
+	mov m, a ; y
+	jmp cnf_return
+
+cnf_4:
 	lda randomHi
 	mov b, a
 	ani $3
 	inr a
 	mov d, a 	; d = foe id
 
+cnf_3:
 	; width
 	lda foe_water
 	mov c, a
@@ -369,10 +419,16 @@ updl_1:
 	lda pf_blockline
 	ora a
 	jz update_next_block
+	mov b, a
+	; avoid creating sprites on roll overlap
+	lda frame_scroll
+	cpi $10
+	jc updl_2
+	mov a, b
 	; create new foe every 32 lines
-	;lda frame_scroll
 	ani $f
 	cz create_new_foe
+updl_2:
 	ani $1
 	jz update_step
 	jmp ustep_out
@@ -686,6 +742,7 @@ FOEID_SHIP 		equ 1
 FOEID_COPTER 	equ 2
 FOEID_RCOPTER	equ 3
 FOEID_JET 		equ 4
+FOEID_BRIDGE	equ 16
 
 	;; foe class
 foeId 			equ 0 			; id: 0 = none, 1 = ship, 2 = copter
@@ -779,6 +836,7 @@ foe_byId:
 
 foe_infield:
 	; prepare dispatches
+	mov a, b
 	dcr b
 	jz  foe_byId_ship		; 1 == ship
 	dcr b
@@ -787,8 +845,18 @@ foe_infield:
 	jz  foe_byId_rcopter	; 3 == redcopter
 	dcr b
 	jz 	foe_byId_jet 		; 4 == jet
+	; specials
+	cpi FOEID_BRIDGE
+	jz  foe_byId_bridge
 	; default: return  
 	ret
+
+foe_byId_bridge:
+	lxi h, bridge_ltr_dispatch
+	shld foeBlock_LTR
+	shld foeBlock_RTL
+	jmp foe_frame
+
 foe_byId_ship:
 	lxi h, ship_ltr_dispatch
 	shld foeBlock_LTR
