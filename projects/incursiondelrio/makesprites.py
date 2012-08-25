@@ -298,6 +298,49 @@ class Jet(Sprite):
         return shift in [-1, 0, 4]
 
 
+class Bridge(Sprite):
+    pic = ['66              66            66',
+           '66              66            66',
+           '66666666666666666666666666666666',
+           '66666666666666666666666666666666',
+           '                                ', 
+           '                                ', 
+           '66666666666666666666666666666666',
+           '66666666666666666666666666666666',
+           '                                ', 
+           '                                ', 
+           '66666666666666666666666666666666',
+           '66666666666666666666666666666666',
+           '33333333333333333333333333333333', 
+           '33333333333333333333333333333333', 
+           '66666666666666666666666666666666',
+           '66666666666666666666666666666666',
+           '                                ', 
+           '                                ', 
+           '66666666666666666666666666666666',
+           '66666666666666666666666666666666',
+           '                                ', 
+           '                                ', 
+           '66666666666666666666666666666666',
+           '66666666666666666666666666666666',
+           '66              66            66',
+           '66              66            66'];
+
+    def getPicRaw(self):
+        return self.pic
+
+    def isDoubleWidth(false):
+        return True
+
+    def isWhite(self):
+        return False
+
+    def getName(self):
+        return "bridge"
+
+    def includeShift(self, shift):
+        return shift in [0]
+
 
         
 print ';; Automatically generated file'
@@ -314,4 +357,5 @@ RedCopter().makeAll()
 PropellerA().makeAll()
 PropellerB().makeAll()
 Jet().makeAll()
+Bridge().makeAll()
 
