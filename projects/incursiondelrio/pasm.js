@@ -583,7 +583,7 @@ function parseInstruction(s, addr, linenumber) {
 		}
 		
 		if (mnemonic == ".org" || mnemonic == "org") {
-			n = resolveNumber(parts[1]);
+            n = evaluateExpression(parts.slice(1).join(' '), addr);
 			if (n >= 0) {
 				return -100000-n;
 			}
