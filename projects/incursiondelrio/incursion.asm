@@ -12,7 +12,10 @@ SCREEN_WIDTH_BYTES	equ 32
 
 FOE_MAX				equ 8  
 BLOCKS_IN_LEVEL 	equ 16
+BLOCK_HEIGHT		equ 64
 HALFBRIDGE_WIDTH	equ 4
+NARROWEST			equ 4 	; the narrowest passage around an island
+ENOUGH_FOR_ISLAND	equ 9   ; if water this wide, island fits
 	 
 	.org $100
 
@@ -223,14 +226,25 @@ terrain_next_islandwidth: 	db 0
 terrain_islandcould: 		db 0
 terrain_prev_water:			db 0
 
-pf_blockcount:				db 1; BLOCKS_IN_LEVEL
-pf_bridgeflag:				db 0
+pf_blockcount:				db 1; current block in level (max=BLOCKS_IN_LEVEL)
+pf_bridgeflag:				db 0; 
+pf_roadflag:				db 0
+pf_blockline:				db 0
 
 	;; ---------------
 	;; Create new foe
 	;; ---------------
 create_new_foe:
 	push psw
+
+	lda randomHi
+	mov b, a
+	ani $4
+	jz  cnf_return
+	lda pf_bridgeflag
+	ora a
+	jnz cnf_return
+
 	; get current foe index
 	lxi h, foeTableIndex
 	mov a, m
@@ -311,6 +325,7 @@ cnf_width_2:
 	mov a, e
 	add c
 	mov m, a
+cnf_return:
 	pop psw
     ret
 
@@ -321,15 +336,23 @@ cnf_width_2:
 update_line:
 	; random should be moved outside to make sure that it gets called every frame
 	call nextRandom16 ; result in randomHi/randomLo and HL
-	lda frame_scroll
-	;ani $7f
-	ani $3f
+	; update block line count
+	lda pf_blockline
+	dcr a
+	jp updl_1
+	mvi a, BLOCK_HEIGHT
+updl_1:
+	sta pf_blockline
+
+	lda pf_blockline
+	ora a
 	jz update_next_block
-	ani $1f
+	; create new foe every 32 lines
+	ani $f
 	cz create_new_foe
 	ani $1
 	jz update_step
-	jmp produce_line
+	jmp produce_line_main
 
 update_next_block:
 	; update block count
@@ -376,69 +399,53 @@ unb_nosetbridge:
 	mov b, a  ; b = terrain_next_water
 	lda terrain_islandwidth
 	ora a
-	jz uupupu
+	jz unp_A
 	mov c, a  ; c = terrain_islandwidth
 	mov a, b
 	sub c
-	sbi 6
-	jp  uupupu 
+	sbi NARROWEST
+	jp  unp_A 
 	; terrain_next_left = screen/2 - island - 6
 	; water_next_left = 6
-	mvi a, 6
+	mvi a, NARROWEST
 	sta terrain_next_water
 	lda terrain_next_left
 	mvi a, 16
 	sub c
-	sbi 6
+	sbi NARROWEST
 	sta terrain_next_left
-	jmp uupupu ; updateblock_noisland
-
-uupupu:
+unp_A:
+	; force terminate the island before the bridge
 	lda pf_bridgeflag
 	ora a
-	jz updateblock_skipterminateisland
-	; terminate the island: inject a random value == 0
-	jmp updateblock_noisland
-
-updateblock_skipterminateisland:
+	jnz updateblock_noisland
+	; if not enough water, no island
 	lda terrain_next_water
-	cpi 9
-	jnc updateblock_yesisland
-	jmp updateblock_noisland
+	cpi ENOUGH_FOR_ISLAND ;9
+	jc updateblock_noisland
 
 	; we have enough room for island
-updateblock_yesisland:
-	; not sure if it's a good idea to skip the entire block here
-	jmp updateblock_makeisland
-	; but keeping it just in case...
-	;lda terrain_islandcould
-	ora a 						; check if the last time the island could fit
-	jnz updateblock_makeisland  ; if it could, make island now
-	sta terrain_islandwidth     ; otherwise make sure that island width = 0
-	inr a 
-	sta terrain_islandcould 	; and set the island could fit flag 
-	jmp updateblock_out
-
 updateblock_makeisland:
 	mov a, l
 	rar
 	rar
 	ani $7
 	adi $2
-updateblock_makeisland_backdoor:
-	; make sure that water - island > 6
+	; make sure that water - island > NARROWEST
 	mov b, a
 	lda terrain_water 
 	sub b
-	sbi 6
-	jm  updateblock_makeisland_morewater
-	jz  updateblock_makeisland_morewater
+	sbi NARROWEST
+	jm  unb_island_morewater
+	jz  unb_island_morewater
 	lda terrain_next_water
 	sub b
-	sbi 6
-	jm  updateblock_makeisland_morewater
-	jz  updateblock_makeisland_morewater
-updateblock_makeisland_morewater:
+	sbi NARROWEST
+	jm  unb_island_morewater
+	jz  unb_island_morewater
+	; the passage needs no tuning
+	jmp unb_island_ok
+unb_island_morewater:
 	; d = max(terrain_left, terrain_next_left)
 	lda terrain_left 
     mov d, a
@@ -447,8 +454,9 @@ updateblock_makeisland_morewater:
     jm .+4 
     mov d, a
  
-	; make passage 6 wide: water = 6; island = screen/2 - (water+left)
-	mvi a, 6
+	; make passage NARROWEST wide: 
+	; water = NARROWEST; island = screen/2 - (water+left)
+	mvi a, NARROWEST
 	sta terrain_next_water
 	mov c, a
 	mov a, d
@@ -456,10 +464,10 @@ updateblock_makeisland_morewater:
 	mov c, a  ; c = next_water + current_left
 	mvi a, 16
 	sub c 
-	mov b, a 
-updateblock_makeisland_ok:
-	mov a, b
+	mov b, a
+unb_island_ok:
 	; check that island width is > 0
+	mov a, b
 	ora a
 	jm updateblock_noisland
 	sta terrain_next_islandwidth
@@ -474,7 +482,21 @@ updateblock_noisland:
 updateblock_out:
 	; -- fall through to update_step
 
+	;; -------------------------------------------
+	;; Update one scanline of terrain
+	;; interpolate between current and next values
+	;; -------------------------------------------
 update_step:
+	; check if we need to set the road flag
+	lda pf_blockcount
+	cpi BLOCKS_IN_LEVEL
+	mvi a, 0
+	jnz uss_x1
+	inr a
+uss_x1:
+	sta pf_roadflag
+
+
 	; widen/narrow the banks
 	lhld terrain_next
 	xchg
@@ -514,11 +536,54 @@ uss4:
 
 ustep_noisland:
 ustep_out:
-	; bridge combo: 0xc, 0x4, 0x0
-	; killer combo: 0xb, 0x6, 0xff
+
+produce_line_main:
+	; if no road, just produce regular line
+	lda pf_roadflag
+	ora a
+	jz produce_line
+
+	lda pf_blockline
+	cpi BLOCK_HEIGHT-20 	; bottom edge
+	jz produce_line_road
+	jp produce_line
+	cpi BLOCK_HEIGHT-54 	; top edge
+	jp produce_line_road
+	jz produce_line_road
+	jmp produce_line
+
+produce_line_road:
+	; if at the border
+	jz plr_border
+	cpi BLOCK_HEIGHT-(20+(34/2)-1) ; bottom divider line
+	jp plr_asphalt
+	cpi BLOCK_HEIGHT-(20+(34/2)+1) ; top divider line
+	jm plr_asphalt
+	jmp plr_yellow
+plr_asphalt:
+	lxi h, $c0ff-TOP_HEIGHT+2   ; c+8 = cyan, c+a = near black
+	call produce_line_e2
+	lxi h, $80ff-TOP_HEIGHT+2
+	call produce_line_e2
+	ret
+plr_yellow:
+	lxi h, $80ff-TOP_HEIGHT+2 	; 8+a = yellow
+	call produce_line_e2
+	lxi h, $a0ff-TOP_HEIGHT+2
+	call produce_line_e2
+	ret
+
+plr_border:
+	lxi h, $c0ff-TOP_HEIGHT+2 	
+	call produce_line_e2
+	lxi h, $a0ff-TOP_HEIGHT+2
+	call produce_line_e2
+	ret
+
+
 produce_line:
 	lxi h, $80ff-TOP_HEIGHT+2
-
+produce_line_e2:
 	lda frame_scroll
 	add l
 	mov l, a
@@ -560,6 +625,7 @@ produce_loop_rightwater:
 	dcr a
 	jnz produce_loop_rightwater
 
+	ret
 produce_rightbank:
 	mvi a, $80+SCREEN_WIDTH_BYTES
 	sub h
@@ -949,8 +1015,8 @@ c_green 	equ $73 ; 01 110 011
 c_yellow 	equ $bf ; 
 c_magenta 	equ $94 ; $8d ;
 c_white		equ $f6
-c_grey		equ $09 ; 00 010 010
-c_cyan		equ $f4	; 10 011 001
+c_grey		equ $09 ; 00 010 010  -- also $52 the darkest neutral gray
+c_cyan		equ $ab ; $ad ; $f4	; 10 011 001 - $ad is neutral gray
 c_dkblue	equ $81	; 10 010 001
 
 palette_data:
