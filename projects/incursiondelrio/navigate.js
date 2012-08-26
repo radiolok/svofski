@@ -10,40 +10,29 @@ var textlabels = Array();
 var references = Array();
 var errors = Array();
 
+
 String.prototype.trim = function() { return this.replace(/^\s+|\s+$/g, ''); };
 String.prototype.startsWith = function(s) {return (this.match("^"+s)==s); }
 
 function loaded() {
-    /*
-    var list = document.getElementById("list").childNodes;
-    for (var i = 0; i < list.length; i++) {
-        var child = list[i];
-        if (child.id == undefined) continue;
-        var lineId = child.id;
-
-        for (var n = 0; n < child.childNodes.length; n++) {
-            var stuff = child.childNodes[n];
-            if (stuff.id == undefined) continue;
-            //if (i < 100) {
-            //    console.log("line: " + lineId + " id=" + child.childNodes[n].id);
-            //}
-            if (stuff.id.startsWith("label")) {
-                var labelText = stuff.innerHTML;
-                var lineNumber = stuff.id.substr(5);
-                //console.log("label " + labelText + " in line " + parseInt(lineNumber));
-                textlabels[lineNumber] = labelText;
-                referencesLabel(labelText, lineNumber);
-            }
-        }
-    }*/
     var json_textlabels = document.getElementById("json_textlabels").innerHTML;
     var json_references = document.getElementById("json_references").innerHTML;
 
     textlabels = eval(json_textlabels);
     references = eval(json_references);
 
+    updateSizes();
+
     return false;
 }
+
+function updateSizes() {
+    height = window.innerHeight;
+
+    var to = document.getElementById('list');
+    to.style.height = height + "px";
+}
+
 
 function gotoLabel(label) {
     var sought = textlabels.indexOf(label.toLowerCase());
@@ -196,31 +185,24 @@ function highlightStage1() {
 
             highlightOrigin.insertBefore(highlightArrow, highlightOrigin.firstChild);
             highlightArrow.style.display='inline-block';
-            highlightArrow.style.marginLeft ='-30px';
-            highlightArrow.style.paddingLeft ='15px';
-            highlightArrow.style.width = '15px';
-            highlightArrow.style.backgroundColor = 'white';
+            highlightArrow.style.marginLeft ='-4em';
+            highlightArrow.style.paddingLeft ='2em';
+            highlightArrow.style.width = '2em';
 
             highlightOrigin.setAttribute('onclick', 
                 'scrollTo('+(labelTop-height/2)+'); return false;');
             highlightOrigin.style.cursor = 'pointer';
         }
 
-        highlightLabel.className = 'highlight1';
+        highlightLabel.className += ' highlight1';
     } 
-    //for (src = 0; src < highlightLines.length; src++) {
-    //    highlightLines[src].className = 'srchl1';
-    //}
     highlightTimeout = setTimeout('highlightStage2()', 50);
 }
 
 function highlightStage2() {
     if (highlightLabel != undefined) {
-        highlightLabel.className = 'highlight2';
+        highlightLabel.className = highlightLabel.className.replace('highlight1', 'highlight2');
     }
-    //for (src = 0; src < highlightLines.length; src++) {
-    //    highlightLines[src].className = 'srchl2';
-    //}
     if (highlightArrow != false) {
         highlightArrow.className = highlightDir + 2;
     }
@@ -229,11 +211,8 @@ function highlightStage2() {
 
 function highlightStage3() {
     if (highlightLabel != undefined) {
-        highlightLabel.className = 'highlight3';
+        highlightLabel.className = highlightLabel.className.replace('highlight2', 'highlight3');
     }
-    //for (src = 0; src < highlightLines.length; src++) {
-    //    highlightLines[src].className = 'srchl3';
-    //}
     if (highlightArrow != false) {
         highlightArrow.className = highlightDir + 3;
     }
@@ -259,7 +238,9 @@ function endHighlighting(lineno) {
     clearTimeout(highlightTimeout);
     highlightTimeout = false;
     if (highlightLabel != undefined) {
-        highlightLabel.className = "highlight0";
+        if (highlightLabel.className != undefined) {
+            highlightLabel.className = highlightLabel.className.replace(/ .*/, '');
+        }
         highlightLabel = undefined;
     }
     for (src = 0; src < highlightLines.length; src++) {
@@ -281,7 +262,6 @@ function endHighlighting(lineno) {
 
 function formatBackrefText(element) {
     formatBackrefText.spaces = "         ";
-    var adr = element.innerHTML.substr(0, 4);
     var label = "";
     var text = "";
     for (var i = 0; i < element.childNodes.length; i++) {
@@ -291,6 +271,8 @@ function formatBackrefText(element) {
             label = child.innerHTML;
         } else if (child.id.indexOf("code") == 0) {
             text = child.innerHTML;
+        } else if (child.className == "adr") {
+            adr = child.innerHTML;
         }
     }
 
@@ -337,7 +319,7 @@ function startBackrefWindow(lineno) {
         highlightLines.length > 0) {
         backrefTimeout = setTimeout('showBackref(0)', 500);
         backrefLeft = backrefLabel.offsetLeft;
-        backrefTop = highlightOrigin.offsetTop;
+        backrefTop = highlightOrigin.offsetTop + 4;
         backrefTop += backrefLabel.offsetHeight;
         list = document.getElementById('list');
         if (!inTheOpera) {
@@ -372,7 +354,7 @@ function showBackref(n) {
         for (var src = 0; src < referencingLinesFull.length; src++) {
             var labelTop = referencingLinesFull[src].offsetTop;
             var text = formatBackrefText(referencingLinesFull[src]);
-            var scrollTo = labelTop - backrefTop + 15;
+            var scrollTo = labelTop - backrefTop + 18;
                         
             backrefWindow.innerHTML += 
               '<div onclick="scrollTo('+scrollTo+');' +
@@ -400,7 +382,7 @@ function showBackref(n) {
     }
 
     if (n == 1) {
-        if (backrefWindow.style.opacity == 0.9) {
+        if (backrefWindow.style.opacity >= 0.9) {
             backrefTimeout = false;
         } else {
             showBackref.opacity += .3;
@@ -418,6 +400,7 @@ function showBackref(n) {
 
     if (n == -2) {
         clearTimeout(backrefTimeout);
+        console.log("backrefTimeout clear");
         backrefTimeout = false;
         if (backrefWindow != false) {
             backrefWindow.style.display = 'none';

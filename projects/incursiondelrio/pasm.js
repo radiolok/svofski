@@ -680,7 +680,7 @@ function parseInstruction(s, addr, linenumber) {
 // -- output --
 
 function labelList() {
-    labelList.s = "            ";
+    labelList.s = "                        ";
     labelList.f = function(label, addr) {
         var result = label.substring(0, labelList.s.length);
         if (result.length < labelList.s.length) {
@@ -698,7 +698,7 @@ function labelList() {
 
     var result = "<pre>Labels:</pre>";
     result += '<div class="hordiv"></div>';
-    result += '<pre>';
+    result += '<pre class="labeltable">';
     var col = 1;
     for (var j = 0; j < sorted.length; j++) {
         var i = sorted[j];
@@ -707,10 +707,11 @@ function labelList() {
         // hmm? 
         if (label == undefined) continue;
         if (i.length == 0) continue; // resolved expressions
-        result += "<span class='" +
-            (col%4 == 0 ? 't2' : 't1') +  
+        var resultClass = (col%4 == 0 ? 't2' : 't1');
+        if (label < 0) resultClass += ' errorline';
+
+        result += "<span class='" + resultClass +  
             "' onclick=\"return gotoLabel('"+i+"');\"";
-        if (label < 0) result += ' style="background-color:pink;" ';
         result += ">";
         result += labelList.f(i,label);
         result += "</span>";
@@ -899,13 +900,21 @@ function listing(text,lengths,addresses) {
     for(var i = 0; i < text.length; i++) {
         var labeltext = "";
         var remainder = text[i];
+        var comment = '';
         var parts = text[i].split(/[\:\s]/);
         if (parts.length > 1) {
-            if (getLabel(parts[0]) != -1) {
+            if (getLabel(parts[0]) != -1 && parts[0].trim()[0] != ';') {
                 labeltext = parts[0];
                 remainder = text[i].substring(labeltext.length);
             }
         }
+
+        var semicolon = remainder.indexOf(';');
+        if (semicolon != -1) {
+            comment = remainder.substring(semicolon);
+            remainder = remainder.substring(0, semicolon);
+        }
+
 
         var id = "l" + i;
         var labelid = "label" + i;
@@ -923,17 +932,14 @@ function listing(text,lengths,addresses) {
         }
         for (b = 0; b < 16 - width; b++) { hexes += ' '; }
 
-        result += '<pre id="' + id + '"' 
-        //    +
-        //    ' onmouseover="return mouseover('+i+');"' + 
-        //    ' onmouseout="return mouseout('+i+');"';
+        result += '<pre id="' + id + '"';
 
         if (unresolved || errors[i] != undefined) {
             result += ' class="errorline" ';
         }
 
-        result += 
-            '>' + (lengths[i] > 0 ? hex16(addresses[i]) : "");
+        result += '>';
+        result += '<span class="adr">' + (lengths[i] > 0 ? hex16(addresses[i]) : "") + "</span>"
         result += '\t';
 
         result += hexes;
@@ -954,6 +960,10 @@ function listing(text,lengths,addresses) {
             ' onmouseover="return mouseover('+i+');"' + 
             ' onmouseout="return mouseout('+i+');"' +
             '>' + remainder + '</span>';
+        }
+
+        if (comment.length > 0) {
+            result += '<span class="cmt">' + comment + '</span>';
         }
 
         // hacked this into displaying only first and last lines
@@ -981,17 +991,18 @@ function listing(text,lengths,addresses) {
     result += labelList();
 
     result += "<div>&nbsp;</div>";
-    
-    if (doHexDump) {
-        result += dump();
+
+    if (!makeListing) {   
+        if (doHexDump) {
+            result += dump();
+        }
+
+        result += "<div>&nbsp;</div>";
+
+        result += intelHex();
+
+        result += "<div>&nbsp;</div>";
     }
-
-    result += "<div>&nbsp;</div>";
-
-    result += intelHex();
-
-    result += "<div>&nbsp;</div>";
-
     return result;
 }
 
@@ -1196,8 +1207,8 @@ function preamble() {
     return '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru"> <head> <title>Pretty 8080 Assembler</title>\n' +
 '<script type="text/javascript"><!--  --></script>\n' +
 '<script type="text/javascript" src="navigate.js"></script>\n' +
-'<link href="list.css" rel="stylesheet" type="text/css" media="screen"/>\n' +
-'<body id="main" onload="loaded(); return false;">\n' +
+'<link href="listn.css" rel="stylesheet" type="text/css" media="screen"/>\n' +
+'<body id="main" onload="loaded(); return false;" onresize="updateSizes(); return false;">\n' +
 '<div id="list">';
 }
 
@@ -1739,8 +1750,8 @@ if (!JSON) {
 //------
 
 function jsons() {
-    return '<div id="json_references">\n' + references.toJSONString() + '</div>\n' +
-     '<div id="json_textlabels">\n' + textlabels.toJSONString() + '</div>\n';
+    return '<div style="display:none" id="json_references">\n' + references.toJSONString() + '</div>\n' +
+     '<div style="display:none" id="json_textlabels">\n' + textlabels.toJSONString() + '</div>\n';
 }
 
 var lst = assemble(inputFile)
