@@ -400,7 +400,6 @@ function showBackref(n) {
 
     if (n == -2) {
         clearTimeout(backrefTimeout);
-        console.log("backrefTimeout clear");
         backrefTimeout = false;
         if (backrefWindow != false) {
             backrefWindow.style.display = 'none';
@@ -424,6 +423,10 @@ function mouseout(lineno) {
     endHighlighting(lineno);
     showBackref(-1);
     return false;
+}
+
+function rgmouseover(className) {
+    
 }
 
 function getListHeight() {
