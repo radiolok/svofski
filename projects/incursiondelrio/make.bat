@@ -1,0 +1,1 @@
+C:\usr\src\tp\bin\make.exe -f Makefile.w 

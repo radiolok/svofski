@@ -235,6 +235,8 @@ var textlabels = Array();
 var references = Array();
 var errors = Array();
 
+var regUsage = Array();
+
 function clearLabels() {
     LabelsCount = 0;
     labels = new Object();
@@ -513,6 +515,7 @@ function parseInstruction(s, addr, linenumber) {
             immediate = useExpr(subparts.slice(1), addr, linenumber);
 
 			setmem16(addr+1, immediate);
+            regUsage[linenumber] = ['@'+subparts[0].trim()];			
 			return 3;
 		}
 
@@ -537,6 +540,9 @@ function parseInstruction(s, addr, linenumber) {
             immediate = useExpr(subparts.slice(1), addr, linenumber);
 
             setmem8(addr+1, immediate);
+            
+			regUsage[linenumber] = [subparts[0].trim()];
+            
 			return 2;			
 		}
 				
@@ -548,6 +554,7 @@ function parseInstruction(s, addr, linenumber) {
 			reg2 = parseRegister(subparts[1].trim());
 			if (reg1 == -1 || reg2 == -1) return -1;
 			mem[addr] = new Number("0x" + opcs) | reg1 << 3 | reg2;
+			regUsage[linenumber] = [subparts[0].trim(), subparts[1].trim()];
 			return 1;
 		}
 
@@ -559,8 +566,8 @@ function parseInstruction(s, addr, linenumber) {
 			if (opsRegDst.indexOf(mnemonic) != -1) {
 				reg <<= 3;
 			}
-			
 			mem[addr] = new Number("0x" + opcs) | reg;
+			regUsage[linenumber] = [parts[1].trim()];
 			return 1;
 		}
 		
@@ -569,6 +576,7 @@ function parseInstruction(s, addr, linenumber) {
 			rp = parseRegisterPair(parts[1]);
 			if (rp == -1) return -1;
 			mem[addr] = new Number("0x" + opcs) | rp << 4;
+			regUsage[linenumber] = ['@'+parts[1].trim()];
 			return 1;
 		}		
 		
@@ -894,6 +902,36 @@ function getLabel(l) {
     return labels[l.toLowerCase()];
 }
 
+function processRegUsage(instr, linenumber) {
+    if (regUsage[linenumber] != undefined) {
+        if (regUsage[linenumber].length == 2) {
+            // reg, reg 
+            var s1 = "rg" + regUsage[linenumber][0];
+            var s2 = "rg" + regUsage[linenumber][1];
+            var rep1 = '<span class="rg' + s1 + '" onmouseover="return rgmouseover("' + s1 + '");>$2</span>';
+            var rep2 = '<span class="rg' + s2 + '" onmouseover="return rgmouseover("' + s2 + '");>$3</span>';
+            var replace = '$1' + rep1 + ', ' + rep2;
+            instr=instr.replace(/(.+\s)([abcdehlm])\s*,\s*([abcdehlm])/, replace);
+        } else if (regUsage[linenumber].length == 1) {
+            var rpname = regUsage[linenumber][0];
+            if (rpname[0] == '@') {
+                rpname = rpname.substring(1);
+                // register pair
+                var rep1 = '<span class="rp' + rpname + '">$2</span>';
+                var replace = '$1'+rep1;
+                instr=instr.replace(/([^\s]+[\s]+)([abcdehlm])/, replace);
+            } else {
+                // normal register
+                var rep1 = '<span class="rg' + rpname + '">$2</span>';
+                var replace = '$1'+rep1;
+                instr=instr.replace(/([^\s]+[\s]+)([abcdehlm])/, replace);
+            }
+        }
+    }
+    
+    return instr;
+}
+
 function listing(text,lengths,addresses) {
     var result = "";
     var addr = 0;
@@ -915,6 +953,7 @@ function listing(text,lengths,addresses) {
             remainder = remainder.substring(0, semicolon);
         }
 
+        remainder = processRegUsage(remainder, i);
 
         var id = "l" + i;
         var labelid = "label" + i;
@@ -1208,6 +1247,16 @@ function preamble() {
 '<script type="text/javascript"><!--  --></script>\n' +
 '<script type="text/javascript" src="navigate.js"></script>\n' +
 '<link href="listn.css" rel="stylesheet" type="text/css" media="screen"/>\n' +
+'<style type="text/css">\n'+
+'.rga { color: red; }'+
+''+
+''+
+''+
+''+
+''+
+''+
+''+
+'</style>\n'+
 '<body id="main" onload="loaded(); return false;" onresize="updateSizes(); return false;">\n' +
 '<div id="list">';
 }
