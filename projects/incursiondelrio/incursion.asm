@@ -80,10 +80,23 @@ jamas:
     lxi d, foe_8
     call foe_in_de
 
+    ; pink border
+    mvi a, 4
+    out 2
     call clearblinds
+    
+    ; dkblue border
+    mvi a, $e
+    out 2
     call update_line
+
+    ; white border
+    mvi a, 2
+    out 2
     call drawblinds_bottom
 
+    mvi a, 8
+    out 2
     lxi h, frame_number
     inr m
 

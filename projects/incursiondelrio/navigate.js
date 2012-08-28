@@ -436,12 +436,10 @@ function getRuleset(selector) {
 }
 
 function rgmouseover(className) {
-    console.log('highlighting:', className, ' ', className.length);
     list = [].concat(className);
 
     for (var i = 0; i < list.length; i++) {
         ruleset = getRuleset("."+list[i]);
-        console.log('highlighting:', ruleset);
         if (ruleset != undefined) {
             ruleset.style["color"] = "#ff3020";
         }
