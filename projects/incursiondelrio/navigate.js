@@ -425,8 +425,38 @@ function mouseout(lineno) {
     return false;
 }
 
+function getRuleset(selector) {
+    var rules = document.styleSheets[1].cssRules;
+    for (i = 0; i < rules.length; i++) {
+        if (rules[i].selectorText == selector) {
+            return rules[i];
+        }
+    }
+    return undefined;
+}
+
 function rgmouseover(className) {
-    
+    console.log('highlighting:', className, ' ', className.length);
+    list = [].concat(className);
+
+    for (var i = 0; i < list.length; i++) {
+        ruleset = getRuleset("."+list[i]);
+        console.log('highlighting:', ruleset);
+        if (ruleset != undefined) {
+            ruleset.style["color"] = "#ff3020";
+        }
+    }
+}
+
+function rgmouseout(className) {
+    list = [].concat(className);
+
+    for (var i = 0; i < list.length; i++) {
+        ruleset = getRuleset("."+list[i]);
+        if (ruleset != undefined) {
+            ruleset.style["color"] = "lightgray";
+        }
+    }
 }
 
 function getListHeight() {
