@@ -1,5 +1,12 @@
 html { }
-body {font-size:small; background-color: #002230; color: #FFEEb0; font-family: Monaco, monospace;}
+body {
+  margin: 0px; 
+  overflow: hidden; 
+  font-size:small; 
+  background-color: #002230; 
+  color: #FFEEb0; 
+  font-family: Monaco, monospace;
+}
 .hordiv { width:80%; text-align: left; border-bottom:2px solid #20a8FF;}
 .code { font-family: Monaco, monospace; }
 .cmt { font-style: italic; color: #20a8FF;}
@@ -95,6 +102,7 @@ padding-left:1ex;
 overflow:scroll;
 display:inline-block;
 width:100%;
+overflow: auto;
 }
 .uarr1 {
 margin-top:-4px;

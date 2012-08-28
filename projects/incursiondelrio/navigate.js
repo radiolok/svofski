@@ -28,9 +28,11 @@ function loaded() {
 
 function updateSizes() {
     height = window.innerHeight;
+    width = window.innerWidth;
 
     var to = document.getElementById('list');
-    to.style.height = height + "px";
+    to.style.height = (height - 0) + "px";
+    to.style.width = (width - 10) + "px";
 }
 
 

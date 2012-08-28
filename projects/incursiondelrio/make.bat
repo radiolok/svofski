@@ -1,1 +1,1 @@
-C:\usr\src\tp\bin\make.exe -f Makefile.w 
+C:\usr\src\tp\bin\make.exe -f Makefile.win
