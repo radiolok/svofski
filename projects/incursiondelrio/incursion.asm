@@ -248,6 +248,10 @@ foe_right: db 0
 create_new_foe:
     push psw
 
+    lda pf_roadflag
+    ora a
+    jnz cnf_leftandwaterskip
+cnf_c1:
     lda randomHi
     mov b, a
     ani $4
@@ -859,10 +863,7 @@ foe_infield:
     ret
 
 foe_byId_bridge:
-    lxi h, bridge_ltr_dispatch
-    shld foeBlock_LTR
-    shld foeBlock_RTL
-    jmp foe_frame
+    jmp bridge_frame
 
 foe_byId_ship:
     lxi h, ship_ltr_dispatch
@@ -910,6 +911,36 @@ foe_byId_copterpropeller:
     ; restore copter Y position in the foe block
     pop psw             ; 12
     sta foeBlock + foeY ; 16 = 64
+    ret
+
+;; --------------------------
+;; Bridge frame
+;; --------------------------
+bridge_frame:
+    lxi h, bridgeBottom_ltr_dispatch
+    shld foeBlock_LTR
+    shld foeBlock_RTL
+    mvi e, 12
+    lda foeBlock + foeY
+    push psw
+    adi 7
+    sta foeBlock + foeY
+    call foe_paint
+    pop psw
+    sta foeBlock + foeY
+
+    lxi h, bridgeTop_ltr_dispatch
+    shld foeBlock_LTR
+    shld foeBlock_RTL
+    mvi e, 12
+    lda foeBlock + foeY
+    push psw
+    adi 14+7
+    sta foeBlock + foeY
+    call foe_paint
+    pop psw
+    sta foeBlock + foeY
+
     ret
 
 
