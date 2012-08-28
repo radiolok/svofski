@@ -248,18 +248,16 @@ foe_right: db 0
 create_new_foe:
     push psw
 
+    ; bridge: no random choice
     lda pf_roadflag
     ora a
-    jnz cnf_leftandwaterskip
-cnf_c1:
+    jnz cnf_preparetableoffset
+
+    ; regular foe
     lda randomHi
     mov b, a
     ani $4
     jz  cnf_return
-    ;lda pf_roadflag
-    ;ora a
-    ;jnz cnf_return
-
 
     ; update bounce boundaries
     lxi h, pf_tableft
@@ -278,30 +276,29 @@ cnf_c1:
     ; island?
     add d
     cpi SCREEN_WIDTH_BYTES/2
-    jz ubb_doublewater
+    jz cnf_doublewater
     ; foe_left = width - (left+water)
     mov d, a
     mov a, b
     lda randomLo
     ani $2
-    jz cnf_leftandwaterskip
+    jz cnf_preparetableoffset
 
     mov a, d
     cma
     inr a
     adi SCREEN_WIDTH_BYTES
     sta foe_left
-    jmp cnf_leftandwaterskip
-ubb_doublewater:
+    jmp cnf_preparetableoffset
+cnf_doublewater:
     mov a, e
     ora a
     ral
     sta foe_water
 
-    jmp cnf_leftandwaterskip
+    jmp cnf_preparetableoffset
 
-cnf_leftandwaterskip:
-
+cnf_preparetableoffset:
     ; get current foe index
     lxi h, foeTableIndex
     mov a, m
@@ -423,7 +420,7 @@ update_line:
     lda pf_blockline
     dcr a
     jp updl_1
-    mvi a, BLOCK_HEIGHT
+    mvi a, BLOCK_HEIGHT-1
 updl_1:
     sta pf_blockline
 
@@ -637,6 +634,9 @@ ustep_out:
     lda terrain_water
     mov m, a
 
+ROAD_WIDTH      equ 28
+ROAD_BOTTOM     equ 23
+
 produce_line_main:
     ; if no road, just produce regular line
     lda pf_roadflag
@@ -644,10 +644,10 @@ produce_line_main:
     jz produce_line
 
     lda pf_blockline
-    cpi BLOCK_HEIGHT-20     ; bottom edge
+    cpi BLOCK_HEIGHT-ROAD_BOTTOM     ; bottom edge
     jz produce_line_road
     jp produce_line
-    cpi BLOCK_HEIGHT-54     ; top edge
+    cpi BLOCK_HEIGHT-(ROAD_BOTTOM+ROAD_WIDTH)     ; top edge
     jp produce_line_road
     jz produce_line_road
     jmp produce_line
@@ -655,9 +655,9 @@ produce_line_main:
 produce_line_road:
     ; if at the border
     jz plr_border
-    cpi BLOCK_HEIGHT-(20+(34/2)-1) ; bottom divider line
+    cpi BLOCK_HEIGHT-(ROAD_BOTTOM+(ROAD_WIDTH/2)-1) ; bottom divider line
     jp plr_asphalt
-    cpi BLOCK_HEIGHT-(20+(34/2)+1) ; top divider line
+    cpi BLOCK_HEIGHT-(ROAD_BOTTOM+(ROAD_WIDTH/2)+1) ; top divider line
     jm plr_asphalt
     jmp plr_yellow
 plr_asphalt:
