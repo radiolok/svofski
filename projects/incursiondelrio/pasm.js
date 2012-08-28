@@ -489,6 +489,25 @@ function parseInstruction(s, addr, linenumber) {
 		// no operands
 		if ((opcs = ops0[mnemonic]) != undefined) {
 			mem[addr] = new Number("0x" + opcs);
+            if (mnemonic == "xchg") {
+                regUsage[linenumber] = [];
+                regUsage[linenumber][0] = '#'; 
+                regUsage[linenumber][1] = 'h'; 
+                regUsage[linenumber][2] = 'l'; 
+                regUsage[linenumber][3] = 'd';                
+                regUsage[linenumber][4] = 'e';                
+            } else if (mnemonic == "sphl" || mnemonic == "xthl") {
+                regUsage[linenumber] = [];
+                regUsage[linenumber][0] = '#';
+                regUsage[linenumber][1] = 'sp';
+                regUsage[linenumber][2] = 'h';
+            } else if (["ral", "rar", "rla", "rra", "cma"].indexOf(mnemonic) != -1) {
+                regUsage[linenumber] = [];
+                regUsage[linenumber][0] = '#'; 
+                regUsage[linenumber][1] = 'a'; 
+            }
+
+
 			return 1;
 		}
 		
@@ -497,9 +516,22 @@ function parseInstruction(s, addr, linenumber) {
 			mem[addr] = new Number("0x" + opcs);
 
             immediate = useExpr(parts.slice(1), addr, linenumber);
-            //if (!immediate) return -3;
 
 			setmem16(addr+1, immediate);
+
+            if (["lhld", "shld"].indexOf(mnemonic) != -1) {
+                regUsage[linenumber] = [];
+                regUsage[linenumber][0] = '#'; 
+                regUsage[linenumber][1] = 'h'; 
+                regUsage[linenumber][2] = 'l'; 
+            }
+            else if (["lda", "sta"].indexOf(mnemonic) != -1) {
+                regUsage[linenumber] = [];
+                regUsage[linenumber][0] = '#'; 
+                regUsage[linenumber][1] = 'a'; 
+            }
+
+
 			return 3;
 		}
 		
@@ -515,7 +547,12 @@ function parseInstruction(s, addr, linenumber) {
             immediate = useExpr(subparts.slice(1), addr, linenumber);
 
 			setmem16(addr+1, immediate);
-            regUsage[linenumber] = ['@'+subparts[0].trim()];			
+            regUsage[linenumber] = ['@'+subparts[0].trim()];
+            if (["h","d"].indexOf(subparts[0].trim()) != -1) {
+                var rpmap = {"h":"l","d":"e"};
+                regUsage[linenumber][1] = '#';
+                regUsage[linenumber][2] = rpmap[subparts[0].trim()];
+            }
 			return 3;
 		}
 
@@ -523,8 +560,14 @@ function parseInstruction(s, addr, linenumber) {
 		if ((opcs = opsIm8[mnemonic]) != undefined) {
 			mem[addr] = new Number("0x" + opcs);
             immediate = useExpr(parts.slice(1), addr, linenumber);
-            //if (!immediate) return -2;
             setmem8(addr+1, immediate);
+
+            if (["sui", "sbi", "xri", "ori", "ani", "adi", "aci", "cpi"].indexOf(mnemonic) != -1) {
+                regUsage[linenumber] = [];
+                regUsage[linenumber][0] = '#'; 
+                regUsage[linenumber][1] = 'a'; 
+            }
+
             return 2;
 		}
 
@@ -567,7 +610,14 @@ function parseInstruction(s, addr, linenumber) {
 				reg <<= 3;
 			}
 			mem[addr] = new Number("0x" + opcs) | reg;
-			regUsage[linenumber] = [parts[1].trim()];
+
+            regUsage[linenumber] = []
+			regUsage[linenumber][0] = [parts[1].trim()];
+            if (["ora", "ana", "xra", "add", "adc", "sub", "sbc", "cmp"].indexOf(mnemonic) != -1) {
+                regUsage[linenumber][1] = '#'; 
+                regUsage[linenumber][2] = 'a'; 
+            }
+
 			return 1;
 		}
 		
@@ -576,7 +626,19 @@ function parseInstruction(s, addr, linenumber) {
 			rp = parseRegisterPair(parts[1]);
 			if (rp == -1) return -1;
 			mem[addr] = new Number("0x" + opcs) | rp << 4;
+
 			regUsage[linenumber] = ['@'+parts[1].trim()];
+            if (mnemonic == "dad") {
+                regUsage[linenumber][1] = '#';
+                regUsage[linenumber][2] = 'h';
+                regUsage[linenumber][3] = 'l';
+            } else if (["inx", "dcx"].indexOf(mnemonic) != -1) {
+                if (["h","d"].indexOf(parts[1].trim()) != -1) {
+                    var rpmap = {"h":"l","d":"e"};
+                    regUsage[linenumber][1] = '#';
+                    regUsage[linenumber][2] = rpmap[parts[1].trim()];
+                }
+            }
 			return 1;
 		}		
 		
@@ -904,25 +966,60 @@ function getLabel(l) {
 
 function processRegUsage(instr, linenumber) {
     if (regUsage[linenumber] != undefined) {
-        if (regUsage[linenumber].length == 2) {
+        // check indirects
+        var indirectsidx = regUsage[linenumber].indexOf('#');
+        var indirects = [];
+        var directs = [];
+        if (indirectsidx != -1) {
+            indirects = regUsage[linenumber].slice(indirectsidx + 1);
+            directs = regUsage[linenumber].slice(0, indirectsidx);
+        } else {
+            directs = regUsage[linenumber];
+        }
+
+        if (indirects.length > 0) {
+            regs = [''].concat(indirects).join("','rg").substr(2) + "'";
+
+            var rep1 = '<span ' + 
+                'onmouseover="return rgmouseover([' + regs + ']);" ' +
+                'onmouseout="return rgmouseout([' + regs + ']);" ' +
+                '>$1</span>';
+            instr = instr.replace(/(\w+)/, rep1);
+        }
+
+        if (directs.length == 2) {
             // reg, reg 
-            var s1 = "rg" + regUsage[linenumber][0];
-            var s2 = "rg" + regUsage[linenumber][1];
-            var rep1 = '<span class="rg' + s1 + '" onmouseover="return rgmouseover("' + s1 + '");>$2</span>';
-            var rep2 = '<span class="rg' + s2 + '" onmouseover="return rgmouseover("' + s2 + '");>$3</span>';
+            var s1 = "rg" + directs[0];
+            var s2 = "rg" + directs[1];
+            var rep1 = '<span class="' + s1 + '" ' + 
+                'onmouseover="return rgmouseover(\'' + s1 + '\');" ' +
+                'onmouseout="return rgmouseout(\'' + s1 + '\');" ' +
+                '>$2</span>';
+            var rep2 = '<span class="' + s2 + '" ' + 
+                'onmouseover="return rgmouseover(\'' + s2 + '\');" ' +
+                'onmouseout="return rgmouseout(\'' + s2 + '\');" ' +
+                '>$3</span>';
             var replace = '$1' + rep1 + ', ' + rep2;
             instr=instr.replace(/(.+\s)([abcdehlm])\s*,\s*([abcdehlm])/, replace);
-        } else if (regUsage[linenumber].length == 1) {
-            var rpname = regUsage[linenumber][0];
+        } else if (directs.length == 1) {
+            var rpname = directs[0];
             if (rpname[0] == '@') {
                 rpname = rpname.substring(1);
                 // register pair
-                var rep1 = '<span class="rp' + rpname + '">$2</span>';
+                var s1 = "rg" + rpname;
+                var rep1 = '<span class="' + s1 + '" ' + 
+                    'onmouseover="return rgmouseover(\'' + s1 + '\');" ' +
+                    'onmouseout="return rgmouseout(\'' + s1 + '\');" ' +
+                    '>$2</span>';
                 var replace = '$1'+rep1;
-                instr=instr.replace(/([^\s]+[\s]+)([abcdehlm])/, replace);
+                instr=instr.replace(/([^\s]+[\s]+)([bdh]|sp)/, replace);
             } else {
                 // normal register
-                var rep1 = '<span class="rg' + rpname + '">$2</span>';
+                var s1 = "rg" + rpname;
+                var rep1 = '<span class="' + s1 + '" ' + 
+                    'onmouseover="return rgmouseover(\'' + s1 + '\');" ' +
+                    'onmouseout="return rgmouseout(\'' + s1 + '\');" ' +
+                    '>$2</span>';
                 var replace = '$1'+rep1;
                 instr=instr.replace(/([^\s]+[\s]+)([abcdehlm])/, replace);
             }
@@ -1248,14 +1345,19 @@ function preamble() {
 '<script type="text/javascript" src="navigate.js"></script>\n' +
 '<link href="listn.css" rel="stylesheet" type="text/css" media="screen"/>\n' +
 '<style type="text/css">\n'+
-'.rga { color: red; }'+
-''+
-''+
-''+
-''+
-''+
-''+
-''+
+'.rga { color: lightgray; }\n'+
+'.rgb { color: lightgray; }\n'+
+'.rgc { color: lightgray; }\n'+
+'.rgd { color: lightgray; }\n'+
+'.rge { color: lightgray; }\n'+
+'.rgh { color: lightgray; }\n'+
+'.rgl { color: lightgray; }\n'+
+'.rgm { color: lightgray; }\n'+
+'.rgsp { color: lightgray; }\n'+
+'.rpb { color: lightgray; }\n'+
+'.rpd { color: lightgray; }\n'+
+'.rph { color: lightgray; }\n'+
+'.rpsp { color: lightgray; }\n'+
 '</style>\n'+
 '<body id="main" onload="loaded(); return false;" onresize="updateSizes(); return false;">\n' +
 '<div id="list">';
