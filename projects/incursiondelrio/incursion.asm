@@ -204,11 +204,11 @@ foe_left:                   db 0
 foe_water:                  db 0
 foe_right:                  db 0
 
+foe_clearance:              db 0
 
-
-;;
-;; Process foe with descriptor in HL
-;;
+    ;; ---------------------------------------------- -   - 
+    ;; Process foe with descriptor in HL
+    ;; ------------------------------------------------------------
 foe_in_de:
     push d
     lxi h, 0                ; 12
@@ -269,10 +269,10 @@ palette_loop:
     jnz palette_loop
     ret
 
-;------------------------------------------------------
-; Draw 2 lines of black at the bottom of game field
-; Clear them at the top, leave 16+16 of black at sides
-;------------------------------------------------------
+    ;; ---------------------------------------------- -   - 
+    ;; Draw 2 lines of black at the bottom of game field
+    ;; Clear them at the top, leave 16+16 of black at sides
+    ;; ------------------------------------------------------------
 drawblinds_bottom:
     lxi h, $8000 + BOTTOM_HEIGHT - 22 ; 22 ~ enemy height
     mvi e, $00
@@ -313,9 +313,10 @@ clearblinds:
     mov l, a
     jmp drawblinds_fill
 
-    ;; ---------------
+
+    ;; ---------------------------------------------- -   - 
     ;; Create new foe
-    ;; ---------------
+    ;; ------------------------------------------------------------
 create_new_foe:
     push psw
 
@@ -490,10 +491,9 @@ cnf_return:
     pop psw
     ret
 
-    ;;--------------------------------
+    ;; ---------------------------------------------- -   - 
     ;; Update line: terrain formation
-    ;;--------------------------------
-
+    ;; ------------------------------------------------------------
 update_line:
     ; random should be moved outside to make sure that it gets called every frame
     call nextRandom16 ; result in randomHi/randomLo and HL
@@ -651,10 +651,11 @@ updateblock_noisland:
 updateblock_out:
     ; -- fall through to update_step
 
-    ;; -------------------------------------------
+
+    ;; ---------------------------------------------- -   - 
     ;; Update one scanline of terrain
     ;; interpolate between current and next values
-    ;; -------------------------------------------
+    ;; ------------------------------------------------------------
 update_step:
     ; check if we need to set the road flag
     lda pf_blockcount
@@ -715,6 +716,9 @@ ustep_out:
     lda terrain_water
     mov m, a
 
+    ;; ---------------------------------------------- -   - 
+    ;; Draw one line of terrain
+    ;; ------------------------------------------------------------
 produce_line_main:
     ; if no road, just produce regular line
     lda pf_roadflag
@@ -764,7 +768,6 @@ plr_border:
     call produce_line_e2
     ret
 
-
 produce_line:
     lxi h, $80ff+2; $80ff-TOP_HEIGHT+2
     mvi d, $80+SCREEN_WIDTH_BYTES
@@ -811,12 +814,8 @@ produce_loop_rightwater:
     dcr a
     jnz produce_loop_rightwater
 
-    ;ret
 produce_rightbank:
-    ;mvi a, $80+SCREEN_WIDTH_BYTES
     mov a, d
-    ;add SCREEN_WIDTH_BYTES
-    ;mov a, d
     sub h
 produce_loop_rightbank:
     mov m, b
@@ -825,8 +824,10 @@ produce_loop_rightbank:
     jnz produce_loop_rightbank
     ret
 
-    ;; animate sprites
-    ;; should be called once per frame, before the first sprite
+    ;; ---------------------------------------------- -   - 
+    ;; Animate sprites: propellers, explosions, wheels
+    ;; Should be called once per frame, before the first sprite
+    ;; ------------------------------------------------------------
 foe_animate:
     ; animate the propeller
     lda frame_number
@@ -929,9 +930,9 @@ foe_byId_copterpropeller:
     sta foeBlock + foeY ; 16 = 64
     ret
 
-;; --------------------------
-;; Bridge frame
-;; --------------------------
+    ;; ---------------------------------------------- -   - 
+    ;; Bridge: prepare and draw
+    ;; ------------------------------------------------------------
 bridge_frame:
     lxi h, bridgeBottom_ltr_dispatch
     shld foeBlock_LTR
@@ -960,11 +961,11 @@ bridge_frame:
     ;sta foeBlock + foeY
     ret
 
-;; --------------------------
-;; Fuel frame
-;; --------------------------
+    ;; ---------------------------------------------- -   - 
+    ;; Fuel: prepare and draw
+    ;; ------------------------------------------------------------
 fuel_frame:
-    lxi h, luuuu_ltr_dispatch; luuuu_ltr_dispatch
+    lxi h, luuuu_ltr_dispatch
     shld foeBlock_LTR
     shld foeBlock_RTL
     lda foeBlock + foeColumn
@@ -1016,9 +1017,9 @@ fuel_frame:
 
     ret
 
-;; --------------------------
-;; Jet frame
-;; --------------------------
+    ;; ---------------------------------------------- -   - 
+    ;; Jet: prepare and draw
+    ;; ------------------------------------------------------------
 jet_frame:
     ; load Column to e
 
@@ -1088,9 +1089,9 @@ jet_move_reset_to_a:
 jet_move_continue:
     jmp foe_paint
 
-;; ----------------------------------------------
-;; Frame routine for a regular foe: ship, copters
-;; ----------------------------------------------
+    ;; ---------------------------------------------- -   - 
+    ;; Frame routine for a regular foe: ship, copters
+    ;; ------------------------------------------------------------
 foe_frame:
     mvi h, 0 ; bounce flag in h
 foe_Move:
@@ -1165,7 +1166,6 @@ foe_move_yes_bounce:
     ;; additional entry point for sprites with precalculated position
     ;; used for propellers
 foe_paint_preload:
-
     lhld foeBlock + foeColumn
     mov e, l ; e = foeColumn
     mov c, h ; c = foeIndex
@@ -1243,7 +1243,6 @@ sprites_scratch:    dw 0    ; saved SP for various stack-abusing routines
     .include ship.inc
 
     ;; Depuración y basura
-
     ; pintar los colores
 showlayers:
     lxi h, $ffff
