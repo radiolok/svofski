@@ -14,6 +14,10 @@ HALFBRIDGE_WIDTH    equ 4
 NARROWEST           equ 4   ; the narrowest passage around an island
 ENOUGH_FOR_ISLAND   equ 9   ; if water this wide, island fits
 
+ROAD_WIDTH          equ 28
+ROAD_BOTTOM         equ 23
+
+
 FOEID_NONE      equ 0
 FOEID_SHIP      equ 1
 FOEID_COPTER    equ 2
@@ -113,15 +117,94 @@ jamas:
     lxi h, frame_scroll
     inr m
 
-    ;di
-    ;jmp .
-
     jmp jamas
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;;                      V A R I A B L E S
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 frame_number:
     db 0
 frame_scroll:
     db $ff; $10
+
+    ;; Foe table offsets
+foeId           equ 0           ; id: 0 = none, 1 = ship, 2 = copter
+foeColumn       equ 1           ; X column
+foeIndex        equ 2           ; X offset 0..7
+foeDirection    equ 3           ; 1 = LTR, -1 RTL, 0 = not moving
+foeY            equ 4           ; Y position of sprite start
+foeLeftStop     equ 5           ; column # of left limit
+foeRightStop    equ 6           ; column # of right limit
+foeBounce       equ 7           ; bounce flag
+foeSizeOf       equ 8
+
+    ;; Foe parameter block
+foeBlock:
+    db 0                        ; id
+    db 5,0,1,0,$10,3,15
+foeBlock_LTR:   
+    dw 0                        ; dispatch to sprite LTR 
+foeBlock_RTL:
+    dw 0                        ; dispatch to sprite RTL
+
+foePropeller_LTR:
+    dw 0
+foePropeller_RTL:
+    dw 0
+
+foeTableIndex:
+    db 0
+
+foe_1:
+    db 0 ;FOEID_SHIP
+    db 5,0,1,$10,   3,8,0
+foe_2:
+    db 0 ; FOEID_COPTER
+    db 6,0,1,$30,   3,10,0
+foe_3:
+    db 0; FOEID_JET
+    db 5,0,$ff,$50, 3,25,0
+foe_4:
+    db 0; FOEID_RCOPTER
+    db 8,0,1,$70,   3,10,0
+foe_5:
+    db 0; FOEID_SHIP
+    db 19,0,1,$90,  19,24,0
+foe_6:
+    db 0; FOEID_JET
+    db 5,0,1,$b0,   0,0,0
+foe_7:
+    db 0; FOEID_SHIP
+    db 21,0,1,$d0,  19,24,0
+foe_8:
+    db 0; FOEID_COPTER
+    db 9,0,1,$f0,   3,10,0
+
+
+terrain_current:
+terrain_left:               db 4
+terrain_water:              db 12 ; 24
+terrain_islandwidth:        db 0
+
+terrain_next:
+terrain_next_left:          db 4
+terrain_next_water:         db 24
+terrain_next_islandwidth:   db 0
+terrain_islandcould:        db 0
+terrain_prev_water:         db 0
+
+pf_blockcount:              db 1; current block in level (max=BLOCKS_IN_LEVEL)
+pf_bridgeflag:              db 0; 
+pf_roadflag:                db 0
+pf_blockline:               db 0
+
+
+foe_left:                   db 0
+foe_water:                  db 0
+foe_right:                  db 0
+
+
 
 ;;
 ;; Process foe with descriptor in HL
@@ -229,28 +312,6 @@ clearblinds:
     add l
     mov l, a
     jmp drawblinds_fill
-
-terrain_current:
-terrain_left:               db 4
-terrain_water:              db 12 ; 24
-terrain_islandwidth:        db 0
-
-terrain_next:
-terrain_next_left:          db 4
-terrain_next_water:         db 24
-terrain_next_islandwidth:   db 0
-terrain_islandcould:        db 0
-terrain_prev_water:         db 0
-
-pf_blockcount:              db 1; current block in level (max=BLOCKS_IN_LEVEL)
-pf_bridgeflag:              db 0; 
-pf_roadflag:                db 0
-pf_blockline:               db 0
-
-
-foe_left: db 0
-foe_water: db 0
-foe_right: db 0
 
     ;; ---------------
     ;; Create new foe
@@ -654,9 +715,6 @@ ustep_out:
     lda terrain_water
     mov m, a
 
-ROAD_WIDTH      equ 28
-ROAD_BOTTOM     equ 23
-
 produce_line_main:
     ; if no road, just produce regular line
     lda pf_roadflag
@@ -765,61 +823,7 @@ produce_loop_rightbank:
     inr h
     dcr a
     jnz produce_loop_rightbank
-
     ret
-
-    ;; foe class
-foeId           equ 0           ; id: 0 = none, 1 = ship, 2 = copter
-foeColumn       equ 1           ; X column
-foeIndex        equ 2           ; X offset 0..7
-foeDirection    equ 3           ; 1 = LTR, -1 RTL, 0 = not moving
-foeY            equ 4           ; Y position of sprite start
-foeLeftStop     equ 5           ; column # of left limit
-foeRightStop    equ 6           ; column # of right limit
-foeBounce       equ 7           ; bounce flag
-foeSizeOf       equ 8
-
-    ;; foe 0 descriptor
-foeBlock:
-    db 5,0,1,0,$10,3,15
-    db 0                        ; id
-foeBlock_LTR:   
-    dw 0                        ; dispatch to sprite LTR 
-foeBlock_RTL:
-    dw 0                        ; dispatch to sprite RTL
-
-foePropeller_LTR:
-    dw 0
-foePropeller_RTL:
-    dw 0
-
-foeTableIndex:
-    db 0
-
-foe_1:
-    db 0 ;FOEID_SHIP
-    db 5,0,1,$10,   3,8,0
-foe_2:
-    db 0 ; FOEID_COPTER
-    db 6,0,1,$30,   3,10,0
-foe_3:
-    db 0; FOEID_JET
-    db 5,0,$ff,$50, 3,25,0
-foe_4:
-    db 0; FOEID_RCOPTER
-    db 8,0,1,$70,   3,10,0
-foe_5:
-    db 0; FOEID_SHIP
-    db 19,0,1,$90,  19,24,0
-foe_6:
-    db 0; FOEID_JET
-    db 5,0,1,$b0,   0,0,0
-foe_7:
-    db 0; FOEID_SHIP
-    db 21,0,1,$d0,  19,24,0
-foe_8:
-    db 0; FOEID_COPTER
-    db 9,0,1,$f0,   3,10,0
 
     ;; animate sprites
     ;; should be called once per frame, before the first sprite
@@ -1234,9 +1238,9 @@ sprite_ltr_rtl_dispatchjump:
 
 sprites_scratch:    dw 0    ; saved SP for various stack-abusing routines
 
-    .include ship.inc
     .include random.inc
     .include palette.inc
+    .include ship.inc
 
     ;; Depuración y basura
 
