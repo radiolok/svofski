@@ -44,7 +44,8 @@ class Sprite:
     def makeAsm(self, shift, orientation, returnLabel):
         print '\tlxi h, 0'
         print '\tdad sp'
-        print '\tshld %s+1' % returnLabel    
+        print '\tshld %s+1' % returnLabel   
+        #print '\t.nolist' 
 
         if not self.isWhite():
             layer = self.makeLayer('13578', shift, orientation)     # layer 0
@@ -89,7 +90,7 @@ class Sprite:
             print ';; white'
             print self.makeLayer('4', shift, orientation)    
 
-
+        #print '\t.list'
         print '%s:' % returnLabel
         print '\tlxi sp, 0'
         print '\tret'
@@ -400,6 +401,7 @@ class Luuuu(Sprite):
         
 print ';; Automatically generated file'
 print ';; see makesprites.py'
+print '.nolist'
 
 a = Ship()
 a.makeAll()
@@ -418,5 +420,6 @@ Fuuuu().makeAll()
 Uuuuu().makeAll()
 Euuuu().makeAll()
 Luuuu().makeAll()
+print '.list'
 
 
