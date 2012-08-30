@@ -1,11 +1,16 @@
 import math
 
 class Sprite:
+    def getPicRaw(self):
+        return self.pic
+
+    def getDirections(self):
+        return ['ltr', 'rtl']
+
     def makeAll(self):
-        self.makeTable('ltr')
-        self.makeGroup('ltr')
-        self.makeTable('rtl')
-        self.makeGroup('rtl')
+        for dir in self.getDirections():
+            self.makeTable(dir)
+            self.makeGroup(dir)
 
     def isWhite(self):
         return False
@@ -190,9 +195,6 @@ class Ship(Sprite):
            '5555555555555   ',
            '  555555555     ']
 
-    def getPicRaw(self):
-        return self.pic
-
     def isDoubleWidth(self):
         return True
 
@@ -208,9 +210,6 @@ class Copter(Sprite):
            '77     7777777  ',
            '         777    ',
            '       7777777  ']
-
-    def getPicRaw(self):
-        return self.pic
 
     def isDoubleWidth(false):
         return False
@@ -228,9 +227,6 @@ class RedCopter(Sprite):
            '         222    ',
            '       2222222  ']
 
-    def getPicRaw(self):
-        return self.pic
-
     def isDoubleWidth(false):
         return False
 
@@ -243,9 +239,6 @@ class PropellerA(Sprite):
            '         4444444',
            '         4444444',
            '         444    ']
-
-    def getPicRaw(self):
-        return self.pic
 
     def isDoubleWidth(false):
         return False
@@ -261,9 +254,6 @@ class PropellerB(Sprite):
            '     4444444    ',
            '     4444444    ',
            '         444    ']
-
-    def getPicRaw(self):
-        return self.pic
 
     def isDoubleWidth(false):
         return False
@@ -282,9 +272,6 @@ class Jet(Sprite):
            '      44444     ',
            '    4444        ']
 
-    def getPicRaw(self):
-        return self.pic
-
     def isDoubleWidth(false):
         return False
 
@@ -299,41 +286,13 @@ class Jet(Sprite):
 
 
 class Bridge(Sprite):
-    pic = ['66              66            66',
-           '66              66            66',
-           '66666666666666666666666666666666',
-           '66666666666666666666666666666666',
-           '                                ', 
-           '                                ', 
-           '66666666666666666666666666666666',
-           '66666666666666666666666666666666',
-           '                                ', 
-           '                                ', 
-           '66666666666666666666666666666666',
-           '66666666666666666666666666666666',
-           '33333333333333333333333333333333', 
-           '33333333333333333333333333333333', 
-           '66666666666666666666666666666666',
-           '66666666666666666666666666666666',
-           '                                ', 
-           '                                ', 
-           '66666666666666666666666666666666',
-           '66666666666666666666666666666666',
-           '                                ', 
-           '                                ', 
-           '66666666666666666666666666666666',
-           '66666666666666666666666666666666',
-           '66              66            66',
-           '66              66            66'];
-
-    def getPicRaw(self):
-        return self.pic
-
     def isDoubleWidth(false):
         return True
 
     def isWhite(self):
         return False
+
+    def getDirections(self): return ['ltr']
 
     def includeShift(self, shift):
         return shift in [0]
@@ -374,9 +333,69 @@ class BridgeBottom(Bridge):
            '666            6666          666',
            '66              66            66'];
 
-
     def getName(self):
         return "bridgeBottom"
+
+class Fuuuu(Sprite):
+    pic = ['   2222222222   ',
+           ' 222        222 ',
+           ' 222  222222222 ',
+           ' 222     222222 ',
+           ' 222  222222222 ',
+           ' 222  222222222 '];
+
+    def getDirections(self): return ['ltr']
+
+    def includeShift(self, shift):
+        return shift in [0]
+
+    def getName(self): return "fuuuu"
+
+class Uuuuu(Sprite):
+    pic = [' 44444444444444 ',
+           ' 444  4444  444 ',
+           ' 444  4444  444 ',
+           ' 444  4444  444 ',
+           ' 444        444 ',
+           ' 44444444444444 '];
+
+    def getDirections(self): return ['ltr']
+
+    def includeShift(self, shift):
+        return shift in [0]
+
+    def getName(self): return "uuuuu"
+
+class Euuuu(Sprite):
+    pic = [' 222        222 ',
+           ' 222  222222222 ',
+           ' 222      22222 ',
+           ' 222  222222222 ',
+           ' 222        222 ',
+           ' 22222222222222 '];
+
+    def getDirections(self): return ['ltr']
+
+    def includeShift(self, shift):
+        return shift in [0]
+
+    def getName(self): return "euuuu"
+
+class Luuuu(Sprite):
+    pic = [' 444  444444444 ',
+           ' 444  444444444 ',
+           ' 444  444444444 ',
+           ' 444  444444444 ',
+           ' 444        444 ',
+           ' 44444444444444 '];
+
+    def getDirections(self): return ['ltr']
+
+    def includeShift(self, shift):
+        return shift in [0]
+
+    def getName(self): return "luuuu"
+
 
         
 print ';; Automatically generated file'
@@ -395,4 +414,9 @@ PropellerB().makeAll()
 Jet().makeAll()
 BridgeTop().makeAll()
 BridgeBottom().makeAll()
+Fuuuu().makeAll()
+Uuuuu().makeAll()
+Euuuu().makeAll()
+Luuuu().makeAll()
+
 
