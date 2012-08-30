@@ -61,6 +61,7 @@ var objCopy = 'gobjcopy';
 var postbuild = '';
 var doHexDump = true;
 
+
 // -- utility stuffs --
 function fromBinary(val) {
     x = 0;
@@ -115,6 +116,7 @@ Array.prototype.indexOf = function (element) {
 
 String.prototype.trim = function() { return this.replace(/^\s+|\s+$/g, ''); };
 String.prototype.endsWith = function(c) { return this[this.length-1] == c; };
+String.prototype.startsWith = function(s) {return (this.match("^"+s)==s); }
 
 // -- Assembler --
 
@@ -696,6 +698,10 @@ function parseInstruction(s, addr, linenumber) {
             return -100000;
         }
 
+        if (mnemonic == ".nolist" || mnemonic == ".list") {
+            return 0;
+        }
+
         // assign immediate value to label
         if (mnemonic == ".equ" || mnemonic == "equ") {
             if (labelTag == undefined) return -1;
@@ -1032,7 +1038,12 @@ function processRegUsage(instr, linenumber) {
 function listing(text,lengths,addresses) {
     var result = "";
     var addr = 0;
+    var listOn = true;
+    var skipLineCount = 0;
     for(var i = 0; i < text.length; i++) {
+        var lineResult = "";
+        var skipLine = false;
+        var listOffComment = "";
         var labeltext = "";
         var remainder = text[i];
         var comment = '';
@@ -1043,6 +1054,19 @@ function listing(text,lengths,addresses) {
                 remainder = text[i].substring(labeltext.length);
             }
         }
+
+        if (remainder.trim().startsWith(".nolist")) {
+            skipLine = true;
+            listOn = false;
+            listOffComment = "                        ; list generation turned off";
+        } 
+        else if (remainder.trim().startsWith(".list")) {
+            skipLine = true;
+            listOn = true;
+            listOffComment = "                        ; skipped " + skipLineCount + " lines";
+        }
+
+        skipLineCount = listOn ? 0 : (skipLineCount + 1);
 
         var semicolon = remainder.indexOf(';');
         if (semicolon != -1) {
@@ -1068,58 +1092,62 @@ function listing(text,lengths,addresses) {
         }
         for (b = 0; b < 16 - width; b++) { hexes += ' '; }
 
-        result += '<pre id="' + id + '"';
+        lineResult += '<pre id="' + id + '"';
 
         if (unresolved || errors[i] != undefined) {
-            result += ' class="errorline" ';
+            lineResult += ' class="errorline" ';
         }
 
-        result += '>';
-        result += '<span class="adr">' + (lengths[i] > 0 ? hex16(addresses[i]) : "") + "</span>"
-        result += '\t';
+        lineResult += '>';
+        lineResult += '<span class="adr">' + (lengths[i] > 0 ? hex16(addresses[i]) : "") + "</span>"
+        lineResult += '\t';
 
-        result += hexes;
+        lineResult += hexes;
 
         if (labeltext.length > 0) {
             var t = '<span class="l" id="' + labelid + '"' +
             ' onmouseover="return mouseovel('+i+');"' + 
             ' onmouseout="return mouseout('+i+');"' +
             '>' + labeltext + '</span>';
-            result += t;
+            lineResult += t;
         }
         for (b = 0; b < remainder.length && isWhitespace(remainder[b]); b++) {
-            result += ' ';
+            lineResult += ' ';
         }
         remainder = remainder.substring(b);
         if (remainder.length > 0) {
-            result += '<span id="' + remid + '"' +
+            lineResult += '<span id="' + remid + '"' +
             ' onmouseover="return mouseover('+i+');"' + 
             ' onmouseout="return mouseout('+i+');"' +
             '>' + remainder + '</span>';
         }
 
         if (comment.length > 0) {
-            result += '<span class="cmt">' + comment + '</span>';
+            lineResult += '<span class="cmt">' + comment + '</span>';
         }
 
         // hacked this into displaying only first and last lines
         // of db thingies
         if (len < lengths[i]) {
-            result += '<br/>\t.&nbsp;.&nbsp;.&nbsp;<br/>';
+            lineResult += '<br/>\t.&nbsp;.&nbsp;.&nbsp;<br/>';
             for (var subline = 1; subline*4 < lengths[i]; subline++) {
-                var subresult = '';
-                subresult += hex16(addresses[i]+subline*4) + '\t';
+                var sublineResult = '';
+                sublineResult += hex16(addresses[i]+subline*4) + '\t';
                 for (var sofs = 0; sofs < 4; sofs++) {
                     var adr = subline*4+sofs;
                     if (adr < lengths[i]) {
-                        subresult += hex8(mem[addresses[i]+adr]) + ' ';
+                        sublineResult += hex8(mem[addresses[i]+adr]) + ' ';
                     }
                 }
-                //result += "<br/>";
+                //lineResult += "<br/>";
             }
-            result += subresult + "<br/>";
+            lineResult += sublineResult + "<br/>";
         }
-        result += '</pre>';
+        lineResult += '</pre>';
+
+
+        if (listOn && !skipLine) result += lineResult;
+        if (listOffComment != "") result += '<pre><span class="cmt">' + listOffComment + '</span></pre>';
 
         addr += lengths[i];
     }
