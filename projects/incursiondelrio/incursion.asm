@@ -13,6 +13,16 @@ BLOCK_HEIGHT        equ 64
 HALFBRIDGE_WIDTH    equ 4
 NARROWEST           equ 4   ; the narrowest passage around an island
 ENOUGH_FOR_ISLAND   equ 9   ; if water this wide, island fits
+
+FOEID_NONE      equ 0
+FOEID_SHIP      equ 1
+FOEID_COPTER    equ 2
+FOEID_RCOPTER   equ 3
+FOEID_JET       equ 4
+FOEID_BRIDGE    equ 16
+FOEID_FUEL      equ 17
+
+
      
     .org $100
 
@@ -305,9 +315,9 @@ cnf_preparetableoffset:
     mov b, a
     inr a           ; advance the index
     cpi FOE_MAX
-    jnz create_new_foe_L1
+    jnz cnf_L1
     xra a
-create_new_foe_L1:
+cnf_L1:
     mov m, a
     ; use the original foeTableIndex
     mov a, b
@@ -323,7 +333,7 @@ create_new_foe_L1:
 
     lda pf_roadflag
     ora a
-    jz cnf_4
+    jz cnf_regular_or_fuel
 
     ; create bridge
     lda pf_blockline
@@ -343,9 +353,19 @@ create_new_foe_L1:
     mov m, a ; y
     jmp cnf_return
 
-cnf_4:
+    ; create fuel or regular foe
+cnf_regular_or_fuel:
     lda randomHi
     mov b, a
+
+    ; fuel maybe?
+    cpi $a0
+    mov a, b
+    jnc cnf_notfuel
+    mvi d, FOEID_FUEL
+    jmp cnf_3
+cnf_notfuel:
+    ; nah, a regular one
     ani $3
     inr a
     mov d, a    ; d = foe id
@@ -748,13 +768,6 @@ produce_loop_rightbank:
 
     ret
 
-FOEID_NONE      equ 0
-FOEID_SHIP      equ 1
-FOEID_COPTER    equ 2
-FOEID_RCOPTER   equ 3
-FOEID_JET       equ 4
-FOEID_BRIDGE    equ 16
-
     ;; foe class
 foeId           equ 0           ; id: 0 = none, 1 = ship, 2 = copter
 foeColumn       equ 1           ; X column
@@ -857,13 +870,12 @@ foe_infield:
     dcr b
     jz  foe_byId_jet        ; 4 == jet
     ; specials
+    cpi FOEID_FUEL
+    jz  fuel_frame
     cpi FOEID_BRIDGE
-    jz  foe_byId_bridge
+    jz  bridge_frame
     ; default: return  
     ret
-
-foe_byId_bridge:
-    jmp bridge_frame
 
 foe_byId_ship:
     lxi h, ship_ltr_dispatch
@@ -925,6 +937,7 @@ bridge_frame:
     push psw
     adi 7
     sta foeBlock + foeY
+    mvi h, 1
     call foe_paint
     pop psw
     sta foeBlock + foeY
@@ -937,12 +950,67 @@ bridge_frame:
     push psw
     adi 14+7
     sta foeBlock + foeY
+    mvi h, 1
     call foe_paint
     pop psw
-    sta foeBlock + foeY
-
+    ;sta foeBlock + foeY
     ret
 
+;; --------------------------
+;; Fuel frame
+;; --------------------------
+fuel_frame:
+    lxi h, luuuu_ltr_dispatch; luuuu_ltr_dispatch
+    shld foeBlock_LTR
+    shld foeBlock_RTL
+    lda foeBlock + foeColumn
+    inr a
+    mov e, a
+    lda foeBlock + foeY
+    push d
+    push psw
+    mvi h, 0
+    call foe_paint
+    pop psw
+    pop d
+
+    lxi h, euuuu_ltr_dispatch
+    shld foeBlock_LTR
+    shld foeBlock_RTL
+    adi 6
+    sta foeBlock + foeY
+    push d
+    push psw
+    mvi h, 0
+    call foe_paint
+    pop psw
+    pop d
+
+    lxi h, uuuuu_ltr_dispatch
+    shld foeBlock_LTR
+    shld foeBlock_RTL
+    adi 6
+    sta foeBlock + foeY
+    push d
+    push psw
+    mvi h, 0
+    call foe_paint
+    pop psw
+    pop d
+
+    lxi h, fuuuu_ltr_dispatch
+    shld foeBlock_LTR
+    shld foeBlock_RTL
+    adi 6
+    sta foeBlock + foeY
+    push d
+    push psw
+    mvi h, 0
+    call foe_paint
+    pop psw
+    pop d
+
+    ret
 
 ;; --------------------------
 ;; Jet frame
@@ -1170,10 +1238,10 @@ sprites_scratch:    dw 0    ; saved SP for various stack-abusing routines
     .include random.inc
 
 c_black     equ $00
-c_blue      equ $c1
+c_blue      equ $c2
 c_green     equ $73 ; 01 110 011
 c_yellow    equ $bf ; 
-c_magenta   equ $94 ; $8d ;
+c_magenta   equ $57 ;$94 ; $8d ;
 c_white     equ $f6
 c_grey      equ $09 ; 00 010 010  -- also $52 the darkest neutral gray
 c_cyan      equ $ab ; $ad ; $f4 ; 10 011 001 - $ad is neutral gray
