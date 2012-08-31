@@ -18,16 +18,19 @@ ROAD_WIDTH          equ 28
 ROAD_BOTTOM         equ 23
 
 
-FOEID_NONE      equ 0
-FOEID_SHIP      equ 1
-FOEID_COPTER    equ 2
-FOEID_RCOPTER   equ 3
-FOEID_JET       equ 4
-FOEID_BRIDGE    equ 16
-FOEID_FUEL      equ 17
+FOEID_NONE          equ 0
+FOEID_SHIP          equ 1
+FOEID_COPTER        equ 2
+FOEID_RCOPTER       equ 3
+FOEID_JET           equ 4
+FOEID_BRIDGE        equ 16
+FOEID_FUEL          equ 17
 
+CLEARANCE_DEFAULT   equ 14
+CLEARANCE_BRIDGE    equ 32
+CLEARANCE_FUEL      equ 40
+CLEARANCE_BLOCK     equ 18
 
-     
     .org $100
 
 clrscr:
@@ -193,6 +196,7 @@ terrain_next_water:         db 24
 terrain_next_islandwidth:   db 0
 terrain_islandcould:        db 0
 terrain_prev_water:         db 0
+terrain_changing:           db 0
 
 pf_blockcount:              db 1; current block in level (max=BLOCKS_IN_LEVEL)
 pf_bridgeflag:              db 0; 
@@ -204,7 +208,7 @@ foe_left:                   db 0
 foe_water:                  db 0
 foe_right:                  db 0
 
-foe_clearance:              db 0
+foe_clearance:              db 1
 
     ;; ---------------------------------------------- -   - 
     ;; Process foe with descriptor in HL
@@ -325,11 +329,26 @@ create_new_foe:
     ora a
     jnz cnf_preparetableoffset
 
+    lda terrain_changing
+    ora a
+    jz cnz_terrainstraight
+    mvi a, 2
+    sta foe_clearance
+    jmp cnf_return
+cnz_terrainstraight:
+
+    ; store clearance in case no foe is to be created
+    mvi a, CLEARANCE_DEFAULT
+    sta foe_clearance
+
     ; regular foe
     lda randomHi
     mov b, a
-    ani $4
-    jz  cnf_return
+    ;ani $4
+    ;jz  cnf_return
+    lda randomLo
+    cpi $a0
+    jnc cnf_return
 
     ; update bounce boundaries
     lxi h, pf_tableft
@@ -411,19 +430,31 @@ cnf_L1:
     mvi m, 0 ; direction
     inx h
     lda frame_scroll
-    ;adi 10 
     mov m, a ; y
+
+    mvi a, CLEARANCE_BRIDGE
+    sta foe_clearance
     jmp cnf_return
 
     ; create fuel or regular foe
 cnf_regular_or_fuel:
+    mvi a, CLEARANCE_DEFAULT
+    sta foe_clearance
+
     lda randomHi
     mov b, a
 
     ; fuel maybe?
     cpi $a0
     mov a, b
-    jnc cnf_notfuel
+    jc cnf_notfuel
+
+    ; yes, fuel
+    mvi a, CLEARANCE_FUEL
+    sta foe_clearance
+    lda foe_left
+    inr a
+    sta foe_left
     mvi d, FOEID_FUEL
     jmp cnf_3
 cnf_notfuel:
@@ -457,7 +488,7 @@ cnf_width_2:
 
     ; Column
     lda foe_left
-    ;add c         ; offset the foe right
+    add c         ; offset the foe right
     mov c, a
     mov m, a
     inx h
@@ -514,15 +545,37 @@ updl_1:
     cpi $10
     jc updl_2
     mov a, b
-    ; create new foe every 32 lines
+    push psw
+    ;;; create new foe every 32 lines
+    ;;;ani $f
+    ;;;cz create_new_foe   ; keeps psw
+
+    lda pf_roadflag
+    ora a
+    jz  updl_33
+    mov a, b
     ani $f
+    cz  create_new_foe
+    pop psw
+    jmp updl_2
+updl_33:
+    lda foe_clearance
+    dcr a
+    sta foe_clearance
     cz create_new_foe
+    pop psw
 updl_2:
     ani $1
     jz update_step
     jmp ustep_out
 
 update_next_block:
+    lda foe_clearance
+    cpi CLEARANCE_BLOCK
+    jp unb_clearanceok
+    mvi a, CLEARANCE_BLOCK
+    sta foe_clearance
+unb_clearanceok:
     ; update block count
     xra a
     sta pf_bridgeflag
@@ -657,6 +710,9 @@ updateblock_out:
     ;; interpolate between current and next values
     ;; ------------------------------------------------------------
 update_step:
+    xra a
+    sta terrain_changing
+
     ; check if we need to set the road flag
     lda pf_blockcount
     cpi BLOCKS_IN_LEVEL
@@ -677,11 +733,21 @@ uss_x1:
     dcr l       ; move left bank 1 left
     inr h       ; make water 1 wider
     shld terrain_current
+
+    ; set the changing flag
+    lda terrain_changing
+    ori 1
+    sta terrain_changing
     jmp uss1
 uss2:
     inr l       ; move left bank 1 right
     dcr h       ; make water 1 narrower 
     shld terrain_current
+
+    ; set the changing flag
+    lda terrain_changing
+    ori 1
+    sta terrain_changing
 uss1:
     ; do the same with the island
     lda terrain_next_islandwidth
@@ -695,12 +761,22 @@ uss1:
     inr a  ; more island
     shld terrain_current
     sta terrain_islandwidth
+
+    ; set the changing flag
+    lda terrain_changing
+    ori 1
+    sta terrain_changing
     jmp uss4
 uss5:
     inr h  ; more water
     dcr a  ; less island
     shld terrain_current
     sta terrain_islandwidth
+
+    ; set the changing flag
+    lda terrain_changing
+    ori 1
+    sta terrain_changing
 uss4:
 
 ustep_out:
