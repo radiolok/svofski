@@ -31,6 +31,8 @@ CLEARANCE_BRIDGE    equ 32
 CLEARANCE_FUEL      equ 40
 CLEARANCE_BLOCK     equ 18
 
+BRIDGE_COLUMN       equ 13
+
     .org $100
 
 clrscr:
@@ -77,8 +79,8 @@ jamas:
 
     ; keep interrupts enabled to make errors obvious
     ei
-    ; prepare animated sprites
-    call foe_animate
+
+    call AnimateSprites
 
     lxi d, foe_1
     call foe_in_de
@@ -100,19 +102,19 @@ jamas:
     ; pink border
     mvi a, 4
     out 2
-    call clearblinds
+    call ClearBlinds
     
     ; dkblue border
     mvi a, $e
     out 2
     call UpdateLine
-    call update_step
-    call produce_line_main
+    call UpdateOneStep
+    call ProduceLineMain
 
     ; white border
     mvi a, 2
     out 2
-    call drawblinds_bottom
+    call DrawBlinds
 
     mvi a, 8
     out 2
@@ -274,10 +276,21 @@ palette_loop:
     ret
 
     ;; ---------------------------------------------- -   - 
-    ;; Draw 2 lines of black at the bottom of game field
-    ;; Clear them at the top, leave 16+16 of black at sides
+    ;; Clear the blinds at the top, leave 16+16 of black at sides
     ;; ------------------------------------------------------------
-drawblinds_bottom:
+ClearBlinds:
+    lxi h, $e2ff-TOP_HEIGHT
+    mvi e, 0
+    mvi c, 14 ; 28
+    lda frame_scroll
+    add l
+    mov l, a
+    jmp drawblinds_fill
+
+    ;; ---------------------------------------------- -   - 
+    ;; Draw 2 lines of black at the bottom of game field
+    ;; ------------------------------------------------------------
+DrawBlinds:
     lxi h, $8000 + BOTTOM_HEIGHT - 22 ; 22 ~ enemy height
     mvi e, $00
     ; wipe the first 3 layers with zeroes...
@@ -308,15 +321,6 @@ drawblinds_fill:
     jnz drawblinds_fill
     ret 
 
-clearblinds:
-    lxi h, $e2ff-TOP_HEIGHT
-    mvi e, 0
-    mvi c, 14 ; 28
-    lda frame_scroll
-    add l
-    mov l, a
-    jmp drawblinds_fill
-
     ;; ---------------------------------------------- -   - 
     ;; Create new foe
     ;; ------------------------------------------------------------
@@ -336,10 +340,10 @@ CreateNewFoe:
     lda randomHi
     mov b, a
     ;ani $4
-    ;jz  cnf_return
+    ;jz  CreateNewFoe_Exit
     lda randomLo
     cpi $a0
-    jnc cnf_return
+    jnc CreateNewFoe_Exit
 
     ; update bounce boundaries
     lxi h, pf_tableft
@@ -408,12 +412,12 @@ cnf_L1:
 
     ; create bridge
     lda pf_blockline
-    cpi 32
-    jnz cnf_return
+    cpi BLOCK_HEIGHT/2
+    jnz CreateNewFoe_Exit
 
     mvi m, FOEID_BRIDGE
     inx h
-    mvi m, 13 ; column
+    mvi m, BRIDGE_COLUMN ; = 13
     inx h
     mvi m, 0 ; index
     inx h
@@ -424,7 +428,7 @@ cnf_L1:
 
     mvi a, CLEARANCE_BRIDGE
     sta foe_clearance
-    jmp cnf_return
+    jmp CreateNewFoe_Exit
 
     ; create fuel or regular foe
 cnf_regular_or_fuel:
@@ -470,8 +474,8 @@ cnf_width_2:
     ; get normalized random 0 <= rand < a
     ;dcr a
     sui 2
-    jz cnf_return  ; bad luck: passage too narrow for this foe
-    jm cnf_return 
+    jz CreateNewFoe_Exit  ; bad luck: passage too narrow for this foe
+    jm CreateNewFoe_Exit 
     mov m, d    ; should fit: store foe id 
     inx h
     call randomNormA
@@ -508,7 +512,7 @@ cnf_width_2:
     mov a, e
     add c
     mov m, a
-cnf_return:
+CreateNewFoe_Exit:
     pop psw
     ret
 
@@ -561,7 +565,7 @@ UpdateLine_Exit:
     ;; Update one scanline of terrain
     ;; interpolate between current and next values
     ;; ------------------------------------------------------------
-update_step:
+UpdateOneStep:
     lda frame_scroll
     ani $1
     rnz
@@ -570,9 +574,9 @@ update_step:
     lda pf_blockcount
     cpi BLOCKS_IN_LEVEL
     mvi a, 0
-    jnz uss_x1
+    jnz uos_1
     inr a
-uss_x1:
+uos_1:
     sta pf_roadflag
 
     ; widen/narrow the banks
@@ -581,44 +585,44 @@ uss_x1:
     lhld terrain_current    ; d = next_left, e = next_width
     mov a, l
     cmp e
-    jz uss1
-    jm uss2
+    jz uos_3
+    jm uos_2
     dcr l       ; move left bank 1 left
     inr h       ; make water 1 wider
     shld terrain_current
 
-    jmp uss1
-uss2:
+    jmp uos_3
+uos_2:
     inr l       ; move left bank 1 right
     dcr h       ; make water 1 narrower 
     shld terrain_current
 
-uss1:
+uos_3:
     ; do the same with the island
     lda terrain_next_islandwidth
     mov b, a
     lda terrain_islandwidth
     cmp b
-    jz  uss4 ; next == current, no update
-    jp  uss5
+    jz  UpdateOneStep_Exit ; next == current, no update
+    jp  uos_4
     ; move island wider, water narrower
     dcr h  ; less water
     inr a  ; more island
     shld terrain_current
     sta terrain_islandwidth
-    jmp uss4
-uss5:
+    jmp UpdateOneStep_Exit
+uos_4:
     inr h  ; more water
     dcr a  ; less island
     shld terrain_current
     sta terrain_islandwidth
-uss4:
+UpdateOneStep_Exit:
     ret
 
     ;; ---------------------------------------------- -   - 
     ;; Draw one line of terrain
     ;; ------------------------------------------------------------
-produce_line_main:
+ProduceLineMain:
     ; update boundary tables
     lxi h, pf_tableft
     lda frame_scroll
@@ -633,16 +637,16 @@ produce_line_main:
     ; if no road, just produce regular line
     lda pf_roadflag
     ora a
-    jz produce_line
+    jz produce_line_green
 
     lda pf_blockline
     cpi BLOCK_HEIGHT-ROAD_BOTTOM     ; bottom edge
     jz produce_line_road
-    jp produce_line
+    jp produce_line_green
     cpi BLOCK_HEIGHT-(ROAD_BOTTOM+ROAD_WIDTH)     ; top edge
     jp produce_line_road
     jz produce_line_road
-    jmp produce_line
+    jmp produce_line_green
 
 produce_line_road:
     ; if at the border
@@ -678,14 +682,13 @@ plr_border:
     call produce_line_e2
     ret
 
-produce_line:
+produce_line_green:
     lxi h, $80ff+2; $80ff-TOP_HEIGHT+2
     mvi d, $80+SCREEN_WIDTH_BYTES
 produce_line_e2:
     lda frame_scroll
     add l
     mov l, a
-
     lxi b, $ff00
     lda terrain_left
     dcr a
@@ -738,18 +741,18 @@ produce_loop_rightbank:
     ;; Animate sprites: propellers, explosions, wheels
     ;; Should be called once per frame, before the first sprite
     ;; ------------------------------------------------------------
-foe_animate:
+AnimateSprites:
     ; animate the propeller
     lda frame_number
     ani $2
-    jz  foe_byId_propA
+    jz  aspr_A
     lxi h, propellerB_ltr_dispatch
     lxi d, propellerB_rtl_dispatch
-    jmp foe_byId_propC
-foe_byId_propA:
+    jmp aspr_B
+aspr_A:
     lxi h, propellerA_ltr_dispatch
     lxi d, propellerA_rtl_dispatch
-foe_byId_propC:
+aspr_B:
     shld foePropeller_LTR
     xchg
     shld foePropeller_RTL
