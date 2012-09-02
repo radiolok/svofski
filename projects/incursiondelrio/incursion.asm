@@ -194,9 +194,7 @@ terrain_next:
 terrain_next_left:          db 4
 terrain_next_water:         db 24
 terrain_next_islandwidth:   db 0
-terrain_islandcould:        db 0
 terrain_prev_water:         db 0
-terrain_changing:           db 0
 
 pf_blockcount:              db 1; current block in level (max=BLOCKS_IN_LEVEL)
 pf_bridgeflag:              db 0; 
@@ -328,14 +326,6 @@ create_new_foe:
     lda pf_roadflag
     ora a
     jnz cnf_preparetableoffset
-
-    lda terrain_changing
-    ora a
-    jz cnz_terrainstraight
-    mvi a, 2
-    sta foe_clearance
-    jmp cnf_return
-cnz_terrainstraight:
 
     ; store clearance in case no foe is to be created
     mvi a, CLEARANCE_DEFAULT
@@ -538,7 +528,7 @@ updl_1:
 
     lda pf_blockline
     ora a
-    jz update_next_block
+    jz update_next_block    
     mov b, a
     ; avoid creating sprites on roll overlap
     lda frame_scroll
@@ -546,10 +536,8 @@ updl_1:
     jc updl_2
     mov a, b
     push psw
-    ;;; create new foe every 32 lines
-    ;;;ani $f
-    ;;;cz create_new_foe   ; keeps psw
 
+    ; create new foe here 
     lda pf_roadflag
     ora a
     jz  updl_33
@@ -569,6 +557,7 @@ updl_2:
     jz update_step
     jmp ustep_out
 
+    ; calculate terrain for the next block
 update_next_block:
     lda foe_clearance
     cpi CLEARANCE_BLOCK
@@ -698,7 +687,6 @@ unb_island_ok:
 updateblock_noisland:
     xra a
     sta terrain_next_islandwidth
-    sta terrain_islandcould
     jmp updateblock_out
 
 updateblock_out:
@@ -710,9 +698,6 @@ updateblock_out:
     ;; interpolate between current and next values
     ;; ------------------------------------------------------------
 update_step:
-    xra a
-    sta terrain_changing
-
     ; check if we need to set the road flag
     lda pf_blockcount
     cpi BLOCKS_IN_LEVEL
@@ -734,20 +719,12 @@ uss_x1:
     inr h       ; make water 1 wider
     shld terrain_current
 
-    ; set the changing flag
-    lda terrain_changing
-    ori 1
-    sta terrain_changing
     jmp uss1
 uss2:
     inr l       ; move left bank 1 right
     dcr h       ; make water 1 narrower 
     shld terrain_current
 
-    ; set the changing flag
-    lda terrain_changing
-    ori 1
-    sta terrain_changing
 uss1:
     ; do the same with the island
     lda terrain_next_islandwidth
@@ -761,24 +738,13 @@ uss1:
     inr a  ; more island
     shld terrain_current
     sta terrain_islandwidth
-
-    ; set the changing flag
-    lda terrain_changing
-    ori 1
-    sta terrain_changing
     jmp uss4
 uss5:
     inr h  ; more water
     dcr a  ; less island
     shld terrain_current
     sta terrain_islandwidth
-
-    ; set the changing flag
-    lda terrain_changing
-    ori 1
-    sta terrain_changing
 uss4:
-
 ustep_out:
     ; update boundary tables
     lxi h, pf_tableft
