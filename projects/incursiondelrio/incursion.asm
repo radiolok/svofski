@@ -62,7 +62,7 @@ clearscreen:
     call showlayers
 
 jamas:
-    mvi a, 4
+    mvi a, 10
     out 2
     ei
     hlt
@@ -105,7 +105,9 @@ jamas:
     ; dkblue border
     mvi a, $e
     out 2
-    call update_line
+    call UpdateLine
+    call update_step
+    call produce_line_main
 
     ; white border
     mvi a, 2
@@ -315,11 +317,10 @@ clearblinds:
     mov l, a
     jmp drawblinds_fill
 
-
     ;; ---------------------------------------------- -   - 
     ;; Create new foe
     ;; ------------------------------------------------------------
-create_new_foe:
+CreateNewFoe:
     push psw
 
     ; bridge: no random choice
@@ -376,7 +377,6 @@ cnf_doublewater:
     ora a
     ral
     sta foe_water
-
     jmp cnf_preparetableoffset
 
 cnf_preparetableoffset:
@@ -515,189 +515,57 @@ cnf_return:
     ;; ---------------------------------------------- -   - 
     ;; Update line: terrain formation
     ;; ------------------------------------------------------------
-update_line:
+UpdateLine:
     ; random should be moved outside to make sure that it gets called every frame
     call nextRandom16 ; result in randomHi/randomLo and HL
     ; update block line count
     lda pf_blockline
     dcr a
-    jp updl_1
+    jp ul_1
     mvi a, BLOCK_HEIGHT-1
-updl_1:
+ul_1:
     sta pf_blockline
-
-    lda pf_blockline
     ora a
-    jz update_next_block    
+    push psw
+    cz UpdateNewBlock    
+    pop psw
     mov b, a
     ; avoid creating sprites on roll overlap
     lda frame_scroll
     cpi $10
-    jc updl_2
+    jc UpdateLine_Exit
     mov a, b
     push psw
 
     ; create new foe here 
     lda pf_roadflag
     ora a
-    jz  updl_33
+    jz  ul_2
     mov a, b
     ani $f
-    cz  create_new_foe
+    cz  CreateNewFoe
     pop psw
-    jmp updl_2
-updl_33:
+    jmp UpdateLine_Exit
+ul_2:
     lda foe_clearance
     dcr a
     sta foe_clearance
-    cz create_new_foe
+    cz CreateNewFoe
     pop psw
-updl_2:
-    ani $1
-    jz update_step
-    jmp ustep_out
+UpdateLine_Exit:
+    ret 
 
-    ; calculate terrain for the next block
-update_next_block:
-    lda foe_clearance
-    cpi CLEARANCE_BLOCK
-    jp unb_clearanceok
-    mvi a, CLEARANCE_BLOCK
-    sta foe_clearance
-unb_clearanceok:
-    ; update block count
-    xra a
-    sta pf_bridgeflag
-    lda pf_blockcount
-    dcr a
-    sta pf_blockcount
-    jz unb_setbridge
-    cpi 1
-    jnz unb_nosetbridge
-    sta pf_bridgeflag
-    jmp unb_nosetbridge
-
-unb_setbridge:
-    ; end the island and set passage to bridge width
-    mvi a, BLOCKS_IN_LEVEL
-    sta pf_blockcount
-    mvi a, HALFBRIDGE_WIDTH
-    sta terrain_next_water
-    mvi a, SCREEN_WIDTH_BYTES/2 - HALFBRIDGE_WIDTH
-    sta terrain_next_left
-    jmp updateblock_out
-
-unb_nosetbridge:
-    ; 
-    lda terrain_next_water
-    sta terrain_prev_water
-    mov a, h
-    ani $7
-    adi 3
-    ;mvi a, 2
-    sta terrain_next_left
-    ral
-    mov b, a
-    mvi a, SCREEN_WIDTH_BYTES
-    sub b
-    ; divide water/2
-    ora a
-    rar 
-    sta terrain_next_water
-
-    ; if we're to terminate the island, make sure the passage is wide enough
-    ; water - island - 6 >= 0
-    mov b, a  ; b = terrain_next_water
-    lda terrain_islandwidth
-    ora a
-    jz unp_A
-    mov c, a  ; c = terrain_islandwidth
-    mov a, b
-    sub c
-    sbi NARROWEST
-    jp  unp_A 
-    ; terrain_next_left = screen/2 - island - 6
-    ; water_next_left = 6
-    mvi a, NARROWEST
-    sta terrain_next_water
-    lda terrain_next_left
-    mvi a, 16
-    sub c
-    sbi NARROWEST
-    sta terrain_next_left
-unp_A:
-    ; force terminate the island before the bridge
-    lda pf_bridgeflag
-    ora a
-    jnz updateblock_noisland
-    ; if not enough water, no island
-    lda terrain_next_water
-    cpi ENOUGH_FOR_ISLAND ;9
-    jc updateblock_noisland
-
-    ; we have enough room for island
-updateblock_makeisland:
-    mov a, l
-    rar
-    rar
-    ani $7
-    adi $2
-    ; make sure that water - island > NARROWEST
-    mov b, a
-    lda terrain_water 
-    sub b
-    sbi NARROWEST
-    jm  unb_island_morewater
-    jz  unb_island_morewater
-    lda terrain_next_water
-    sub b
-    sbi NARROWEST
-    jm  unb_island_morewater
-    jz  unb_island_morewater
-    ; the passage needs no tuning
-    jmp unb_island_ok
-unb_island_morewater:
-    ; d = max(terrain_left, terrain_next_left)
-    lda terrain_left 
-    mov d, a
-    lda terrain_next_left
-    cmp d
-    jm .+4 
-    mov d, a
- 
-    ; make passage NARROWEST wide: 
-    ; water = NARROWEST; island = screen/2 - (water+left)
-    mvi a, NARROWEST
-    sta terrain_next_water
-    mov c, a
-    mov a, d
-    add c   
-    mov c, a  ; c = next_water + current_left
-    mvi a, 16
-    sub c 
-    mov b, a
-unb_island_ok:
-    ; check that island width is > 0
-    mov a, b
-    ora a
-    jm updateblock_noisland
-    sta terrain_next_islandwidth
-    jmp updateblock_out
-
-updateblock_noisland:
-    xra a
-    sta terrain_next_islandwidth
-    jmp updateblock_out
-
-updateblock_out:
-    ; -- fall through to update_step
-
+    .include updatenewblock.inc
 
     ;; ---------------------------------------------- -   - 
     ;; Update one scanline of terrain
     ;; interpolate between current and next values
     ;; ------------------------------------------------------------
 update_step:
+    lda frame_scroll
+    ani $1
+    rnz
+
     ; check if we need to set the road flag
     lda pf_blockcount
     cpi BLOCKS_IN_LEVEL
@@ -745,11 +613,15 @@ uss5:
     shld terrain_current
     sta terrain_islandwidth
 uss4:
-ustep_out:
+    ret
+
+    ;; ---------------------------------------------- -   - 
+    ;; Draw one line of terrain
+    ;; ------------------------------------------------------------
+produce_line_main:
     ; update boundary tables
     lxi h, pf_tableft
     lda frame_scroll
-    ;sui 4 ; offset the index hoping that it will be ~ at the middle of foe height
     add l
     mov l, a
     lda terrain_left
@@ -758,10 +630,6 @@ ustep_out:
     lda terrain_water
     mov m, a
 
-    ;; ---------------------------------------------- -   - 
-    ;; Draw one line of terrain
-    ;; ------------------------------------------------------------
-produce_line_main:
     ; if no road, just produce regular line
     lda pf_roadflag
     ora a
