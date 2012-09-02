@@ -11,7 +11,7 @@ FOE_MAX             equ 8
 BLOCKS_IN_LEVEL     equ 16
 BLOCK_HEIGHT        equ 64
 HALFBRIDGE_WIDTH    equ 4
-NARROWEST           equ 4   ; the narrowest passage around an island
+NARROWEST           equ 4   ; narrowest passage around an island
 ENOUGH_FOR_ISLAND   equ 9   ; if water this wide, island fits
 
 ROAD_WIDTH          equ 28
@@ -107,8 +107,16 @@ jamas:
     ; dkblue border
     mvi a, $e
     out 2
+
+    ; update random
+    ; create new pf block when needed
+    ; create new foe
     call UpdateLine
+
+    ; update one line of terrain
     call UpdateOneStep
+
+    ; draw one line of terrain
     call ProduceLineMain
 
     ; white border
@@ -126,9 +134,9 @@ jamas:
 
     jmp jamas
 
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;;                      V A R I A B L E S
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;;                   V A R I A B L E S
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 frame_number:
     db 0
@@ -136,7 +144,7 @@ frame_scroll:
     db $ff; $10
 
     ;; Foe table offsets
-foeId           equ 0           ; id: 0 = none, 1 = ship, 2 = copter
+foeId           equ 0           ; ref: FOE_ID
 foeColumn       equ 1           ; X column
 foeIndex        equ 2           ; X offset 0..7
 foeDirection    equ 3           ; 1 = LTR, -1 RTL, 0 = not moving
@@ -198,10 +206,10 @@ terrain_next:
 terrain_next_left:          db 4
 terrain_next_water:         db 24
 terrain_next_islandwidth:   db 0
-terrain_prev_water:         db 0
 
-pf_blockcount:              db 1; current block in level (max=BLOCKS_IN_LEVEL)
-pf_bridgeflag:              db 0; 
+; current block in level (max=BLOCKS_IN_LEVEL)
+pf_blockcount:              db 1
+pf_bridgeflag:              db 0
 pf_roadflag:                db 0
 pf_blockline:               db 0
 
@@ -214,7 +222,7 @@ foe_clearance:              db 1
 
     ;; ---------------------------------------------- -   - 
     ;; Process foe with descriptor in HL
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
 foe_in_de:
     push d
     lxi h, 0                ; 12
@@ -277,7 +285,7 @@ palette_loop:
 
     ;; ---------------------------------------------- -   - 
     ;; Clear the blinds at the top, leave 16+16 of black at sides
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
 ClearBlinds:
     lxi h, $e2ff-TOP_HEIGHT
     mvi e, 0
@@ -289,7 +297,7 @@ ClearBlinds:
 
     ;; ---------------------------------------------- -   - 
     ;; Draw 2 lines of black at the bottom of game field
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
 DrawBlinds:
     lxi h, $8000 + BOTTOM_HEIGHT - 22 ; 22 ~ enemy height
     mvi e, $00
@@ -323,15 +331,30 @@ drawblinds_fill:
 
     ;; ---------------------------------------------- -   - 
     ;; Create new foe
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
+    ;  Modifies:
+    ;       foe_clearance
+    ;       foe_left
+    ;       foe_water
+    ;       foeTableIndex
+    ;       foeTableIndex->contents
 CreateNewFoe:
     push psw
 
-    ; bridge: no random choice
+    ; bridge?
     lda pf_roadflag
     ora a
-    jnz cnf_preparetableoffset
+    jz cnf_notabridge
 
+    ; check that we're on the right line for bridge
+    lda pf_blockline
+    ani $f
+    jz cnf_preparetableoffset
+    ; do nothing if not
+    jmp CreatenewFoe_Exit
+
+    ; not a bridge
+cnf_notabridge:
     ; store clearance in case no foe is to be created
     mvi a, CLEARANCE_DEFAULT
     sta foe_clearance
@@ -404,7 +427,9 @@ cnf_L1:
     ral 
     mvi b, 0
     mov c, a
-    dad b       ; hl = foe[foeTableIndex]: Id, Column, Index, Direction, Y, Left, Right
+    dad b       
+    ; hl = foe[foeTableIndex]: 
+    ;   Id, Column, Index, Direction, Y, Left, Right
 
     lda pf_roadflag
     ora a
@@ -474,7 +499,8 @@ cnf_width_2:
     ; get normalized random 0 <= rand < a
     ;dcr a
     sui 2
-    jz CreateNewFoe_Exit  ; bad luck: passage too narrow for this foe
+    jz CreateNewFoe_Exit  ; bad luck: 
+                          ; passage too narrow for this foe
     jm CreateNewFoe_Exit 
     mov m, d    ; should fit: store foe id 
     inx h
@@ -518,10 +544,17 @@ CreateNewFoe_Exit:
 
     ;; ---------------------------------------------- -   - 
     ;; Update line: terrain formation
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
+    ;  Modifies:
+    ;       randomHi, randomLo
+    ;       pf_blockline
+    ;       foe_clearance
+    ;  Branches:
+    ;       UpdateNewBlock
+    ;       CreateNewFoe
 UpdateLine:
-    ; random should be moved outside to make sure that it gets called every frame
-    call nextRandom16 ; result in randomHi/randomLo and HL
+    ; random(), result in randomHi/randomLo and HL
+    call nextRandom16 
     ; update block line count
     lda pf_blockline
     dcr a
@@ -529,42 +562,44 @@ UpdateLine:
     mvi a, BLOCK_HEIGHT-1
 ul_1:
     sta pf_blockline
-    ora a
-    push psw
-    cz UpdateNewBlock    
-    pop psw
-    mov b, a
+    ora a   
+    cz UpdateNewBlock       ; this block has ran to its end
+                            ; update terrain variables
+                            ; for the next block 
+
     ; avoid creating sprites on roll overlap
     lda frame_scroll
     cpi $10
     jc UpdateLine_Exit
-    mov a, b
-    push psw
 
-    ; create new foe here 
+    ; crossing a road/bridge? 
     lda pf_roadflag
     ora a
     jz  ul_2
-    mov a, b
-    ani $f
-    cz  CreateNewFoe
-    pop psw
+    call CreateNewFoe   ; create bridge when it's time
     jmp UpdateLine_Exit
 ul_2:
     lda foe_clearance
     dcr a
     sta foe_clearance
-    cz CreateNewFoe
-    pop psw
+    cz CreateNewFoe     ; create a regular foe
 UpdateLine_Exit:
     ret 
 
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; UpdateNewBlock
     .include updatenewblock.inc
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     ;; ---------------------------------------------- -   - 
     ;; Update one scanline of terrain
     ;; interpolate between current and next values
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
+    ;  Modifies:
+    ;       pf_roadflag
+    ;       terrain_left
+    ;       terrain_water
+    ;       terrain_islandwidth
 UpdateOneStep:
     lda frame_scroll
     ani $1
@@ -621,7 +656,7 @@ UpdateOneStep_Exit:
 
     ;; ---------------------------------------------- -   - 
     ;; Draw one line of terrain
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
 ProduceLineMain:
     ; update boundary tables
     lxi h, pf_tableft
@@ -651,9 +686,11 @@ ProduceLineMain:
 produce_line_road:
     ; if at the border
     jz plr_border
-    cpi BLOCK_HEIGHT-(ROAD_BOTTOM+(ROAD_WIDTH/2)-1) ; bottom divider line
+    ; bottom divider line
+    cpi BLOCK_HEIGHT-(ROAD_BOTTOM+(ROAD_WIDTH/2)-1)
     jp plr_asphalt
-    cpi BLOCK_HEIGHT-(ROAD_BOTTOM+(ROAD_WIDTH/2)+1) ; top divider line
+    ; top divider line
+    cpi BLOCK_HEIGHT-(ROAD_BOTTOM+(ROAD_WIDTH/2)+1)
     jm plr_asphalt
     jmp plr_yellow
 plr_asphalt:
@@ -740,7 +777,7 @@ produce_loop_rightbank:
     ;; ---------------------------------------------- -   - 
     ;; Animate sprites: propellers, explosions, wheels
     ;; Should be called once per frame, before the first sprite
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
 AnimateSprites:
     ; animate the propeller
     lda frame_number
@@ -845,7 +882,7 @@ foe_byId_copterpropeller:
 
     ;; ---------------------------------------------- -   - 
     ;; Bridge: prepare and draw
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
 bridge_frame:
     lxi h, bridgeBottom_ltr_dispatch
     shld foeBlock_LTR
@@ -876,7 +913,7 @@ bridge_frame:
 
     ;; ---------------------------------------------- -   - 
     ;; Fuel: prepare and draw
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
 fuel_frame:
     lxi h, luuuu_ltr_dispatch
     shld foeBlock_LTR
@@ -932,7 +969,7 @@ fuel_frame:
 
     ;; ---------------------------------------------- -   - 
     ;; Jet: prepare and draw
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
 jet_frame:
     ; load Column to e
 
@@ -1004,7 +1041,7 @@ jet_move_continue:
 
     ;; ---------------------------------------------- -   - 
     ;; Frame routine for a regular foe: ship, copters
-    ;; ------------------------------------------------------------
+    ;; ----------------------------------------------------------
 foe_frame:
     mvi h, 0 ; bounce flag in h
 foe_Move:
@@ -1076,7 +1113,8 @@ foe_move_yes_bounce:
     ; do the Move() once again
     jmp foe_Move
 
-    ;; additional entry point for sprites with precalculated position
+    ;; additional entry point 
+    ;; for sprites with precalculated position
     ;; used for propellers
 foe_paint_preload:
     lhld foeBlock + foeColumn
@@ -1148,8 +1186,6 @@ sprite_ltr_rtl_dispatchjump:
     shld .+4
     lhld 0000   
     pchl
-
-sprites_scratch:    dw 0    ; saved SP for various stack-abusing routines
 
     .include random.inc
     .include palette.inc
