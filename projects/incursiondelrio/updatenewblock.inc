@@ -1,4 +1,13 @@
-    ; calculate terrain for the next block
+    ;; ---------------------------------------- -   - 
+    ;;  calculate terrain for the next block
+    ;; -----------------------------------------------------
+    ;  Modifies:
+    ;       foe_clearance
+    ;       pf_bridgeflag
+    ;       pf_blockcount
+    ;       terrain_next_left
+    ;       terrain_next_water
+    ;       terrain_next_islandwidth
 UpdateNewBlock:
     lda foe_clearance
     cpi CLEARANCE_BLOCK
@@ -29,13 +38,10 @@ unb_setbridge:
     jmp UpdateNewBlock_Exit
 
 unb_nosetbridge:
-    ; 
     lda terrain_next_water
-    sta terrain_prev_water
     mov a, h
     ani $7
     adi 3
-    ;mvi a, 2
     sta terrain_next_left
     ral
     mov b, a
@@ -46,7 +52,8 @@ unb_nosetbridge:
     rar 
     sta terrain_next_water
 
-    ; if we're to terminate the island, make sure the passage is wide enough
+    ; if we're to terminate the island, 
+    ; make sure that the passage is wide enough
     ; water - island - 6 >= 0
     mov b, a  ; b = terrain_next_water
     lda terrain_islandwidth
