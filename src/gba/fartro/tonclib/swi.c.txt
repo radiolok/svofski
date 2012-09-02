@@ -1,0 +1,38 @@
+// swi.c
+// implementation of BIOS calls
+//
+// OBSOLETE! It's all in swi.s now.
+//
+// (Created: 2004-03-24, Modified: 2004-06-02, Cearn)
+
+#include "types.h"
+#include "swi.h"
+
+// NOTE! GCC inline-asm is a FUNCTION asm(str), where "str" is the string 
+//    containing the asm code
+// In ARM STD it's a KEYWORD __asm{}, with the asm-code as, well, code.
+
+// === CONSTANTS ======================================================
+
+// === FUNCTIONS ======================================================
+
+// VBlankIntrWait
+void swi_vsync()
+{	swi_call(0x05);	}
+
+// Div
+int swi_div(int num, int denom)
+{	swi_call(0x06);	}
+
+// Sqrt
+int swi_sqrt(u32 num)
+{	swi_call(0x08);	}
+
+// Arctan2
+s16 swi_arctan2(s16 x, s16 y)
+{	swi_call(0x0a);	}
+
+// ObjAffineSet
+void swi_obj_rs(ObjAffineSource *src, ObjAffineDest *dst, int num, int offset)
+{	swi_call(0x0f);	}
+
