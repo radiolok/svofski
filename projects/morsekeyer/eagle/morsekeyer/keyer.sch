@@ -10464,7 +10464,7 @@ Source: http://www.lumberg.com/Produkte/PDFs/1503_09.pdf</description>
 <part name="C25" library="rcl" deviceset="CPOL-EU" device="SMCB" value="10uF"/>
 <part name="GND42" library="supply1" deviceset="GND" device=""/>
 <part name="Q7" library="SparkFun" deviceset="TRANSISTOR_NPN" device="SOT23-3"/>
-<part name="R33" library="rcl" deviceset="R-EU_" device="R0805S" value="100"/>
+<part name="R33" library="rcl" deviceset="R-EU_" device="R0805S" value="150"/>
 <part name="GND36" library="supply1" deviceset="GND" device=""/>
 <part name="R35" library="rcl" deviceset="R-EU_" device="R0805S" value="1K"/>
 <part name="C1" library="rcl" deviceset="CPOL-EU" device="D/7343-31R" value="220uF"/>
