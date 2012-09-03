@@ -390,13 +390,13 @@ cnf_regular_or_fuel:
     ; yes, fuel
     mvi a, CLEARANCE_FUEL
     sta foe_clearance
-    lda foe_left
-    inr a
-    sta foe_left
+
+;cnf_fuel_ok:
     mvi d, FOEID_FUEL
     jmp cnf_3
+
 cnf_notfuel:
-    ; nah, a regular one
+    ; a regular foe
     ani $3
     inr a
     mov d, a    ; d = foe id
@@ -414,22 +414,25 @@ cnf_width_2:
     sui 1
     mov e, a
     ; now a = available width
-
-    ; get normalized random 0 <= rand < a
-    ;dcr a
     sui 2
-    jz CreateNewFoe_Exit  ; bad luck: 
-                          ; passage too narrow for this foe
-    jm CreateNewFoe_Exit 
-    mov m, d    ; should fit: store foe id 
-    inx h
-    call randomNormA
+    jz CreateNewFoe_Exit    ; bad luck: 
+    jm CreateNewFoe_Exit    ;   passage too narrow for this foe
 
+    call randomNormA        ; c = random less than a
     ; Column
     lda foe_left
-    add c         ; offset the foe right
+    add c                   ; offset the foe right
     mov c, a
-    mov m, a
+
+    ; check that if it's a fuel, it fits
+    call check_fuel_fit
+    ora a
+    jz CreateNewFoe_AbortFuel
+
+    mov m, d 
+    inx h                   ; foe.Id = d
+
+    mov m, c                ; foe.Column = a
     inx h
 
     ; Index = 0
@@ -437,7 +440,13 @@ cnf_width_2:
     inx h
 
     ; Direction = 1
-    mvi m, 1
+    lda randomHi
+    ani $8
+    mvi a, $ff
+    jz cnf_dir1
+    mvi a, 1
+cnf_dir1:
+    mov m, a
     inx h
 
     ; Y = current
@@ -461,6 +470,48 @@ CreateNewFoe_Exit:
     pop psw
     ret
 
+CreateNewFoe_AbortFuel:
+    lda CLEARANCE_DEFAULT
+    sta foe_clearance
+    jmp CreateNewFoe_Exit
+
+    ; d = foe id
+    ; c = column
+check_fuel_fit:
+    mov a, d
+    cpi FOEID_FUEL
+    rnz
+
+    lda pf_blockline
+    cpi BLOCK_HEIGHT-CLEARANCE_FUEL
+    rnc
+
+    push b
+    push d
+
+    ; left edge
+    ; terrain_next_left > c: overlap
+    lda terrain_next_left
+    mov b, a
+    cmp c
+    mvi a, 0
+    jp cff_pop
+    mvi a, 1
+
+    ; right edge
+    ; terrain_next_left + terrain_next_water < c: overlap
+    lda terrain_next_water
+    add b
+    cmp c
+    mvi a, 1
+    jp cff_pop
+    mvi a, 0
+
+cff_pop:
+    pop d
+    pop b
+    ret
+
     ;; ---------------------------------------------- -   - 
     ;; Update line: terrain formation
     ;; ----------------------------------------------------------
@@ -482,17 +533,29 @@ UpdateLine:
 ul_1:
     sta pf_blockline
     ora a   
-    cz UpdateNewBlock       ; this block has ran to its end
-                            ; update terrain variables
-                            ; for the next block 
+    jnz ul_1_1
 
+    lhld terrain_next
+    shld terrain_act
+    lda terrain_next_islandwidth
+    sta terrain_act_islandwidth
+
+    lda pf_next1_bridgeflag
+    sta pf_bridgeflag
+    lda pf_next_bridgeflag
+    sta pf_next1_bridgeflag
+
+    call UpdateNewBlock       ; this block has ran to its end
+                              ; update terrain variables
+                              ; for the next block 
+ul_1_1:
     ; avoid creating sprites on roll overlap
     lda frame_scroll
     cpi $10
     jc UpdateLine_Exit
 
     ; crossing a road/bridge? 
-    lda pf_roadflag
+    lda pf_bridgeflag ;pf_roadflag
     ora a
     jz  ul_2
     call CreateNewFoe   ; create bridge when it's time
@@ -525,16 +588,20 @@ UpdateOneStep:
     rnz
 
     ; check if we need to set the road flag
-    lda pf_blockcount
-    cpi BLOCKS_IN_LEVEL
-    mvi a, 0
-    jnz uos_1
-    inr a
-uos_1:
+
+    lda pf_bridgeflag
     sta pf_roadflag
 
+    ;lda pf_blockcount
+    ;cpi BLOCKS_IN_LEVEL
+    ;mvi a, 0
+    ;jnz uos_1
+    ;inr a
+;uos_1:
+;    sta pf_roadflag
+
     ; widen/narrow the banks
-    lhld terrain_next
+    lhld terrain_act
     xchg
     lhld terrain_current    ; d = next_left, e = next_width
     mov a, l
@@ -553,7 +620,7 @@ uos_2:
 
 uos_3:
     ; do the same with the island
-    lda terrain_next_islandwidth
+    lda terrain_act_islandwidth
     mov b, a
     lda terrain_islandwidth
     cmp b
