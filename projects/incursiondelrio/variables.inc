@@ -69,10 +69,13 @@ terrain_next_left:          db 4
 terrain_next_water:         db 24
 terrain_next_islandwidth:   db 0
 
-terrain_next2:
-terrain_next2_left:          db 0
-terrain_next2_water:         db 0
-terrain_next2_islandwidth:   db 0
+pf_next_bridgeflag:         db 0
+pf_next1_bridgeflag:        db 0
+
+terrain_act:
+terrain_act_left:           db 4
+terrain_act_water:          db 24
+terrain_act_islandwidth:    db 0
 
 ; current block in level (max=BLOCKS_IN_LEVEL)
 pf_blockcount:              db 1

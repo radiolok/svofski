@@ -25,8 +25,6 @@ randomNormA:
 randomNormA_retry:
 		cmp c
 		jc randomNormA_return
-		stc
-		cmc
 		rar
 		jmp randomNormA_retry
 randomNormA_return:
@@ -34,6 +32,8 @@ randomNormA_return:
 		ret
 
 random:
+;randomLo:	db $3
+;randomHi:	db $2
 randomLo:	db $14
 randomHi:	db $a8
 

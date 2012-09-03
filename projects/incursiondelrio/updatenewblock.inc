@@ -3,7 +3,7 @@
     ;; -----------------------------------------------------
     ;  Modifies:
     ;       foe_clearance
-    ;       pf_bridgeflag
+    ;       pf_next_bridgeflag
     ;       pf_blockcount
     ;       terrain_next_left
     ;       terrain_next_water
@@ -17,14 +17,14 @@ UpdateNewBlock:
 unb_clearanceok:
     ; update block count
     xra a
-    sta pf_bridgeflag
+    sta pf_next_bridgeflag
     lda pf_blockcount
     dcr a
     sta pf_blockcount
     jz unb_setbridge
     cpi 1
     jnz unb_nosetbridge
-    sta pf_bridgeflag
+    sta pf_next_bridgeflag
     jmp unb_nosetbridge
 
 unb_setbridge:
@@ -38,7 +38,7 @@ unb_setbridge:
     jmp UpdateNewBlock_Exit
 
 unb_nosetbridge:
-    lda terrain_next_water
+    lhld random
     mov a, h
     ani $7
     adi 3
@@ -56,7 +56,7 @@ unb_nosetbridge:
     ; make sure that the passage is wide enough
     ; water - island - 6 >= 0
     mov b, a  ; b = terrain_next_water
-    lda terrain_islandwidth
+    lda terrain_act_islandwidth
     ora a
     jz unb_A
     mov c, a  ; c = terrain_islandwidth
@@ -75,7 +75,7 @@ unb_nosetbridge:
     sta terrain_next_left
 unb_A:
     ; force terminate the island before the bridge
-    lda pf_bridgeflag
+    lda pf_next_bridgeflag
     ora a
     jnz unb_noisland
     ; if not enough water, no island
@@ -92,7 +92,7 @@ unb_makeisland:
     adi $2
     ; make sure that water - island > NARROWEST
     mov b, a
-    lda terrain_water 
+    lda terrain_act_water 
     sub b
     sbi NARROWEST
     jm  unb_island_morewater
@@ -106,7 +106,7 @@ unb_makeisland:
     jmp unb_island_ok
 unb_island_morewater:
     ; d = max(terrain_left, terrain_next_left)
-    lda terrain_left 
+    lda terrain_act_left 
     mov d, a
     lda terrain_next_left
     cmp d
