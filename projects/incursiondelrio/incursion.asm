@@ -33,6 +33,11 @@ CLEARANCE_BLOCK     equ 18
 
 BRIDGE_COLUMN       equ 13
 
+KEY_DOWN            equ $80
+KEY_RIGHT           equ $40
+KEY_UP              equ $20
+KEY_LEFT            equ $10
+
     .org $100
 
 clrscr:
@@ -62,6 +67,7 @@ clearscreen:
     hlt
     call setpalette
     call showlayers
+    call SoundInit
 
 jamas:
     mvi a, 10
@@ -71,11 +77,24 @@ jamas:
     xra a
     out 2
 
+    call KeyboardScan
+    call PlayerWipe
+
+    lxi h, frame_scroll
+    inr m
+
+
     ; scroll
     mvi a, 88h
     out 0
     lda frame_scroll
     out 3
+
+    cpi $80
+    jnz jamas_1
+    call SoundInit
+jamas_1:
+    call SoundNoise
 
     ; keep interrupts enabled to make errors obvious
     ei
@@ -89,6 +108,9 @@ jamas:
     lxi d, foe_3
     call foe_in_de
     lxi d, foe_4
+
+    call SoundNoise
+
     call foe_in_de
     lxi d, foe_5
     call foe_in_de
@@ -98,6 +120,12 @@ jamas:
     call foe_in_de
     lxi d, foe_8
     call foe_in_de
+
+    call SoundNoise
+
+    call PlayerMotion
+    call PlayerSprite
+
 
     ; pink border
     mvi a, 4
@@ -124,13 +152,13 @@ jamas:
     out 2
     call DrawBlinds
 
+    call SoundNoise
+
     mvi a, 8
     out 2
     lxi h, frame_number
     inr m
 
-    lxi h, frame_scroll
-    inr m
 
     jmp jamas
 
@@ -138,6 +166,12 @@ jamas:
     ;;                   V A R I A B L E S
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     .include variables.inc
+
+    .include sound.inc
+
+    .include player.inc
+
+    .include input.inc
 
     ;; ---------------------------------------------- -   - 
     ;; Process foe with descriptor in HL
@@ -879,6 +913,7 @@ bridge_frame:
     adi 7
     sta foeBlock + foeY
     mvi h, 1
+    mvi c, 0
     call foe_paint
     pop psw
     sta foeBlock + foeY
@@ -892,6 +927,7 @@ bridge_frame:
     adi 14+7
     sta foeBlock + foeY
     mvi h, 1
+    mvi c, 0
     call foe_paint
     pop psw
     ;sta foeBlock + foeY
@@ -911,6 +947,7 @@ fuel_frame:
     push d
     push psw
     mvi h, 0
+    mov c, h
     call foe_paint
     pop psw
     pop d
@@ -923,6 +960,7 @@ fuel_frame:
     push d
     push psw
     mvi h, 0
+    mov c, h
     call foe_paint
     pop psw
     pop d
@@ -935,6 +973,7 @@ fuel_frame:
     push d
     push psw
     mvi h, 0
+    mov c, h
     call foe_paint
     pop psw
     pop d
@@ -947,6 +986,7 @@ fuel_frame:
     push d
     push psw
     mvi h, 0
+    mov c, h
     call foe_paint
     pop psw
     pop d
