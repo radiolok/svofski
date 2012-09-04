@@ -89,3 +89,9 @@ foe_water:                  db 0
 foe_right:                  db 0
 
 foe_clearance:              db 1
+
+inputs:                     
+input_down:                 db 0
+input_right:                db 0
+input_up:                   db 0
+input_left:                 db 0

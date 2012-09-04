@@ -1,5 +1,6 @@
 import math
 
+
 class Sprite:
     def getPicRaw(self):
         return self.pic
@@ -184,6 +185,42 @@ class Sprite:
             if (lst[len(lst) - 1 - i] != match): break
         return i
     
+
+class BlitSprite(Sprite):
+    def makeAsm(self, shift, orientation, returnLabel):
+        print ".list"
+        layer = self.makeLayer('4', shift, orientation)     
+        if (len(layer) > 0):
+            print ';; white pixels'
+            print layer
+
+    def makeLayer(self, layerchar, shift, orientation):
+        result = ''
+        comment = ''
+
+        pic = self.getPic(shift, 
+                mirror = orientation == 'rtl', 
+                prepend = shift == -1, 
+                append = (shift == 0))
+
+
+        height = len(pic)
+        width = len(pic[0])
+        columns = width / 8
+
+        result = '\tdw';
+
+        for column in xrange(0,columns):
+            for y in xrange(0, height, 2):   
+                popor = pic[y][column*8:column*8+8] + pic[y+1][column*8:column*8+8]
+                b = self.filter(popor, layerchar)
+                result = ('%s $%04x,' % (result, b));
+
+        result = result + '\n';
+        return comment + result
+
+
+
 
 class Ship(Sprite):
            #1   1   1   1   |
@@ -398,10 +435,53 @@ class Luuuu(Sprite):
     def getName(self): return "luuuu"
 
 
+
+class PlayerStraight(BlitSprite):
+    pic = ['       44       ',
+           '       44       ',
+           '       44       ',
+           '     444444     ',
+           '    44444444    ',
+           '   4444444444   ',
+           '  444  44  444  ',
+           '       44       ',
+           '       44       ',
+           '     444444     ',
+           '    44 44 44    ',
+           '                '];
+
+    def getName(self): return "player_up"
+
+    def getDirections(self): return ['ltr']
+
+class PlayerBank(BlitSprite):
+    pic = ['       44       ',
+           '       44       ',
+           '       44       ',
+           '     4444       ',
+           '   44444444     ',
+           '  444  444444   ',
+           '       44  44   ',
+           '       44       ',
+           '       44       ',
+           '    44444       ',
+           '   44  44444    ',
+           '           44   '];
+
+    def getName(self): return "player_bank"
+
+#class PlayerBankR(PlayerBank):
+#    def getName(self): return "player_br"
+#
+#class PlayerBankL(PlayerBank):
+#    def getName(self): return "player_bl"
+
+
+
         
 print ';; Automatically generated file'
 print ';; see makesprites.py'
-print '.nolist'
+#print '.nolist'
 
 a = Ship()
 a.makeAll()
@@ -420,6 +500,8 @@ Fuuuu().makeAll()
 Uuuuu().makeAll()
 Euuuu().makeAll()
 Luuuu().makeAll()
+PlayerStraight().makeAll()
+PlayerBank().makeAll()
 print '.list'
 
 
