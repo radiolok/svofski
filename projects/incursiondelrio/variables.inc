@@ -2,6 +2,7 @@ frame_number:
     db 0
 frame_scroll:
     db $ff; $10
+frame_scroll_prev:      db $ff
 
     ;; Foe table offsets
 foeId           equ 0           ; ref: FOE_ID
