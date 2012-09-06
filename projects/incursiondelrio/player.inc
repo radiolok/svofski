@@ -10,8 +10,79 @@ player_ptr:			dw player_bank_ltr_dispatch + 2; player_up_ltr_dispatch+2
 playerXspeed:		db 0
 playerXaccu:		db 255	
 
-playerJoystickUsed:	db 0
+YSPEED_DEFAULT		equ 88
+YSPEED_MAX			equ 128
+YSPEED_MIN			equ 64
 
+playerYspeed:		db YSPEED_DEFAULT
+playerYaccu:		db 0
+
+ScrollAccu:
+	mvi d, 0
+	lda playerYspeed
+	mov b, a
+	lda playerYaccu
+	add b
+	jnc saccu_1
+	inr d
+saccu_1:
+	add b
+	jnc saccu_2
+	inr d
+saccu_2:
+	add b
+	jnc saccu_3
+	inr d
+saccu_3:
+	add b
+	jnc saccu_4
+	inr d
+saccu_4:
+	sta playerYaccu
+	ret
+
+
+PlayerSpeed:
+	lda input_up
+	ora a
+	jnz ps_throttle
+	lda input_down
+	ora a
+	jnz ps_brake
+ps_spring:
+	lda playerYspeed
+	cpi YSPEED_DEFAULT
+	mvi b, 0
+	jz  ps_spring_add
+	mvi b, $8
+	jm 	ps_spring_add
+	mvi b, $f8
+ps_spring_add:
+	add b
+	jmp ps_exit_sta
+
+ps_throttle:
+	lda playerYspeed
+	cpi YSPEED_MAX
+	jm ps_throttle_1
+	jmp ps_exit
+ps_throttle_1:
+	adi 8
+	sta playerYspeed
+	jmp ps_exit
+
+ps_brake:
+	lda playerYspeed
+	cpi YSPEED_MIN
+	jnc  ps_brake_1
+	;jnz ps_brake_1
+	jmp ps_exit
+ps_brake_1:
+	sui 8
+ps_exit_sta:
+	sta playerYspeed
+ps_exit:
+	ret
 
 PlayerMotion:
 	mvi d, $ff
@@ -104,9 +175,13 @@ pm_Exit:
 PlayerSprite:
 	lxi h, $8000
 	shld psw_layer+1
+	lda frame_scroll
+	mov b, a
 	call PlayerSprite_W
 	lxi h, $a000
 	shld psw_layer+1
+	lda frame_scroll
+	mov b, a
 	call PlayerSprite_W
 	lxi h, $c000
 	shld psx_layer+1
@@ -116,6 +191,8 @@ PlayerSprite:
 PlayerWipe:
 	lxi h, $c000
 	shld psw_layer+1
+	lda frame_scroll_prev
+	mov b, a
 	call PlayerSprite_W
 	ret
 
@@ -147,8 +224,9 @@ psw_layer:
 	add h
 	mov h, a
 
-	mvi b, player_y
-	lda frame_scroll
+	;mvi b, player_y
+	;lda frame_scroll
+	mvi a, player_y
 	add b
 	mov l, a
 	; hl -> screen location

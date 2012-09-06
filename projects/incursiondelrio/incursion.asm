@@ -72,23 +72,23 @@ clearscreen:
 jamas:
     mvi a, 10
     out 2
+
     ei
     hlt
     xra a
     out 2
 
+
     call KeyboardScan
     call PlayerWipe
-
-    lxi h, frame_scroll
-    inr m
-
 
     ; scroll
     mvi a, 88h
     out 0
     lda frame_scroll
     out 3
+
+
 
     cpi $80
     jnz jamas_1
@@ -124,43 +124,73 @@ jamas_1:
     call SoundNoise
 
     call PlayerMotion
-    call PlayerSprite
+    call PlayerSpeed
 
 
     ; pink border
     mvi a, 4
     out 2
-    call ClearBlinds
+    ;call ClearBlinds
     
     ; dkblue border
     mvi a, $e
     out 2
 
-    ; update random
-    ; create new pf block when needed
-    ; create new foe
-    call UpdateLine
 
-    ; update one line of terrain
-    call UpdateOneStep
-
-    ; draw one line of terrain
-    call ProduceLineMain
+jamas_norollo:
+    ;call PlayerSprite
 
     ; white border
     mvi a, 2
     out 2
     call DrawBlinds
-
+    call PlayerSprite
+    lda  frame_scroll
+    sta frame_scroll_prev
+    call PlayFieldRoll
+    call ClearBlinds
     call SoundNoise
 
     mvi a, 8
     out 2
     lxi h, frame_number
     inr m
-
-
     jmp jamas
+
+PlayFieldRoll:
+    call ScrollAccu
+    mov a, d
+    ora a
+    rz ;jz jamas_norollo
+    dcr d
+    push d
+
+    ; update random
+    ; create new pf block when needed
+    ; create new foe
+    call UpdateLine
+    ; update one line of terrain
+    call UpdateOneStep
+    ; draw one line of terrain
+    call ProduceLineMain
+
+    lxi h, frame_scroll
+    inr m
+
+    pop d
+    dcr d
+    ;jm jamas_norollo
+    rm 
+
+    ;;;; full speed: scroll more 
+    call UpdateLine
+    call UpdateOneStep
+    call ProduceLineMain
+    lxi h, frame_scroll
+    inr m
+    ;;;;;
+    ret
+
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;;                   V A R I A B L E S
@@ -425,7 +455,6 @@ cnf_regular_or_fuel:
     mvi a, CLEARANCE_FUEL
     sta foe_clearance
 
-;cnf_fuel_ok:
     mvi d, FOEID_FUEL
     jmp cnf_3
 
@@ -485,8 +514,6 @@ cnf_dir1:
 
     ; Y = current
     lda frame_scroll
-    mov b, a
-    ;sui TOP_HEIGHT-16 ; make foes appear above the top curtain
     mov m, a
     inx h
     ; Left

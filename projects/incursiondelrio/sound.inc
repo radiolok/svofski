@@ -41,7 +41,12 @@ SoundSound:
 
 SoundNoise:
 	call nextRandomSnd
-	mvi b, $80
+	lda playerYspeed
+	sui YSPEED_DEFAULT
+	cma
+	adi $80
+	mov b, a
+	;mvi b, $80
 	lda random_sndLo
 	ani $3f
 	add b
