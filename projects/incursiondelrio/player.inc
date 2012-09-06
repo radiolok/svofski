@@ -7,95 +7,69 @@ player_dir:			db 0
 
 player_ptr:			dw player_bank_ltr_dispatch + 2; player_up_ltr_dispatch+2
 
-pm_input_left:
-	lda player_dir
-	dcr a
-	cpi $fe
-	jp pmi_left_1
-	jz pmi_left_1
-	mvi a, $fe
-pmi_left_1:
-	sta player_dir
-	jmp pm_inputHandled
+playerXspeed:		db 0
+playerXaccu:		db 255	
 
-pm_input_right:
-	lda player_dir
-	inr a
-	cpi $2
-	jc pmi_right_1
-	mvi a, $2
-pmi_right_1:
-	sta player_dir
-	jmp pm_inputHandled
+playerJoystickUsed:	db 0
 
 
 PlayerMotion:
-	lda frame_scroll
-	ani $1
-	jnz pm_inputHandled
-
+	mvi d, $ff
 	lda input_left
 	ora a
-	jnz pm_input_left
+	jnz pm_input_leftright
+	mvi d, 1
 	lda input_right
 	ora a
-	jnz pm_input_right
-	jmp pm_input_none
-
-
-pm_inputHandled:
-	lda player_dir
-	ora a
-	jz pm_Exit
-	jm pm_left
-	jmp pm_Right
-
-pm_input_none:
-	; straighen the plane
-	lda player_dir
-	ora a
-	jz pm_isStraight
-	jm pm_straL
-pm_straP:
+	jnz pm_input_leftright
+	
+	; joystick left/right released, clear X speed
+	mvi a, 0
+	sta playerXspeed
 	dcr a
-	sta player_dir
-	jmp pm_StraightenDone
-pm_straL:
-	inr a
-	sta player_dir
-	jmp pm_StraightenDone
-pm_Continue:
-	ora a
-	jz pm_isStraight
-	jm pm_BankLeft
-pm_BankRight:
-	lxi h, player_bank_ltr_dispatch+2
-	shld player_ptr
-	jmp pm_StraightenDone
-pm_BankLeft:
-	lxi h, player_bank_rtl_dispatch
-	shld player_ptr
-	jmp pm_StraightenDone
-pm_isStraight:
-	; flying straight
+	sta playerXaccu
+	
+	; set the plane straight
 	lxi h, player_up_ltr_dispatch+2
 	shld player_ptr
-	jmp pm_StraightenDone
+	jmp pm_Exit
 
-pm_StraightenDone:
-	jmp pm_inputHandled
+pm_input_leftright:
+	lda playerXspeed
+	cpi $80 			; X speed maxed out?
+	jz pm_x_accumulate	; yes, no change
+	adi $4 				; increase speed
+	sta playerXspeed
+pm_x_accumulate:
+	mov b, a
+	mvi c, 0
+	lda playerXaccu
+	add b
+	jnc pm_ilr_1
+	dcr c
+pm_ilr_1:
+	add b
+	sta playerXaccu
+	jc  pm_playerXstep
+	mov a, c
+	ora a
+	jm  pm_playerXstep
+	jmp pm_Exit
+
+	; perform X step, d = direction
+pm_playerXstep:
+	mov a, d
+	ora a
+	jm pm_left
+	jmp pm_right
 
 pm_left:
 	lxi h, player_bank_rtl_dispatch
 	shld player_ptr
 
 	lxi h, player_index
-	lda player_dir
-	stc
-	rar
-	mov b, a
 	mov a, m
-	add b
+	sui 2 				; move in steps of 2
 	jp pm_left_m1
 	adi 8
 	mov m, a
@@ -112,12 +86,8 @@ pm_right:
 	shld player_ptr
 
 	lxi h, player_index
-	lda player_dir
-	ora a
-	rar
-	mov b, a
 	mov a, m
-	add b
+	adi 2 				; move in steps of 2
 	cpi 8
 	jm pm_right_m1
 	sui 8

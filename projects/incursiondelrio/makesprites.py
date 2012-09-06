@@ -376,11 +376,11 @@ class BridgeBottom(Bridge):
 
 class Fuuuu(Sprite):
     pic = ['   2222222222   ',
-           ' 222        222 ',
-           ' 222  222222222 ',
-           ' 222     222222 ',
-           ' 222  222222222 ',
-           ' 222  222222222 '];
+           '  22        22  ',
+           '  22  22222222  ',
+           '  22     22222  ',
+           '  22  22222222  ',
+           '  22  22222222  '];
 
     def getDirections(self): return ['ltr']
 
@@ -390,12 +390,12 @@ class Fuuuu(Sprite):
     def getName(self): return "fuuuu"
 
 class Uuuuu(Sprite):
-    pic = [' 44444444444444 ',
-           ' 444  4444  444 ',
-           ' 444  4444  444 ',
-           ' 444  4444  444 ',
-           ' 444        444 ',
-           ' 44444444444444 '];
+    pic = ['  444444444444  ',
+           '  44  4444  44  ',
+           '  44  4444  44  ',
+           '  44  4444  44  ',
+           '  44        44  ',
+           '  444444444444  '];
 
     def getDirections(self): return ['ltr']
 
@@ -405,12 +405,12 @@ class Uuuuu(Sprite):
     def getName(self): return "uuuuu"
 
 class Euuuu(Sprite):
-    pic = [' 222        222 ',
-           ' 222  222222222 ',
-           ' 222      22222 ',
-           ' 222  222222222 ',
-           ' 222        222 ',
-           ' 22222222222222 '];
+    pic = ['  22        22  ',
+           '  22  22222222  ',
+           '  22      2222  ',
+           '  22  22222222  ',
+           '  22        22  ',
+           '  222222222222  '];
 
     def getDirections(self): return ['ltr']
 
@@ -420,12 +420,12 @@ class Euuuu(Sprite):
     def getName(self): return "euuuu"
 
 class Luuuu(Sprite):
-    pic = [' 444  444444444 ',
-           ' 444  444444444 ',
-           ' 444  444444444 ',
-           ' 444  444444444 ',
-           ' 444        444 ',
-           ' 44444444444444 '];
+    pic = ['  44  44444444  ',
+           '  44  44444444  ',
+           '  44  44444444  ',
+           '  44  44444444  ',
+           '  44        44  ',
+           '  444444444444  '];
 
     def getDirections(self): return ['ltr']
 
