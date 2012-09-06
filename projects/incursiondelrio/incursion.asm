@@ -827,7 +827,7 @@ foe_byId:
     mov l, a
     lda foeBlock + foeY              
     sub l
-    cpi BOTTOM_HEIGHT
+    cpi BOTTOM_HEIGHT-8
     jnc foe_infield
     xra a
     sta foeBlock + foeId
