@@ -4,7 +4,6 @@ KeyboardScan:
 	mvi a, $fe ; row 0
 	out 03
 	in 02
-	;sta key_arrows
 	lxi h, 0
 	shld inputs
 	shld inputs+2

@@ -97,7 +97,7 @@ PlayerMotion:
 	jnz pm_input_leftright
 	
 	; joystick left/right released, clear X speed
-	mvi a, 0
+	xra a
 	sta playerXspeed
 	dcr a
 	sta playerXaccu
@@ -146,9 +146,8 @@ pm_left:
 	jp pm_left_m1
 	adi 8
 	mov m, a
-	lda player_column
-	dcr a
-	sta player_column
+	dcx h
+	dcr m  				; decrement column
 	jmp pm_Exit
 pm_left_m1:
 	mov m, a
@@ -165,9 +164,8 @@ pm_right:
 	jm pm_right_m1
 	sui 8
 	mov m, a
-	lda player_column
-	inr a
-	sta player_column
+	dcx h
+	inr m
 	jmp pm_Exit
 pm_right_m1:
 	mov m, a
