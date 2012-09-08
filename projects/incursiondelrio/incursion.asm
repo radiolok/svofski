@@ -225,19 +225,18 @@ copyfoe_restoresp:
     ; copy foe block back
     ; only the first 4 bytes of foeBlock need to be copied back
     ; it's faster to do it by byte
-    lhld foeBlock       ; 20
-    mov b, h            ; 8
-    mov c, l            ; 8
     lhld foeBlock + 2   ; 20
     pop d               ; 16
     xchg                ; 8 
-    mov m, c            
-    inx h               
-    mov m, b
-    inx h
-    mov m, e
-    inx h
-    mov m, d            ; = 136
+    lda foeBlock        ; 12
+    mov m, a            ; 8
+    inx h               ; 8
+    lda foeBlock + 1    ; 12
+    mov m, a            ; 8
+    inx h               ; 8
+    mov m, e            ; 8
+    inx h               ; 8
+    mov m, d            ; = 116
     ret
 
 
