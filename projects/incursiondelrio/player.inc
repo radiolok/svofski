@@ -202,10 +202,10 @@ PlayerSprite:
 
 PlayerWipe:
 	lxi h, $c000
-	shld psw_layer+1
+	shld psc_layer+1
 	lda frame_scroll_prev
 	mov b, a
-	call PlayerSprite_W
+	call PlayerSprite_C
 	ret
 
 
@@ -1010,5 +1010,290 @@ psx_layer:
 
 
 psx_restoreSP:
+	lxi sp, 0
+	ret
+
+
+
+PlayerSprite_C:
+
+	; hl -> player_ptr
+	lhld player_ptr
+	mvi d, 0
+	lda player_index
+	ora a
+	ral 
+	mov e, a
+	dad d
+	; hl -> player_ptr[player_index]
+
+	mov e, m
+	inx h
+	mov d, m
+	; de -> &bits
+
+	lxi h, 0
+	dad sp 
+	shld psc_restoreSP+1
+
+psc_layer:
+	lxi h, $c000
+	lda player_column
+	add h
+	mov h, a
+
+	mvi a, player_y
+	add b  ; frame_scroll in b
+	mov l, a
+	; hl -> screen location
+
+	xchg	
+	sphl
+	xchg
+
+	mvi d, 0
+
+	mov e, l
+	;; le big pop
+	pop b
+	mov a, b
+	cma  			; a = mask
+	ana m 			; a = m & mask
+					; collision = m != (m & mask)
+	cmp m
+	jz .+4
+	inr d
+
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+
+	inr h
+	mov l, e
+	; column end
+
+	;; le big pop
+	pop b
+	mov a, b
+	cma  			; a = mask
+	ana m 			; a = m & mask
+					; collision = m != (m & mask)
+	cmp m
+	jz .+4
+	inr d
+
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+
+	inr h
+	mov l, e
+	; column end
+	;; le big pop
+	pop b
+	mov a, b
+	cma  			; a = mask
+	ana m 			; a = m & mask
+					; collision = m != (m & mask)
+	cmp m
+	jz .+4
+	inr d
+
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	dcr l
+	;
+	pop b
+	mov a, b
+	cma 
+	ana m
+	mov m, a
+	dcr l
+	mov a, c
+	cma
+	ana m
+	mov m, a
+	; column end
+
+
+psc_restoreSP:
 	lxi sp, 0
 	ret
