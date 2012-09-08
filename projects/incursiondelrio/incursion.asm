@@ -385,8 +385,6 @@ cnf_notabridge:
     ; regular foe
     lda randomHi
     mov b, a
-    ;ani $4
-    ;jz  CreateNewFoe_Exit
     lda randomLo
     cpi $a0
     jnc CreateNewFoe_Exit
@@ -480,8 +478,8 @@ cnf_L1:
 
     ; create fuel or regular foe
 cnf_regular_or_fuel:
-    mvi a, CLEARANCE_DEFAULT
-    sta foe_clearance
+    ;mvi a, CLEARANCE_DEFAULT
+    ;sta foe_clearance
 
     lda randomHi
     mov b, a
@@ -542,7 +540,7 @@ cnf_width_2:
     mvi m, 0
     inx h
 
-    ; Direction = 1
+    ; Direction
     lda randomHi
     ani $8
     mvi a, $ff
@@ -1026,50 +1024,45 @@ fuel_frame:
     mov e, a
     lda foeBlock + foeY
     push d
-    push psw
     mvi h, 0
     mov c, h
     call foe_paint
-    pop psw
     pop d
 
     lxi h, euuuu_ltr_dispatch
     shld foeBlock_LTR
     shld foeBlock_RTL
+    lda foeBlock + foeY
     adi 6
     sta foeBlock + foeY
     push d
-    push psw
     mvi h, 0
     mov c, h
     call foe_paint
-    pop psw
     pop d
 
     lxi h, uuuuu_ltr_dispatch
     shld foeBlock_LTR
     shld foeBlock_RTL
+    lda foeBlock + foeY
     adi 6
     sta foeBlock + foeY
     push d
-    push psw
     mvi h, 0
     mov c, h
     call foe_paint
-    pop psw
     pop d
 
     lxi h, fuuuu_ltr_dispatch
     shld foeBlock_LTR
     shld foeBlock_RTL
+    lda foeBlock + foeY
     adi 6
     sta foeBlock + foeY
     push d
-    push psw
     mvi h, 0
     mov c, h
     call foe_paint
-    pop psw
     pop d
 
     ret
@@ -1161,7 +1154,7 @@ foe_Move:
     lda foeBlock + foeIndex
     add b
     ; if (Index == -1  
-    ora a
+    ;ora a
     jm foe_move_indexoverrun
     ;     || Index == 8)
     cpi $8
