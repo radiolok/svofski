@@ -1,5 +1,7 @@
 player_y			equ 64+20
 
+player_collision:	db 0
+
 player_column:		db 15
 player_index:   	db 4
 
@@ -178,14 +180,24 @@ PlayerSprite:
 	lda frame_scroll
 	mov b, a
 	call PlayerSprite_W
+	mov a, d
+	sta player_collision
+
 	lxi h, $a000
 	shld psw_layer+1
 	lda frame_scroll
 	mov b, a
 	call PlayerSprite_W
+	lda player_collision
+	add d
+	sta player_collision
+
 	lxi h, $c000
 	shld psx_layer+1
 	call PlayerSprite_X
+	lda player_collision
+	add d
+	sta player_collision
 	ret
 
 PlayerWipe:
@@ -224,10 +236,8 @@ psw_layer:
 	add h
 	mov h, a
 
-	;mvi b, player_y
-	;lda frame_scroll
 	mvi a, player_y
-	add b
+	add b  ; frame_scroll in b
 	mov l, a
 	; hl -> screen location
 
@@ -235,18 +245,27 @@ psw_layer:
 	sphl
 	xchg
 
+	mvi d, 0
+
 	mov e, l
-
 	;; le big pop
 	pop b
 	mov a, b
-	cma 
-	ana m
+	cma  			; a = mask
+	ana m 			; a = m & mask
+					; collision = m != (m & mask)
+	cmp m
+	jz .+4
+	inr d
+
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -254,11 +273,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -266,11 +291,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -278,11 +309,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -290,11 +327,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -302,11 +345,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 
 	inr h
@@ -316,13 +365,21 @@ psw_layer:
 	;; le big pop
 	pop b
 	mov a, b
-	cma 
-	ana m
+	cma  			; a = mask
+	ana m 			; a = m & mask
+					; collision = m != (m & mask)
+	cmp m
+	jz .+4
+	inr d
+
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -330,11 +387,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -342,11 +405,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -354,11 +423,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -366,11 +441,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -378,11 +459,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 
 	inr h
@@ -391,13 +478,21 @@ psw_layer:
 	;; le big pop
 	pop b
 	mov a, b
-	cma 
-	ana m
+	cma  			; a = mask
+	ana m 			; a = m & mask
+					; collision = m != (m & mask)
+	cmp m
+	jz .+4
+	inr d
+
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -405,11 +500,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -417,11 +518,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -429,11 +536,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -441,11 +554,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	;
@@ -453,11 +572,17 @@ psw_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	mov m, a
 
 	inr h
@@ -508,18 +633,24 @@ psx_layer:
 	xchg
 
 	mov e, l
-
+	mvi d, 0
 	;; le big pop
 	pop b
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -528,12 +659,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -542,12 +679,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -556,12 +699,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -570,12 +719,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -584,14 +739,21 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
+	dcr l
 
 	inr h
 	mov l, e
@@ -602,12 +764,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -616,12 +784,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -630,12 +804,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -644,12 +824,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -658,12 +844,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -672,14 +864,21 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
+	dcr l
 
 	inr h
 	mov l, e
@@ -689,12 +888,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -703,12 +908,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -717,12 +928,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -731,12 +948,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -745,12 +968,18 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
 	dcr l
@@ -759,18 +988,24 @@ psx_layer:
 	mov a, b
 	cma 
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora b
 	mov m, a
 	dcr l
 	mov a, c
 	cma
 	ana m
+	cmp m
+	jz .+4
+	inr d
 	ora c
 	mov m, a
+	dcr l
 
 	inr h
 	mov l, e
-
 	; column end
 
 

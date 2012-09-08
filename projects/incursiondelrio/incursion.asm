@@ -94,6 +94,7 @@ jamas:
     jnz jamas_1
     call SoundInit
 jamas_1:
+    call SoundSound
     call SoundNoise
 
     ; keep interrupts enabled to make errors obvious
@@ -127,9 +128,6 @@ jamas_1:
     call PlayerSpeed
 
 
-    ; pink border
-    mvi a, 4
-    out 2
     ;call ClearBlinds
     
     ; dkblue border
@@ -140,14 +138,24 @@ jamas_1:
 jamas_norollo:
     ;call PlayerSprite
 
+    ; pink border
+    mvi a, 4
+    out 2
+    call DrawBlinds
     ; white border
     mvi a, 2
     out 2
-    call DrawBlinds
     call PlayerSprite
     lda  frame_scroll
     sta frame_scroll_prev
+
+    mvi a, 6
+    out 2
     call PlayFieldRoll
+
+    ; black border
+    mvi a, 5
+    out 2
     call ClearBlinds
     call SoundNoise
 
@@ -272,20 +280,41 @@ palette_loop:
 ClearBlinds:
     lxi h, $e2ff-TOP_HEIGHT
     mvi e, 0
-    mvi c, 14 ; 28
+    mvi c, 7;14 ; 28
     lda frame_scroll
     add l
     mov l, a
-    jmp drawblinds_fill
+    ; fill 2 lines in a meander-like pattern y,y+1,x+1,y+1
+clearblinds_fill:
+    mov m, e
+    inr l    
+    mov m, e 
+    inr h
+    mov m, e
+    dcr l
+    mov m, e
+    inr h
+    mov m, e
+    inr l    
+    mov m, e 
+    inr h
+    mov m, e
+    dcr l
+    mov m, e
+    inr h
+    dcr c   
+    jnz clearblinds_fill
+    ret 
 
     ;; ---------------------------------------------- -   - 
     ;; Draw 2 lines of black at the bottom of game field
     ;; ----------------------------------------------------------
 DrawBlinds:
+
     lxi h, $8000 + BOTTOM_HEIGHT - 22 ; 22 ~ enemy height
     mvi e, $00
     ; wipe the first 3 layers with zeroes...
-    mvi c, 16*3 
+    mvi c, 4*3 ; 16*3 
     lda frame_scroll
     add l
     mov l, a
@@ -293,13 +322,36 @@ DrawBlinds:
     
     ; ...and the black layer with $ff
     mvi e, $ff 
-    mvi c, 16
+    mvi c, 4 ; 16
     mov a, l
     adi 22
     mov l, a
-
     ; fill 2 lines in a meander-like pattern y,y+1,x+1,y+1
 drawblinds_fill:
+    mov m, e
+    inr l    
+    mov m, e 
+    inr h
+    mov m, e
+    dcr l
+    mov m, e
+    inr h
+    mov m, e
+    inr l    
+    mov m, e 
+    inr h
+    mov m, e
+    dcr l
+    mov m, e
+    inr h
+    mov m, e
+    inr l    
+    mov m, e 
+    inr h
+    mov m, e
+    dcr l
+    mov m, e
+    inr h
     mov m, e
     inr l    
     mov m, e 
@@ -795,8 +847,9 @@ produce_island:
     lda terrain_islandwidth
     ora a
     jz produce_rightwater
-    ral
 produce_loop_island:
+    mov m, b
+    inr h
     mov m, b
     inr h
     dcr a

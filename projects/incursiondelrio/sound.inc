@@ -37,6 +37,22 @@ SoundInit:
 	ret
 
 SoundSound:
+	lda player_collision
+	ora a
+	jz ss_silence
+	mvi a, CH0_CTR_BEEP
+	out I8253_CONTROL
+	mvi a, $0
+	out I8253_CH0
+	mvi a, $10
+	out I8253_CH0
+	ret
+ss_silence:
+	mvi a, CH0_CTR_SILENCE
+	out I8253_CONTROL
+	mvi a, $ff
+	out I8253_CH0
+	out I8253_CH0
 	ret
 
 SoundNoise:
