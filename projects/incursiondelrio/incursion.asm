@@ -154,10 +154,10 @@ jamas_1:
     jmp jamas
 
 PlayFieldRoll:
-    call ScrollAccu
+    call ScrollAccu         ; d = number of lines to advance
     mov a, d
     ora a
-    rz ;jz jamas_norollo
+    rz 
     dcr d
     push d
 
@@ -175,7 +175,6 @@ PlayFieldRoll:
 
     pop d
     dcr d
-    ;jm jamas_norollo
     rm 
 
     ;;;; full speed: scroll more 
@@ -206,45 +205,39 @@ foe_in_de:
     push d
     lxi h, 0                ; 12
     dad sp                  ; 12
-    shld copyfoe_restoresp+1    ; 16
+    shld copyfoe_restoresp+1    ; 20
     xchg                    ; 8
-    sphl                    ; 8  = 64
+    sphl                    ; 8  
 
     pop h                   ; 12
-    shld foeBlock           ; 16
+    shld foeBlock           ; 20
     pop h                   ; 12
-    shld foeBlock + 2       ; 16
+    shld foeBlock + 2       ; 20
     pop h                   ; 12
-    shld foeBlock + 4       ; 16
+    shld foeBlock + 4       ; 20
     pop h                   ; 12
-    shld foeBlock + 6       ; 16  = 68
+    shld foeBlock + 6       ; 20
 copyfoe_restoresp:
     lxi sp, 0
 
     call foe_byId
-    pop d
 
     ; copy foe block back
     ; only the first 4 bytes of foeBlock need to be copied back
-    lxi h, 0    
-    dad sp      
-    shld copyback_return+1 
-    xchg        
-    lxi d, 4                ; foeBlock size
-    dad d
-    sphl        
-
-    ;lhld foeBlock + 6      
-    ;push h
-    ;lhld foeBlock + 4
-    ;push h
-    lhld foeBlock + 2
-    push h
-    lhld foeBlock
-    push h           
-
-copyback_return:
-    lxi sp, 0
+    ; it's faster to do it by byte
+    lhld foeBlock       ; 20
+    mov b, h            ; 8
+    mov c, l            ; 8
+    lhld foeBlock + 2   ; 20
+    pop d               ; 16
+    xchg                ; 8 
+    mov m, c            
+    inx h               
+    mov m, b
+    inx h
+    mov m, e
+    inx h
+    mov m, d            ; = 136
     ret
 
 
@@ -533,6 +526,7 @@ cnf_width_2:
     mov m, d 
     inx h                   ; foe.Id = d
 
+    inr c
     mov m, c                ; foe.Column = a
     inx h
 
@@ -971,12 +965,8 @@ foe_byId_copterpropeller:
     lda foeBlock + foeY ; 16
     adi 4               ; 8
     sta foeBlock + foeY ; 16
-    push psw            ; 12
     ; draw propeller
     call foe_paint_preload 
-    ; restore copter Y position in the foe block
-    pop psw             ; 12
-    sta foeBlock + foeY ; 16 = 64
     ret
 
     ;; ---------------------------------------------- -   - 
@@ -988,28 +978,22 @@ bridge_frame:
     shld foeBlock_RTL
     mvi e, 12
     lda foeBlock + foeY
-    push psw
     adi 7
     sta foeBlock + foeY
     mvi h, 1
     mvi c, 0
     call foe_paint
-    pop psw
-    sta foeBlock + foeY
 
     lxi h, bridgeTop_ltr_dispatch
     shld foeBlock_LTR
     shld foeBlock_RTL
     mvi e, 12
     lda foeBlock + foeY
-    push psw
-    adi 14+7
+    adi 14
     sta foeBlock + foeY
     mvi h, 1
     mvi c, 0
     call foe_paint
-    pop psw
-    ;sta foeBlock + foeY
     ret
 
     ;; ---------------------------------------------- -   - 
@@ -1020,50 +1004,47 @@ fuel_frame:
     shld foeBlock_LTR
     shld foeBlock_RTL
     lda foeBlock + foeColumn
-    inr a
     mov e, a
     lda foeBlock + foeY
-    push d
     mvi h, 0
     mov c, h
     call foe_paint
-    pop d
 
     lxi h, euuuu_ltr_dispatch
     shld foeBlock_LTR
     shld foeBlock_RTL
+    lda foeBlock + foeColumn
+    mov e, a
     lda foeBlock + foeY
     adi 6
     sta foeBlock + foeY
-    push d
     mvi h, 0
     mov c, h
     call foe_paint
-    pop d
 
     lxi h, uuuuu_ltr_dispatch
     shld foeBlock_LTR
     shld foeBlock_RTL
+    lda foeBlock + foeColumn
+    mov e, a
     lda foeBlock + foeY
     adi 6
     sta foeBlock + foeY
-    push d
     mvi h, 0
     mov c, h
     call foe_paint
-    pop d
 
     lxi h, fuuuu_ltr_dispatch
     shld foeBlock_LTR
     shld foeBlock_RTL
+    lda foeBlock + foeColumn
+    mov e, a
     lda foeBlock + foeY
     adi 6
     sta foeBlock + foeY
-    push d
     mvi h, 0
     mov c, h
     call foe_paint
-    pop d
 
     ret
 
