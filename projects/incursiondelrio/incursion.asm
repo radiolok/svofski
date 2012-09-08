@@ -78,7 +78,6 @@ jamas:
     xra a
     out 2
 
-
     call KeyboardScan
     call PlayerWipe
 
@@ -87,8 +86,6 @@ jamas:
     out 0
     lda frame_scroll
     out 3
-
-
 
     cpi $80
     jnz jamas_1
@@ -122,21 +119,12 @@ jamas_1:
     lxi d, foe_8
     call foe_in_de
 
-    call SoundNoise
-
-    call PlayerMotion
-    call PlayerSpeed
-
-
-    ;call ClearBlinds
-    
     ; dkblue border
     mvi a, $e
     out 2
-
-
-jamas_norollo:
-    ;call PlayerSprite
+    call SoundNoise
+    call PlayerMotion
+    call PlayerSpeed
 
     ; pink border
     mvi a, 4
@@ -705,14 +693,6 @@ UpdateOneStep:
     lda pf_bridgeflag
     sta pf_roadflag
 
-    ;lda pf_blockcount
-    ;cpi BLOCKS_IN_LEVEL
-    ;mvi a, 0
-    ;jnz uos_1
-    ;inr a
-;uos_1:
-;    sta pf_roadflag
-
     ; widen/narrow the banks
     lhld terrain_act
     xchg
@@ -793,41 +773,42 @@ produce_line_road:
     jm plr_asphalt
     jmp plr_yellow
 plr_asphalt:
-    lxi h, $c0ff+2   ; c+8 = cyan, c+a = near black
-    mvi d, $c0+SCREEN_WIDTH_BYTES
+    lxi h, $c201   ; c+8 = cyan, c+a = near black
+    mvi d, $c0+SCREEN_WIDTH_BYTES-2
     call produce_line_e2
-    lxi h, $80ff+2
-    mvi d, $80+SCREEN_WIDTH_BYTES
+    lxi h, $8201
+    mvi d, $80+SCREEN_WIDTH_BYTES-2
     call produce_line_e2
     ret
 plr_yellow:
-    lxi h, $80ff+2  ; 8+a = yellow
-    mvi d, $80+SCREEN_WIDTH_BYTES
+    lxi h, $8201  ; 8+a = yellow
+    mvi d, $80+SCREEN_WIDTH_BYTES-2
     call produce_line_e2
-    lxi h, $a0ff+2
-    mvi d, $a0+SCREEN_WIDTH_BYTES
+    lxi h, $a201
+    mvi d, $a0+SCREEN_WIDTH_BYTES-2
     call produce_line_e2
     ret
 
 plr_border:
-    lxi h, $c0ff+2  
-    mvi d, $c0+SCREEN_WIDTH_BYTES
+    lxi h, $c201  
+    mvi d, $c0+SCREEN_WIDTH_BYTES-2
     call produce_line_e2
-    lxi h, $a0ff+2
-    mvi d, $a0+SCREEN_WIDTH_BYTES
+    lxi h, $a201
+    mvi d, $a0+SCREEN_WIDTH_BYTES-2
     call produce_line_e2
     ret
 
 produce_line_green:
-    lxi h, $80ff+2; $80ff-TOP_HEIGHT+2
-    mvi d, $80+SCREEN_WIDTH_BYTES
+    ;lxi h, $80ff+2
+    lxi h, $8201
+    mvi d, $80+SCREEN_WIDTH_BYTES-2
 produce_line_e2:
     lda frame_scroll
     add l
     mov l, a
     lxi b, $ff00
     lda terrain_left
-    dcr a
+    sui 2
 produce_loop_leftbank:
     mov m, b
     inr h
@@ -836,6 +817,16 @@ produce_loop_leftbank:
 
     lda terrain_water
     ora a
+    jz produce_island
+    mov m, c
+    inr h
+    mov m, c
+    inr h
+    mov m, c
+    inr h
+    mov m, c
+    inr h
+    sui 4
     jz produce_island
 produce_loop_leftwater:
     mov m, c
@@ -857,6 +848,16 @@ produce_loop_island:
 produce_rightwater:
     lda terrain_water
     ora a
+    jz produce_rightbank
+    mov m, c
+    inr h
+    mov m, c
+    inr h
+    mov m, c
+    inr h
+    mov m, c
+    inr h
+    sui 4
     jz produce_rightbank
 produce_loop_rightwater:
     mov m, c
