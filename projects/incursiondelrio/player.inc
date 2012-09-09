@@ -12,9 +12,9 @@ player_ptr:			dw player_bank_ltr_dispatch + 2; player_up_ltr_dispatch+2
 playerXspeed:		db 0
 playerXaccu:		db 255	
 
-YSPEED_DEFAULT		equ 88
+YSPEED_DEFAULT		equ 76 ;88
 YSPEED_MAX			equ 128
-YSPEED_MIN			equ 64
+YSPEED_MIN			equ 48
 
 playerYspeed:		db YSPEED_DEFAULT
 playerYaccu:		db 0
@@ -56,9 +56,9 @@ ps_spring:
 	cpi YSPEED_DEFAULT
 	mvi b, 0
 	jz  ps_spring_add
-	mvi b, $8
+	mvi b, $1; $4 ; $8
 	jm 	ps_spring_add
-	mvi b, $f8
+	mvi b, $ff; $fc ; $f8
 ps_spring_add:
 	add b
 	jmp ps_exit_sta
@@ -69,7 +69,7 @@ ps_throttle:
 	jm ps_throttle_1
 	jmp ps_exit
 ps_throttle_1:
-	adi 8
+	adi 1; 4; 8
 	sta playerYspeed
 	jmp ps_exit
 
@@ -80,7 +80,7 @@ ps_brake:
 	;jnz ps_brake_1
 	jmp ps_exit
 ps_brake_1:
-	sui 8
+	sui 1;4; 8
 ps_exit_sta:
 	sta playerYspeed
 ps_exit:

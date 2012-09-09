@@ -134,6 +134,7 @@ jamas_1:
     mvi a, 2
     out 2
     call PlayerSprite
+    call MissileSprite
     lda  frame_scroll
     sta frame_scroll_prev
 
@@ -195,6 +196,7 @@ PlayFieldRoll:
     .include sound.inc
 
     .include player.inc
+    .include missile.inc
 
     .include input.inc
 
