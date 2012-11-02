@@ -12,9 +12,10 @@ player_ptr:			dw player_bank_ltr_dispatch + 2; player_up_ltr_dispatch+2
 playerXspeed:		db 0
 playerXaccu:		db 255	
 
-YSPEED_DEFAULT		equ 76 ;88
+YSPEED_DEFAULT		equ 76
 YSPEED_MAX			equ 128
 YSPEED_MIN			equ 48
+
 
 playerYspeed:		db YSPEED_DEFAULT
 playerYaccu:		db 0
