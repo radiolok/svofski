@@ -134,7 +134,7 @@ jamas_1:
     mvi a, 2
     out 2
     call PlayerSprite
-    call MissileSprite
+    ;call MissileSprite
     lda  frame_scroll
     sta frame_scroll_prev
 
