@@ -13,7 +13,11 @@
 
 class Biquad {
 public:
-    Biquad(int a0, int a1, int a2, int b1, int b2, int freq, int Q) {
+    Biquad(int a0, int a1, int a2, int b1, int b2, int freq
+#ifdef TESTBENCH
+        , float q, float fa0, float fa1, float fa2, float fb1, float fb2
+#endif
+    ) {
         m_ia0 = a0;
         m_ia1 = a1;
         m_ia2 = a2;
@@ -23,7 +27,12 @@ public:
         m_id_1 = m_id_2 = 0;
         m_Freq = freq;
 #ifdef TESTBENCH
-        m_Q = Q;
+        m_Q = q;
+        m_a0 = fa0;
+        m_a1 = fa1;
+        m_a2 = fa2;
+        m_b1 = fb1;
+        m_b2 = fb2;
 #endif
     }
 
@@ -52,8 +61,9 @@ public:
     float B2() const { return m_b2; };
 
     char* toString(char* buf) {
-        sprintf(buf, "Biquad(%d,%d,%d,%d,%d, %d, %d)",
-            m_ia0, m_ia1, m_ia2, m_ib1, m_ib2, m_Freq, (int)m_Q);
+        sprintf(buf, "Biquad(%d,%d,%d,%d,%d, %d\n#ifdef TESTBENCH\n ,%f,%f,%f,%f,%f,%f\n#endif\n)",
+            m_ia0, m_ia1, m_ia2, m_ib1, m_ib2, m_Freq, 
+            m_Q, m_a0, m_a1, m_a2, m_b1, m_b2);
         return buf;
     }
 #endif
