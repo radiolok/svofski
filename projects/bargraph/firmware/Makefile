@@ -2,6 +2,8 @@
 PROJECT = blink
 
 DEFS=-DSAMPLERATE=28000
+SERIAL=/dev/tty.SLAB_USBtoUART
+BITRATE=230400
 
 ARCH=-mthumb -mcpu=cortex-m3
 #OPTIMIZATION = -O0 -g
@@ -23,7 +25,7 @@ MKDIR = mkdir
 RM = rm -f
 
 #  Compiler and linker flags
-CFLAGS = -Wall -fno-common $(ARCH) $(OPTIMIZATION)
+CFLAGS = -Wall -fno-common $(ARCH) $(OPTIMIZATION) $(DEFS)
 CFLAGS += $(foreach DIR, $(INCLUDEDIRS), -I$(DIR))
 CPPFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 LDFLAGS = $(ARCH) $(OPTIMIZATION) -nostartfiles
@@ -47,26 +49,27 @@ VPATH = $(foreach DIR, $(SOURCEDIRS), $(strip $(DIR)):)
 all: include/instfilters.h $(BUILDDIR)/$(PROJECT).hex $(OUTDIR)/$(PROJECT).bin
 
 burn: $(OUTDIR)/$(PROJECT).bin
-	~/tmpsrc/lpc21isp/lpc21isp -bin $(OUTDIR)/$(PROJECT).bin /dev/tty.linvor-DevB 9600 12000
+	~/tmpsrc/lpc21isp/lpc21isp -bin $(OUTDIR)/$(PROJECT).bin $(SERIAL) $(BITRATE) 12000
 
 burnterm: $(OUTDIR)/$(PROJECT).bin
-	~/tmpsrc/lpc21isp/lpc21isp -term -bin $(OUTDIR)/$(PROJECT).bin /dev/tty.linvor-DevB 9600 12000
+	~/tmpsrc/lpc21isp/lpc21isp -term -bin $(OUTDIR)/$(PROJECT).bin $(SERIAL) $(BITRATE) 12000
 
 clean:
 	$(RM) $(OBJS)
 	$(RM) $(BUILDDIR)/$(PROJECT).*
 	$(RM) $(OUTDIR)/$(PROJECT).*
+	$(RM) include/instfilters.h
 	CFLAGS=$(DEFS) CPPFLAGS=$(DEFS) make -C filtercalc clean
 
-main.o: $(HFILES) include/instfilters.h
+main.o: $(HFILES) include/instfilters.h include/sampler.h
 
 include/biquad2.h:  include/instfilters.h
 
 include/instfilters.h:	filtercalc/instfilters.h
+	cp filtercalc/instfilters.h include/instfilters.h
 
 filtercalc/instfilters.h:	filtercalc
 	make -C filtercalc instfilters.h DEFS=$(DEFS)
-	cp filtercalc/instfilters.h include/instfilters.h
 	
 $(OUTDIR)/$(PROJECT).bin: $(BUILDDIR)/$(PROJECT).elf
 	$(OBJCOPY) -O binary -j .text -j .data $(BUILDDIR)/$(PROJECT).elf $(OUTDIR)/$(PROJECT).bin

@@ -98,9 +98,9 @@ public:
     int getOverruns() const { return m_Overrun; }
 
     inline void SampleTaken() {
-        m_SampleL = ADC_ChannelGetData(LPC_ADC,ADC_CHANNEL_0);
+        //m_SampleL = ADC_ChannelGetData(LPC_ADC,ADC_CHANNEL_0);
         m_SampleM = ADC_ChannelGetData(LPC_ADC,ADC_CHANNEL_1);
-        m_SampleR = ADC_ChannelGetData(LPC_ADC,ADC_CHANNEL_2);
+        //m_SampleR = ADC_ChannelGetData(LPC_ADC,ADC_CHANNEL_2);
         m_NSamples++;
 #ifdef WITHBUFFER
         m_Buffer[m_Head] = m_SampleM;
@@ -140,6 +140,7 @@ private:
         int samplePeriod = SystemCoreClock / sampleRate;
 
         // Set up timer 0 
+        // CLK = CLKPWR_PCLKSEL_CCLK_DIV_4, prescaler = 1
         TIM_TIMERCFG_Type config;
         config.PrescaleOption = TIM_PRESCALE_TICKVAL;
         config.PrescaleValue = 1;
@@ -157,7 +158,7 @@ private:
         matchConfig.StopOnMatch = 0;
         matchConfig.ResetOnMatch = TRUE;
         matchConfig.ExtMatchOutputType = TIM_EXTMATCH_TOGGLE;
-        matchConfig.MatchValue = samplePeriod/8;
+        matchConfig.MatchValue = samplePeriod/8;    // (2*CLK_DIV)
         TIM_ConfigMatch(LPC_TIM0, &matchConfig);
     }
 

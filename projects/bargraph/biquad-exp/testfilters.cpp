@@ -18,7 +18,8 @@ void plot1t(Filter* const filter, int npoints) {
 
 	filter->ffilter(0.0);
 	for(int i = 0; i < npoints; i++) {
-		fprintf(plot, "%f\t%f\n", 1000.0*i/filter->sampleRate(), filter->ffilter(1.0));
+		//fprintf(plot, "%f\t%f\n", 1000.0*i/filter->sampleRate(), filter->ffilter(1.0));
+		fprintf(plot, "%f\t%f\n", 1000.0*i/filter->sampleRate(), 0*filter->ffilter(sin(1000.0*i/filter->sampleRate())));
 	}
 	fclose(plot);
 
@@ -31,7 +32,12 @@ void plot1t(Filter* const filter, int npoints) {
 
 	filter->ifilter(0.0);
 	for(int i = 0; i < npoints; i++) {
-		fprintf(plot, "%f\t%f\n", 1000.0*i/filter->sampleRate(), filter->ifilter(filter->scale())/(1.0*filter->scale()));
+        float t = 1000.0 * i/filter->sampleRate();
+        //int filtered = filter->ifilter(sin(t)*filter->scale());
+        int filtered = filter->ifilter(filter->scale());
+        float mag = 20*log10(fabs(filtered)/filter->scale());
+		//fprintf(plot, "%f\t%f\n", 1000.0*i/filter->sampleRate(), mag);
+		fprintf(plot, "%f\t%d\n", 1000.0*i/filter->sampleRate(), filtered);
 	}
 	fclose(plot);
 
@@ -61,28 +67,31 @@ void plot1t(Filter* const filter, int npoints) {
 	fclose(plot);
 }
 
+#define SCALE 32768
+//#define SCALE 32768
+
 int main(int argc, char **argv) {
 	int sampleRate = 28000;
-	plot1t(&Biquad<65536>(sampleRate, 44.0, 2.0), 4096);  
-	plot1t(&Biquad<65536>(sampleRate, 60.0, 1.5), 4096);
-	plot1t(&Biquad<32768>(sampleRate, 80.0, 1.5), 4096);
-	plot1t(&Biquad<32768>(sampleRate, 107.0, 1.1), 4096);
-	plot1t(&Biquad<32768>(sampleRate, 145.0, 1.0), 4096);
-	plot1t(&Biquad<32768>(sampleRate, 195.0, 0.8), 2048);
-	plot1t(&Biquad<32768>(sampleRate, 264.0, 0.75), 2048);
-	plot1t(&Biquad<32768>(sampleRate, 356.0, 0.74), 1024);
-	plot1t(&Biquad<32768>(sampleRate, 480.0, 1.0), 1024);
-	plot1t(&Biquad<32768>(sampleRate, 647.0, 1.0), 512);
-	plot1t(&Biquad<32768>(sampleRate, 872.0, 1.0), 512);
-	plot1t(&Biquad<32768>(sampleRate, 1175.0, 1.0), 512);
-	plot1t(&Biquad<32768>(sampleRate, 1584.0, 1.0), 256);
-	plot1t(&Biquad<32768>(sampleRate, 2135.0, 1.0), 256);
-	plot1t(&Biquad<32768>(sampleRate, 2878.0, 1.0), 256);
-	plot1t(&Biquad<32768>(sampleRate, 3880.0, 1.0), 128);
-	plot1t(&Biquad<32768>(sampleRate, 5230.0, 1.0), 128);
-	plot1t(&Biquad<32768>(sampleRate, 7050.0, 1.0), 128);
-	plot1t(&Biquad<32768>(sampleRate, 9504.0, 1.0), 128);
-	plot1t(&Biquad<32768>(sampleRate, 12811.0, 0.6), 128);
+	plot1t(&Biquad<SCALE>(sampleRate, 44.0, 2.0), 4096);  
+	plot1t(&Biquad<SCALE>(sampleRate, 60.0, 1.5), 4096);
+	plot1t(&Biquad<SCALE>(sampleRate, 80.0, 1.5), 4096);
+	plot1t(&Biquad<SCALE>(sampleRate, 107.0, 1.1), 4096);
+	plot1t(&Biquad<SCALE>(sampleRate, 145.0, 1.0), 4096);
+	plot1t(&Biquad<SCALE>(sampleRate, 195.0, 0.8), 2048);
+	plot1t(&Biquad<SCALE>(sampleRate, 264.0, 0.75), 2048);
+	plot1t(&Biquad<SCALE>(sampleRate, 356.0, 0.74), 1024);
+	plot1t(&Biquad<SCALE>(sampleRate, 480.0, 1.0), 1024);
+	plot1t(&Biquad<SCALE>(sampleRate, 647.0, 1.0), 512);
+	plot1t(&Biquad<SCALE>(sampleRate, 872.0, 1.0), 512);
+	plot1t(&Biquad<SCALE>(sampleRate, 1175.0, 1.0), 512);
+	plot1t(&Biquad<SCALE>(sampleRate, 1584.0, 1.0), 256);
+	plot1t(&Biquad<SCALE>(sampleRate, 2135.0, 1.0), 256);
+	plot1t(&Biquad<SCALE>(sampleRate, 2878.0, 1.0), 256);
+	plot1t(&Biquad<SCALE>(sampleRate, 3880.0, 1.0), 128);
+	plot1t(&Biquad<SCALE>(sampleRate, 5230.0, 1.0), 128);
+	plot1t(&Biquad<SCALE>(sampleRate, 7050.0, 1.0), 128);
+	plot1t(&Biquad<SCALE>(sampleRate, 9504.0, 1.0), 128);
+	plot1t(&Biquad<SCALE>(sampleRate, 12811.0, 0.6), 128);
 
 
 	return 0;

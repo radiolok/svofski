@@ -4,7 +4,7 @@ CPPFLAGS=-fpermissive $(ARCH) -ftrapv -DTESTBENCH $(DEFS)
 FILTERFILES=biquad.o testfilters.o
 
 
-all: testfilters plots calcfilters
+all: clean testfilters plots calcfilters
 
 plots:	testfilters
 	./testfilters
@@ -13,11 +13,11 @@ plots:	testfilters
 instfilters.h:	calcfilters
 	./calcfilters
 
-testfilters:	$(FILTERFILES)
+testfilters:	instfilters.h $(FILTERFILES)
 	g++ $(ARCH) -ftrapv testfilters.o biquad.o   -o testfilters
 
 clean:
-	rm -f *.o fr*.txt bq*.txt bq*.png bands.png bq.html testfilters calcfilters
+	rm -f *.o fr*.txt bq*.txt bq*.png bands.png bq.html testfilters calcfilters instfilters.h
 
 testfilters.o:	biquad.h
 
