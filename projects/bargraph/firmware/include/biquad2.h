@@ -13,7 +13,7 @@
 
 class Biquad {
 public:
-    Biquad(int a0, int a1, int a2, int b1, int b2) {
+    Biquad(int a0, int a1, int a2, int b1, int b2, int freq, int Q) {
         m_ia0 = a0;
         m_ia1 = a1;
         m_ia2 = a2;
@@ -21,6 +21,10 @@ public:
         m_ib2 = b2;
         m_ix_1 = m_ix_2 = m_iy_1 = m_iy_2 = 0;
         m_id_1 = m_id_2 = 0;
+        m_Freq = freq;
+#ifdef TESTBENCH
+        m_Q = Q;
+#endif
     }
 
     int IA0() const { return m_ia0; };
@@ -28,6 +32,7 @@ public:
     int IA2() const { return m_ia2; };
     int IB1() const { return m_ib1; };
     int IB2() const { return m_ib2; };
+    int freq() const { return m_Freq; };
 
 #ifdef TESTBENCH
     Biquad(int sampleRate, float freq, float Q);
@@ -39,7 +44,6 @@ public:
         m_y_1 = result;
         return result;
     }
-    float freq() const { return m_Freq; };
     float Q() const { return m_Q; };
     float A0() const { return m_a0; };
     float A1() const { return m_a1; };
@@ -48,8 +52,8 @@ public:
     float B2() const { return m_b2; };
 
     char* toString(char* buf) {
-        sprintf(buf, "Biquad(%d,%d,%d,%d,%d)",
-            m_ia0, m_ia1, m_ia2, m_ib1, m_ib2);
+        sprintf(buf, "Biquad(%d,%d,%d,%d,%d, %d, %d)",
+            m_ia0, m_ia1, m_ia2, m_ib1, m_ib2, m_Freq, (int)m_Q);
         return buf;
     }
 #endif
@@ -77,21 +81,19 @@ public:
     }
 
     int scale() const { return 32768; }
-    int sampleRate() const { return m_SampleRate; };
 
 
 private:
 #ifdef TESTBENCH
     void calcBandpass(int sampleRate, float freq, float Q);
     void calcInteger();
-    float m_Freq;
     float m_Q;
 
     float m_a0, m_a1, m_a2, m_b1, m_b2;
     float m_x_1, m_x_2, m_y_1, m_y_2;
 
 #endif
-    int m_SampleRate;
+    int m_Freq;
     int m_ia0, m_ia1, m_ia2, m_ib1, m_ib2;
     int m_ix_1, m_ix_2, m_iy_1, m_iy_2;
     int m_id_1, m_id_2;
@@ -100,7 +102,6 @@ private:
 #ifdef TESTBENCH
 Biquad::Biquad(int sampleRate, float freq, float Q) {
     m_Freq = freq;
-    m_SampleRate = sampleRate;
     m_Q = Q;
     calcBandpass(sampleRate, freq, m_Q);
     calcInteger();
@@ -114,7 +115,7 @@ void Biquad::calcBandpass(int sampleRate, float freq, float Q) {
     float norm;
     float V, K;
 
-    K = tan(M_PI * freq/sampleRate);
+    K = tan(M_PI * freq/(2*sampleRate));
     norm = 1 / (1 + K / Q + K * K);
     m_a0 = K / Q * norm;
     m_a1 = 0;

@@ -1,10 +1,10 @@
 #include "LPC17xx.h"
-#include "uart0.h"
 #include "xprintf.h"
 #include "boostgen.h"
 #include "sampler.h"
 #include "uart.h"
 #include "biquad2.h"
+//#include "cr_dsplib.h"
 
 #include "fixp.h"
 #include <math.h>
@@ -12,7 +12,7 @@
 #define NBANDS 20
 
 UART<LPC_UART_TypeDef> uart0(LPC_UART0, 0);
-Sampler sampler(28000);
+Sampler sampler(SAMPLERATE);
 
 volatile uint32_t msTicks;
 
@@ -61,7 +61,7 @@ void init_board(void)
 
     NVIC_EnableIRQ(UART0_IRQn);
 
-    uart0.Init(9600);
+    uart0.Init(230400);
     BoostGen_Setup();
     sampler.Init();
     //sampler.Start();
@@ -86,13 +86,13 @@ void processSample(int sample) {
 
     sample -= 2048;
     //sample *= 16; //filters[0]->scale()/2048;
-    sample <<= 6;
+    sample <<= 7;
     for(int i = 0; i < NBANDS; i++) {
         filtered = fixp_abs(filters[i]->ifilter(sample));
 
         if (peaks[i] < filtered) {
             peaks[i] = filtered;
-            peaktimes[i] = 280;
+            peaktimes[i] = 3000;
         }
 
         if (peaktimes[i] > 0) {
@@ -100,7 +100,7 @@ void processSample(int sample) {
         }
         else {
             if (peaks[i] > 0) {
-                peaks[i] = 0; //-= peaks[i]/2;
+                peaks[i] -= peaks[i]>>3;
             }
         }
 
@@ -156,7 +156,7 @@ void printPeaks(void) {
 
 void printPeaks(void) {
     //xprintf("\033[H\033[2J\033#6\033#3\n\033#4\033[H");
-    xprintf("\033[H\033#6\033#3\n\033#4\033[H");
+    xprintf("\033[?25l\033[H\033#6\033#3\n\033#4\033[H");
     for(int i = 0; i < 2; i++) {
         xprintf("Peak values per band\n");
     }
@@ -169,12 +169,13 @@ void printPeaks(void) {
 
         xprintf("\033#6");
         int d;
-        for (d = -31; d <= 0 && d <= toint; d++)
+        for (d = -36; d <= 0 && d <= toint; d++)
             xputchar('#');
-        xprintf("\033[K\033[%dC", 2-d);
-        xprintf("%03d dB\n", toint);
+        //xprintf("\033[K\033[%dC", 2-d);
+        //xprintf("%03d dB\n", toint);
+        xprintf("\033[K\n");
     }
-    xprintf("\nOverruns=%d\n", sampler.getOverruns());
+    //xprintf("\nOverruns=%d\n Time=%ds\033[?25h", sampler.getOverruns(), sampler.getNSamples()/28000); // SAMPLERATE
 }
 #endif
 
@@ -241,7 +242,7 @@ int main(void)
     init_board();
     printPeaksI = -1;
 
-    xprintf("Schnuppel\n");
+    xprintf("Schnuppel SystemCoreClock=%d\n", SystemCoreClock);
     xprintf("filter[0].scale=%d coeff=%d %d %d %d %d\n", 
         filters[0]->scale(),
         filters[0]->IA0(), filters[0]->IA1(), filters[0]->IA2(),

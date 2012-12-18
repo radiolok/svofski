@@ -12,9 +12,9 @@ int main(int argc, char **argv) {
 
     float Q = 10;
 
-	fprintf(out, "Biquad f1 = %s;\n", Biquad(sampleRate, 44,       Q).toString(buf));
-	fprintf(out, "Biquad f2 = %s;\n", Biquad(sampleRate, 60.0,     Q).toString(buf));
-	fprintf(out, "Biquad f3 = %s;\n", Biquad(sampleRate, 80.0,     Q).toString(buf));
+	fprintf(out, "Biquad f1 = %s;\n", Biquad(sampleRate, 44,       0.8).toString(buf));
+	fprintf(out, "Biquad f2 = %s;\n", Biquad(sampleRate, 60.0,     Q/5).toString(buf));
+	fprintf(out, "Biquad f3 = %s;\n", Biquad(sampleRate, 80.0,     Q/2).toString(buf));
 	fprintf(out, "Biquad f4 = %s;\n", Biquad(sampleRate, 107.0,    Q).toString(buf));
 	fprintf(out, "Biquad f5 = %s;\n", Biquad(sampleRate, 145.0,    Q).toString(buf));
 	fprintf(out, "Biquad f6 = %s;\n", Biquad(sampleRate, 195.0,    Q).toString(buf));

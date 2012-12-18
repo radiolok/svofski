@@ -14,6 +14,8 @@ for f in $((for f in bq-*.txt; do
     echo "set output \"bq$f.png\""
     #echo "set title \"$f Hz Bandpass 1(t) Response\""
     echo "set title \"$header\""
+    echo "set yrange [-32768:32768]"
+    #echo "set yrange [-35:0]"
     echo "plot \"bq-$f-1t-f.txt\" with lines title \"FP\", \"bq-$f-1t-i.txt\" with lines title \"int\""
 
     echo "<img src=\"bq$f.png\"/><br/>" >> $html
