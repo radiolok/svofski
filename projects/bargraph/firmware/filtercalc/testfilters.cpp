@@ -19,8 +19,8 @@ void plot1t(Biquad* const filter, int npoints) {
 
 	filter->ffilter(0.0);
 	for(int i = 0; i < npoints; i++) {
-		//fprintf(plot, "%f\t%f\n", 1000.0*i/filter->sampleRate(), filter->ffilter(1.0));
-		fprintf(plot, "%f\t%f\n", 1000.0*i/SAMPLERATE, 0*filter->ffilter(sin(1000.0*i/SAMPLERATE)));
+		fprintf(plot, "%f\t%f\n", 1000.0*i/SAMPLERATE, filter->ffilter(1.0));
+		//fprintf(plot, "%f\t%f\n", 1000.0*i/SAMPLERATE, 0*filter->ffilter(sin(1000.0*i/SAMPLERATE)));
 	}
 	fclose(plot);
 
@@ -34,11 +34,10 @@ void plot1t(Biquad* const filter, int npoints) {
 	filter->ifilter(0.0);
 	for(int i = 0; i < npoints; i++) {
         float t = 1000.0 * i/SAMPLERATE;
-        //int filtered = filter->ifilter(sin(t)*filter->scale());
-        int filtered = filter->ifilter(FIXP_ONE/2);
-        float mag = 20*log10(fabs(filtered)/filter->scale());
+        int filtered = filter->ifilter(FIXP_ONE-FIXP_ONE/6);
+        //float mag = 20*log10(fabs(filtered)/filter->scale());
 		//fprintf(plot, "%f\t%f\n", 1000.0*i/SAMPLERATE, mag);
-		fprintf(plot, "%f\t%d\n", 1000.0*i/SAMPLERATE, filtered);
+		fprintf(plot, "%f\t%f\n", 1000.0*i/SAMPLERATE, 1.0*filtered/FIXP_ONE);
 	}
 	fclose(plot);
 
@@ -63,7 +62,7 @@ void plot1t(Biquad* const filter, int npoints) {
   			- log(pow(1+b1+b2, 2) - 4*(b1 + 4*b2 + b1*b2)*phi + 16*b2*phi*phi);
 		y = y * 10 / log(10);
 
-		fprintf(plot, "%f\t%f  # \n", 1.0*SAMPLERATE * i / (len - 1) / 2, y, 0, 0);
+		fprintf(plot, "%f\t%f  # \n", 1.0*SAMPLERATE * i / (len - 1) / 1, y, 0, 0);
 	}
 	fclose(plot);
 }

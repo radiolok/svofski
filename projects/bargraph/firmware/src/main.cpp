@@ -234,8 +234,8 @@ int main(void)
     int i = 0;
     int updateCount = UPDATE_PERIOD;
 
-    int pwm_div = 256;
-    int pwm_cmp = 128;
+    int pwm_div = 254;
+    int pwm_cmp = 100;
     int pwm_enable = 1 == 1;
 
     initFilters();
