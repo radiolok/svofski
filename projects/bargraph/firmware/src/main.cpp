@@ -235,11 +235,13 @@ int main(void)
     int updateCount = UPDATE_PERIOD;
 
     int pwm_div = 254;
-    int pwm_cmp = 100;
+    int pwm_cmp = 220;
     int pwm_enable = 1 == 1;
 
     initFilters();
     init_board();
+    BoostGen_SetParam(pwm_div, pwm_cmp);
+    
     printPeaksI = -1;
 
     xprintf("Schnuppel SystemCoreClock=%d\n", SystemCoreClock);
