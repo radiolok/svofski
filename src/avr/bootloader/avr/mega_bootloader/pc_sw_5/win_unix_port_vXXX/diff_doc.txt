@@ -1,0 +1,69 @@
+jussi@gandalf:~/work/avr/mega_bootloader/pc_sw$ diff -qr win_unix_port win_unix_port_vXXX/
+
+Files win_unix_port/Makefile and win_unix_port_vXXX/Makefile differ
+Files win_unix_port/mega_bootload.c and win_unix_port_vXXX/mega_bootload.c differ
+Files win_unix_port/serial.c and win_unix_port_vXXX/serial.c differ
+Files win_unix_port/serial.h and win_unix_port_vXXX/serial.h differ
+
+jussi@gandalf:~/work/avr/mega_bootloader/pc_sw$ diff -r win_unix_port win_unix_port_vXXX/
+
+diff -r win_unix_port/Makefile win_unix_port_vXXX/Makefile
+27c27
+<       rm -f $(PRG) *.o *~
+---
+>       rm -f mega8_bootload mega168_bootload *.o *~
+diff -r win_unix_port/mega_bootload.c win_unix_port_vXXX/mega_bootload.c
+28c28
+< char id_string[] = "\nJussishow bootloader... version XX\nBuild date: "__DATE__ "  "__TIME__"\n";
+---
+> char id_string[] = "\nJussishow bootloader... version XXX\nBuild date: "__DATE__ "  "__TIME__"\n";
+86c86,88
+<
+---
+> #ifdef linux
+>   printf("Using %s at %d baud.\n", serial_device, get_baud_int(serial_speed));
+> #else
+88c90,91
+<
+---
+> #endif
+>
+diff -r win_unix_port/serial.c win_unix_port_vXXX/serial.c
+23d22
+< #ifdef linux
+25d23
+< #endif
+38c36
+<   new_settings.c_cflag = B115200|CS8|CLOCAL|CREAD;
+---
+>   new_settings.c_cflag = baudrate|CS8|CLOCAL|CREAD;
+54a53,73
+>
+> int get_baud_int(int baudrate)
+> {
+>   switch (baudrate)
+>     {
+>     case B110:    return 110;
+>     case B300:    return 300;
+>     case B600:    return 600;
+>     case B1200:   return 1200;
+>     case B2400:   return 2400;
+>     case B4800:   return 4800;
+>     case B9600:   return 9600;
+>     case B19200:  return 19200;
+>     case B38400:  return 38400;
+>     case B57600:  return 57600;
+>     case B115200: return 115200;
+>     default:return -1;
+>     }
+>   return -1;
+> }
+>
+diff -r win_unix_port/serial.h win_unix_port_vXXX/serial.h
+29d28
+< #define BR14400   B14400
+39a39
+> int get_baud_int(int baudrate);
+jussi@gandalf:~/work/avr/mega_bootloader/pc_sw$
+
+
