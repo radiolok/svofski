@@ -4,7 +4,7 @@
 #include "sampler.h"
 #include "uart.h"
 #include "biquad2.h"
-//#include "cr_dsplib.h"
+#include "bargraphs.h"
 
 #include "fixp.h"
 #include <math.h>
@@ -13,6 +13,7 @@
 
 UART<LPC_UART_TypeDef> uart0(LPC_UART0, 0);
 Sampler sampler(SAMPLERATE);
+BargraphsDriver bargraphs();
 
 volatile uint32_t msTicks;
 
@@ -241,7 +242,7 @@ int main(void)
     initFilters();
     init_board();
     BoostGen_SetParam(pwm_div, pwm_cmp);
-    
+
     printPeaksI = -1;
 
     xprintf("Schnuppel SystemCoreClock=%d\n", SystemCoreClock);
