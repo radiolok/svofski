@@ -309,7 +309,7 @@ int main(void)
                             BoostGen_SetParam(pwm_div, pwm_cmp);
                             break;
                 case 'p':   pwm_enable = !pwm_enable;
-                            BoostGen_Enable(pwm_enable);
+                            BoostGen_Pause(pwm_enable);
                             break;
                 case 'a':   
                             xprintf("Staring sampler:");
