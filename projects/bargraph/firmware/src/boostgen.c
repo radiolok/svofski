@@ -66,13 +66,25 @@ void BoostGen_SetParam(int freq, int duty)
     LPC_PWM1->LER |= (1<<0) | (1<<6);   // Latch enable for MR0 and MR6
 }
 
+// Disable/enable leaves the output in upredictable state
 void BoostGen_Enable(int enable) 
 {
     if (enable) {
         LPC_PWM1->PCR |= PWMENA6;
-        LPC_PWM1->TC = LPC_PWM1->MR6;
     } else {
         LPC_PWM1->PCR &= ~PWMENA6;
+    }
+}
+
+// Pause ensures that the full PWM cycle is finished and the output is in low state
+// The PWM unit is not disabled, but it is commanded to stop when MMR6 match occurs
+void BoostGen_Pause(int run) 
+{
+    if (run) {
+        LPC_PWM1->MCR = 1 << 1; // Reset on PWMMR0: the PWMTC will be reset if PWMMR0 matches it
+        LPC_PWM1->TCR |= (1 << 0) | (1 << 3);   // Run the timer 
+    } else {
+        LPC_PWM1->MCR = 1 << 20; // Stop on PWMMR6: the PWMTC will be reset if PWMMR6 matches it
     }
 }
 
@@ -80,7 +92,7 @@ void EINT3_IRQHandler(void) {
     if (LPC_GPIOINT->IntStatus & 1) {
         // Interrupt on P0
         // Could check Rising/Falling edge here but it's the level that's important
-        BoostGen_Enable((LPC_GPIO0->FIOPIN0 & 1) != 0);
+        BoostGen_Pause((LPC_GPIO0->FIOPIN0 & 1) != 0);
     }
     LPC_GPIOINT->IO0IntClr = ~0;
 }
