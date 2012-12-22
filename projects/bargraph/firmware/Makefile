@@ -7,7 +7,7 @@ BITRATE=230400
 
 ARCH=-mthumb -mcpu=cortex-m3
 #OPTIMIZATION = -O0 -g
-OPTIMIZATION = -O2 -g -funroll-all-loops -fprefetch-loop-arrays
+OPTIMIZATION = -Os -g -funroll-all-loops -fprefetch-loop-arrays
 
 # Directory structure
 SOURCEDIRS = src src/drivers
@@ -61,7 +61,7 @@ clean:
 	$(RM) include/instfilters.h
 	CFLAGS=$(DEFS) CPPFLAGS=$(DEFS) make -C filtercalc clean
 
-main.o: $(HFILES) include/instfilters.h include/sampler.h
+main.o: $(HFILES) include/instfilters.h include/sampler.h include/bargraphs.h
 
 include/biquad2.h:  include/instfilters.h
 
@@ -78,7 +78,7 @@ $(OUTDIR)/$(PROJECT).bin: $(BUILDDIR)/$(PROJECT).elf
 $(BUILDDIR)/$(PROJECT).hex: $(BUILDDIR)/$(PROJECT).elf
 	$(OBJCOPY) -R .stack -O ihex $(BUILDDIR)/$(PROJECT).elf $(BUILDDIR)/$(PROJECT).hex
 
-$(BUILDDIR)/$(PROJECT).elf: $(OBJS)
+$(BUILDDIR)/$(PROJECT).elf: $(OBJS) $(HFILES)
 	$(GCC) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
 $(BUILDDIR)/%.o: %.c

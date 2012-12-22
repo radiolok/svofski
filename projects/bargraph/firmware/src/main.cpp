@@ -13,7 +13,7 @@
 
 UART<LPC_UART_TypeDef> uart0(LPC_UART0, 0);
 Sampler sampler(SAMPLERATE);
-BargraphsDriver bargraphs();
+BargraphsDriver bargraphs(0);
 
 volatile uint32_t msTicks;
 
@@ -63,9 +63,9 @@ void init_board(void)
     NVIC_EnableIRQ(UART0_IRQn);
 
     uart0.Init(230400);
-    BoostGen_Setup();
     sampler.Init();
-    //sampler.Start();
+    BoostGen_Setup();
+    bargraphs.Init();
 }
 
 int peaks[NBANDS];
@@ -285,6 +285,9 @@ int main(void)
     sampler.setHook(processSample);
     sampler.Start();
 
+    int pwmtest = 0;
+    int pwmdir = 1;
+
     while (1) {
         updateCount = 0;
         //while (sampler.Avail() /* && updateCount < 1024*/) {
@@ -293,6 +296,10 @@ int main(void)
         //}
         printPeaks();
         //xprintf("%d samples\n", updateCount);
+
+        bargraphs.SetValue(19, (pwmtest += pwmdir)/4);
+        //if (pwmtest <= 0 || pwmtest >= bargraphs.resolution()*4) pwmdir = -pwmdir;
+        if (pwmtest <= 0 || pwmtest >= 30*4) pwmdir = -pwmdir;
 
         //uart0.Sendchar('>');
         if (uart0.Avail()) {
@@ -318,6 +325,15 @@ int main(void)
                             xprintf("Staring sampler:");
                             xprintf("started\n");
                             break;
+                case 'b':   pwmtest+=4;
+                            pwmdir = 0;
+                            break;
+                case 'B':   pwmtest-=4;
+                            pwmdir = 0;
+                            break;
+                case 'v':   pwmtest = 0;
+                            pwmdir = 1;
+                            break;
                 case '\n':
                             sampler.Stop();
                             printPeaks();
@@ -330,6 +346,7 @@ int main(void)
                     sampler.getTimerTicks(), sampler.getNSamples(),
                     sampler.getSampleL(), sampler.getSampleR(), 
                     sampler.getSampleM());
+            xprintf("bpwm ticks=%d\n pwm[19] (pwmtest)=%d      \n", bargraphs.ticks(), bargraphs.value(19));
         }
     }
 }
