@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #define NCHANNELS 20
-#define PWM_RESOLUTION (32*2)
+#define PWM_RESOLUTION (40*2)
 
 // Port 2
 #define BCHAN0 	(1<<3)
@@ -59,7 +59,7 @@ public:
 
 	// 36 PWM values, 100Hz = 3600Hz
 	void Init(void) {
-		SetupTimer(3600*4);
+		SetupTimer(200*PWM_RESOLUTION);
 		SetupGPIO();
 	}
 
@@ -179,13 +179,13 @@ extern "C" void TIMER1_IRQHandler(void)
 	SETBIT(pwm_counter, pwm_value[18], port1, BCHAN18);
 	SETBIT(pwm_counter, pwm_value[19], port1, BCHAN19);
 
-	LPC_GPIO0->FIOCLR = GPIO0BITS;
+	LPC_GPIO0->FIOCLR = GPIO0BITS & (~port0);
 	LPC_GPIO0->FIOSET = port0;
 
-	LPC_GPIO1->FIOCLR = GPIO1BITS;
+	LPC_GPIO1->FIOCLR = GPIO1BITS & (~port1);
 	LPC_GPIO1->FIOSET = port1;
 
-	LPC_GPIO2->FIOCLR = GPIO2BITS;
+	LPC_GPIO2->FIOCLR = GPIO2BITS & (~port2);
 	LPC_GPIO2->FIOSET = port2;
 
 	glob_port1 = port1;

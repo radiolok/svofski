@@ -4,6 +4,8 @@
 #include "lpc17xx_adc.h"
 #include "lpc17xx_timer.h"
 #include "lpc17xx_pinsel.h"
+#include "lpc17xx_gpio.h"
+#include "lpc17xx_pinsel.h"
 
 #define BUFFER_SIZE 10000
 
@@ -35,6 +37,7 @@ public:
     void Init(void) {
         SetupTimer(m_SampleRate);
         SetupADC();
+        SetupUnusedPins();
     }
 
     void Start(void) {
@@ -178,23 +181,26 @@ private:
         pincfg.Pinmode =
         pincfg.Portnum = 0;
 
+        /*
         pincfg.Pinnum = 23;
         PINSEL_ConfigPin(&pincfg);
+        */
 
         pincfg.Pinnum = 24;
         PINSEL_ConfigPin(&pincfg);
 
+        /*
         pincfg.Pinnum = 25;
         PINSEL_ConfigPin(&pincfg);
-
+        */
 
         // Set up ADC, conversion rate 200kHz
         ADC_Init(LPC_ADC, 200000);
 
         // Enable ADC channels 0, 1, 2
-        // ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_0, ENABLE);
+        //ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_0, ENABLE);
         ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_1, ENABLE);
-        // ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_2, ENABLE);
+        //ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_2, ENABLE);
 
         // Trigger on falling edge
         ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_FALLING);
@@ -204,16 +210,48 @@ private:
         // Mono only: channel 1 interrupt
         ADC_IntConfig(LPC_ADC, ADC_ADINTEN1, ENABLE);
 
-        NVIC_SetPriority(ADC_IRQn, ((0x01<<3)|0x01));
+        //NVIC_SetPriority(ADC_IRQn, ((0x01<<3)|0x01));
+    }
+
+    // Make unused ADC inputs digital outputs
+    // AD0.0 == P0.23 (STEREOL, unused)
+    // AD0.1 is the actual input (STEREOM)
+    // AD0.2 == P0.25 (STEREOR, unused)
+    // AD0.3 == P0.26 (unused)
+    // AD0.4 == P1.30 (unused)
+    // AD0.5 == P1.31 (unused)
+    // AD0.6 == P0.2 (BOOT_TXD)
+    // AD0.7 == P0.3 (BOOT_RXD)
+    void SetupUnusedPins(void) {
+        PINSEL_CFG_Type pincfg;
+        pincfg.Funcnum = 0;
+        pincfg.OpenDrain = 
+        pincfg.Pinmode =
+        pincfg.Portnum = 0;
+
+        pincfg.Pinnum = 23; SetupDummy(&pincfg);
+        pincfg.Pinnum = 25; SetupDummy(&pincfg);
+        pincfg.Pinnum = 26; SetupDummy(&pincfg);
+
+        pincfg.Portnum = 1;
+        pincfg.Pinnum = 30; SetupDummy(&pincfg);
+        pincfg.Pinnum = 31; SetupDummy(&pincfg);
+
+    }
+
+    void SetupDummy(PINSEL_CFG_Type* pincfg) {
+        PINSEL_ConfigPin(pincfg);
+        GPIO_SetDir(pincfg->Portnum, (1<<pincfg->Pinnum), 1);
+        GPIO_ClearValue(pincfg->Portnum, (1<<pincfg->Pinnum));
     }
 };
 
 extern "C" {
 void ADC_IRQHandler(void)
 {
-    instance->SampleTaken();
     int32_t trash __attribute__((unused));
     trash = LPC_ADC->ADGDR;
+    instance->SampleTaken();
 }
 
 void TIMER0_IRQHandler(void)

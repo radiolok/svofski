@@ -2,6 +2,9 @@
 PROJECT = blink
 
 DEFS=-DSAMPLERATE=28000
+USETTY=-DUSETTY
+#TEST=-DTESTTTY
+#TEST=
 SERIAL=/dev/tty.SLAB_USBtoUART
 BITRATE=230400
 
@@ -25,7 +28,7 @@ MKDIR = mkdir
 RM = rm -f
 
 #  Compiler and linker flags
-CFLAGS = -Wall -fno-common $(ARCH) $(OPTIMIZATION) $(DEFS)
+CFLAGS = -Wall -fno-common $(ARCH) $(OPTIMIZATION) $(DEFS) $(TEST) $(USETTY)
 CFLAGS += $(foreach DIR, $(INCLUDEDIRS), -I$(DIR))
 CPPFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 LDFLAGS = $(ARCH) $(OPTIMIZATION) -nostartfiles
@@ -59,7 +62,10 @@ clean:
 	$(RM) $(BUILDDIR)/$(PROJECT).*
 	$(RM) $(OUTDIR)/$(PROJECT).*
 	$(RM) include/instfilters.h
-	CFLAGS=$(DEFS) CPPFLAGS=$(DEFS) make -C filtercalc clean
+	make -C filtercalc clean
+
+plots:
+	make -C filtercalc all DEFS=$(DEFS)
 
 main.o: $(HFILES) include/instfilters.h include/sampler.h include/bargraphs.h
 

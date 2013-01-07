@@ -10,6 +10,7 @@
 #include <math.h>
 
 #define NBANDS 20
+#define DCVALUE 2096
 
 UART<LPC_UART_TypeDef> uart0(LPC_UART0, 0);
 Sampler sampler(SAMPLERATE);
@@ -62,7 +63,9 @@ void init_board(void)
 
     NVIC_EnableIRQ(UART0_IRQn);
 
+#ifdef USETTY
     uart0.Init(230400);
+#endif
     sampler.Init();
     BoostGen_Setup();
     bargraphs.Init();
@@ -74,23 +77,36 @@ int peaktimes[NBANDS];
 volatile int samples[128];
 volatile int head;
 
+volatile int debugsample;
+volatile int minsample;
+volatile int maxsample;
+
 void processSample(int sample) {
     int filtered;
-    //int sample = sampler.getSample();
-
+    static int lastsample = DCVALUE;
 #if 0
     samples[head] = (sample-2048)*(filters[3]->scale()/2048);
     samples[head] = abs(filters[3]->ifilter(samples[head]));
     head++;
     if (head == 128) head = 0;
 #endif
+    debugsample = sample;
+    if (debugsample < minsample) minsample = debugsample;
+    if (debugsample > maxsample) maxsample = debugsample;
 
-    sample -= 2048;
-    //sample *= 16; //filters[0]->scale()/2048;
-    sample <<= 7;
+    // reject ADC surges
+    if (sample > (4096-512) || sample < 512) 
+        sample = lastsample;
+    else
+        lastsample = sample;
+
+    sample -= DCVALUE;
+    sample <<= 6;
+    //sample >>= 4;
     for(int i = 0; i < NBANDS; i++) {
         filtered = fixp_abs(filters[i]->ifilter(sample));
 
+        if (filtered > (FIXP_ONE>>1)) continue;  // maybe the filter is ringing, skip
         if (peaks[i] < filtered) {
             peaks[i] = filtered;
             peaktimes[i] = 3000;
@@ -101,84 +117,38 @@ void processSample(int sample) {
         }
         else {
             if (peaks[i] > 0) {
-                peaks[i] -= peaks[i]>>3;
+                peaks[i] -= (peaks[i]>>5)+1;
+                //peaks[i] -= 1;
             }
         }
 
     }
 }
 
-int printPeaksI;
-#if 0
-
-volatile int printPeaksD;
-
 void printPeaks(void) {
-    static int toint; 
-
-    if (printPeaksI == -1) {
-        xprintf("\033[H\033[2J\033#6\033#3\n\033#4\033[H");
-        for(int i = 0; i < 2; i++) {
-            xprintf("Peak values per band\n");
-        }
-        printPeaksD = -31;
-        printPeaksI++;
-    } 
-    else if (printPeaksI >= 0 && printPeaksI < NBANDS) {
-        if (printPeaksD == -31) {
-            int log = fixp_log(peaks[printPeaksI], fixp_fromint(10));
-            int db = fixp_mul(fixp_fromint(20), log);
-            toint = fixp_toint(db);
-        }
-
-        //int d;
-        //for(d = -31; d <= 0 && d <= toint; d++) xputchar('#');
-        if (printPeaksD <= 0 && printPeaksD <= toint) {
-            printPeaksD++;
-            xputchar('#');
-        } else {
-            xprintf("\033[%dC", 44-printPeaksD);
-            xprintf("%d dB\n", toint);
-            printPeaksI++;
-            printPeaksD = -31;
-#if 0
-            xprintf("peak=%d, log=%d, dB=%d, toint=%d\n",
-                peaks[i], log, db, toint);
-#endif
-         }
-
-   }
-    else {
-        xprintf("Overruns=%d\n", sampler.getOverruns());
-        printPeaksI = -1;
-    }
-}
-#else
-
-void printPeaks(void) {
-    //xprintf("\033[H\033[2J\033#6\033#3\n\033#4\033[H");
+#ifdef TESTTTY
     xprintf("\033[?25l\033[H\033#6\033#3\n\033#4\033[H");
     for(int i = 0; i < 2; i++) {
         xprintf("Peak values per band\n");
     }
     xputchar('\n');
+#else
+    for (int i = 0; i < 20; i++) {
+        //__disable_irq();
+        int peak1 = peaks[i];
+        if (peak1 == 0) peak1 = 1;
+        //__enable_irq();
 
-    for (int i = 0; i < NBANDS; i++) {
-        int log = fixp_log(peaks[i], fixp_fromint(10));
-        int db = fixp_mul(fixp_fromint(20), log);
-        int toint = fixp_toint(db);
-
-        xprintf("\033#6");
-        int d;
-        for (d = -36; d <= 0 && d <= toint; d++)
-            xputchar('#');
-        //xprintf("\033[K\033[%dC", 2-d);
-        //xprintf("%03d dB\n", toint);
-        xprintf("\033[K\n");
+        int log = fixp_log(peak1, fixp_fromint(10));
+        int db = fixp_mul(fixp_fromint(40), log);
+        int toint = fixp_toint(db) - 10;
+        int value = PWM_RESOLUTION + toint;
+        if (value > PWM_RESOLUTION/2)
+            xprintf("\r\noops %d peak1=%d\r\n", value, peak1);
+        bargraphs.SetValue(19-i, value);
     }
-    //xprintf("\nOverruns=%d\n Time=%ds\033[?25h", sampler.getOverruns(), sampler.getNSamples()/28000); // SAMPLERATE
-}
 #endif
+}
 
 void initFilters() {
     head = 0;
@@ -224,27 +194,7 @@ void testFilters(void)
     }
 }
 
-#define UPDATE_PERIOD 3500
-
-volatile fixp fixa = fixp_rconst(1.0);
-volatile fixp fixb = fixp_rconst(0.3);
-
-int main(void)
-{
-    char c;
-    int i = 0;
-    int updateCount = UPDATE_PERIOD;
-
-    int pwm_div = 254;
-    int pwm_cmp = 220;
-    int pwm_enable = 1 == 1;
-
-    initFilters();
-    init_board();
-    BoostGen_SetParam(pwm_div, pwm_cmp);
-
-    printPeaksI = -1;
-
+void runDiags(void) {
     xprintf("Schnuppel SystemCoreClock=%d\n", SystemCoreClock);
     xprintf("filter[0].scale=%d coeff=%d %d %d %d %d\n", 
         filters[0]->scale(),
@@ -256,17 +206,7 @@ int main(void)
     xprintf("from1= %d, fromint(1)=%d, fromint(10)=%d\n", from1, (int)fixp_fromint(1), (int)fixp_fromint(10));
     xprintf("rconst(1.0)=%d, rconst(0.3)=%d\n", fixp_rconst(1.0), 
         fixp_rconst(0.3));
-    xprintf("fixa=%d fixb=%d\n", fixa, fixb);
     xprintf("test(1)=%d\n", fixp_test(fixp_fromint(1)));
-
-    xprintf("div=%d\n", fixa/fixb);
-    xprintf("fixa/fixb=%d\n", fixa/fixb);
-    xprintf("xmul=%d\n", fixp_mul(fixa, fixb));
-    xprintf("mul=%d\n", (int)fixp_xmul(fixa, fixb));
-    int xdiv = fixp_xdiv(fixa, fixb);
-    xprintf("div=%d\n", xdiv);
-    int div = fixp_div(fixa, fixb);
-    xprintf("div=%d\n", div);
 
     xprintf("ln(1)=%d\n", fixp_ln(fixp_fromint(1)));
     xprintf("ln(2)=%d\n", (int)fixp_ln(fixp_fromint(2)));
@@ -277,6 +217,25 @@ int main(void)
         fixp_log(fixp_fromint(10), fixp_fromint(10)));
 
     xprintf("--lntest passed--\n");
+}
+
+int main(void)
+{
+    char c;
+    int i = 0;
+
+    int pwm_div = 264;
+    int pwm_cmp = 220;
+    int pwm_enable = 1 == 1;
+
+    int pwmtest = bargraphs.resolution()*4/3;
+    int pwmdir = 0;
+
+    initFilters();
+    init_board();
+    BoostGen_SetParam(pwm_div, pwm_cmp);
+
+    runDiags();
 
     delay_ms(250);
 
@@ -285,23 +244,23 @@ int main(void)
     sampler.setHook(processSample);
     sampler.Start();
 
-    int pwmtest = 0;
-    int pwmdir = 1;
+    minsample = 2048;
+    maxsample = 2048;
 
     while (1) {
-        updateCount = 0;
-        //while (sampler.Avail() /* && updateCount < 1024*/) {
-        //    processSample();
-        //    updateCount++;
-        //}
         printPeaks();
-        //xprintf("%d samples\n", updateCount);
 
-        bargraphs.SetValue(19, (pwmtest += pwmdir)/4);
-        //if (pwmtest <= 0 || pwmtest >= bargraphs.resolution()*4) pwmdir = -pwmdir;
-        if (pwmtest <= 0 || pwmtest >= 30*4) pwmdir = -pwmdir;
-
-        //uart0.Sendchar('>');
+#ifdef TESTTTY       
+        xprintf("%10d %10d %10d\n", minsample, debugsample, maxsample);
+#endif
+#ifdef TESTTTY
+        pwmtest += pwmdir;
+        for (int chan = 0; chan < 20; chan++) {
+            bargraphs.SetValue(chan, pwmtest/4);
+        }
+        
+        if (pwmtest <= 0 || pwmtest >= bargraphs.resolution()*4) pwmdir = -pwmdir;
+#endif
         if (uart0.Avail()) {
             c = uart0.Getchar();
             uart0.Sendchar(c);
@@ -340,7 +299,6 @@ int main(void)
                             sampler.Start();
                             break;
             }
-            xprintf("\nupdateCount=%d", updateCount);
             xprintf("\nboost div=%d duty/cmp=%d enabled=%d\n", pwm_div, pwm_cmp, pwm_enable);
             xprintf("adc ticks=%d nsamp=%d l=%d r=%d m=%d\n", 
                     sampler.getTimerTicks(), sampler.getNSamples(),
