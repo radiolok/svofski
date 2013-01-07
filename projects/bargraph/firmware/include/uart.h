@@ -51,6 +51,7 @@ template <class LPC_UART_T>
 private:
     LPC_UART_T* LPC_UART;
     int m_UartNo;
+    int m_Initialized;
 
     uint8_t rx_buffer[RX_BUFFER_SIZE];
     volatile int rx_buffer_in;
@@ -62,6 +63,7 @@ public:
         LPC_UART = uart_struct;
         m_UartNo = uartNo;
         UART_Handlers[uartNo] = this;
+        m_Initialized = 0;
     }
 
     void Init(int baudrate)
@@ -131,19 +133,25 @@ public:
 
         // Enable receive interrupt
         LPC_UART->IER = IER_RBR;
+
+        m_Initialized = 0 == 0;
     }
 
     void Sendchar(char c)
     {
-        while( (LPC_UART->LSR & LSR_THRE) == 0 );	// Block until tx empty
+        if (m_Initialized) {
+            while( (LPC_UART->LSR & LSR_THRE) == 0 );	// Block until tx empty
 
-        LPC_UART->THR = c;
+            LPC_UART->THR = c;
+        }
     }
 
     char Getchar()
     {
-        while(!Avail());
-        return Getc();
+        if (m_Initialized) {
+            while(!Avail());
+            return Getc();
+        }
     }
 
     uint8_t Getc() 
