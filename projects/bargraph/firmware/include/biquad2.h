@@ -13,7 +13,7 @@
 
 class Biquad {
 public:
-    Biquad(int a0, int a1, int a2, int b1, int b2, int freq
+    Biquad(int a0, int a1, int a2, int b1, int b2, int freq, int decimate
 #ifdef TESTBENCH
         , float q, float fa0, float fa1, float fa2, float fb1, float fb2
 #endif
@@ -26,6 +26,7 @@ public:
         m_ix_1 = m_ix_2 = m_iy_1 = m_iy_2 = 0;
         m_id_1 = m_id_2 = 0;
         m_Freq = freq;
+        m_Decimate = decimate;
 #ifdef TESTBENCH
         m_Q = q;
         m_a0 = fa0;
@@ -42,9 +43,10 @@ public:
     int IB1() const { return m_ib1; };
     int IB2() const { return m_ib2; };
     int freq() const { return m_Freq; };
+    inline int decimated() const { return m_Decimate; }
 
 #ifdef TESTBENCH
-    Biquad(int sampleRate, float freq, float Q);
+    Biquad(int sampleRate, float freq, float Q, int decimate);
     float ffilter(float x) {
         float result = m_a0*x + m_a1*m_x_1 + m_a2*m_x_2 - m_b1*m_y_1 - m_b2*m_y_2;
         m_x_2 = m_x_1;
@@ -61,8 +63,8 @@ public:
     float B2() const { return m_b2; };
 
     char* toString(char* buf) {
-        sprintf(buf, "Biquad(%d,%d,%d,%d,%d, %d\n#ifdef TESTBENCH\n ,%f,%f,%f,%f,%f,%f\n#endif\n)",
-            m_ia0, m_ia1, m_ia2, m_ib1, m_ib2, m_Freq, 
+        sprintf(buf, "Biquad(%d,%d,%d,%d,%d, %d, %d\n#ifdef TESTBENCH\n ,%f,%f,%f,%f,%f,%f\n#endif\n)",
+            m_ia0, m_ia1, m_ia2, m_ib1, m_ib2, m_Freq, m_Decimate,
             m_Q, m_a0, m_a1, m_a2, m_b1, m_b2);
         return buf;
     }
@@ -107,10 +109,11 @@ private:
     int m_ia0, m_ia1, m_ia2, m_ib1, m_ib2;
     int m_ix_1, m_ix_2, m_iy_1, m_iy_2;
     int m_id_1, m_id_2;
+    int m_Decimate;
 };
 
 #ifdef TESTBENCH
-Biquad::Biquad(int sampleRate, float freq, float Q) {
+Biquad::Biquad(int sampleRate, float freq, float Q, int decimate) {
     m_Freq = freq;
     m_Q = Q;
     calcBandpass(sampleRate, freq, m_Q);
@@ -119,6 +122,7 @@ Biquad::Biquad(int sampleRate, float freq, float Q) {
     m_x_1 = m_x_2 = m_y_1 = m_y_2 = 0;
     m_ix_1 = m_ix_2 = m_iy_1 = m_iy_2 = 0;
     m_id_1 = m_id_2 = 0;
+    m_Decimate = decimate;
 }
 
 void Biquad::calcBandpass(int sampleRate, float freq, float Q) {
