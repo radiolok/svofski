@@ -84,29 +84,52 @@ volatile int maxsample;
 void processSample(int sample) {
     int filtered;
     static int lastsample = DCVALUE;
-#if 0
-    samples[head] = (sample-2048)*(filters[3]->scale()/2048);
-    samples[head] = abs(filters[3]->ifilter(samples[head]));
-    head++;
-    if (head == 128) head = 0;
-#endif
+    static int odd = 0;
+    static int decAccu = 0;
+    int decSample = DCVALUE;    // decimated sample value
+
+#ifdef TESTTTY
     debugsample = sample;
     if (debugsample < minsample) minsample = debugsample;
     if (debugsample > maxsample) maxsample = debugsample;
+#endif
 
+#if 0
     // reject ADC surges
     if (sample > (4096-512) || sample < 512) 
         sample = lastsample;
     else
         lastsample = sample;
+#endif
 
     sample -= DCVALUE;
     sample <<= 6;
-    //sample >>= 4;
-    for(int i = 0; i < NBANDS; i++) {
-        filtered = fixp_abs(filters[i]->ifilter(sample));
 
+    decSample = (sample + decAccu) >> 1;
+    if ((odd & 1) == 0) {
+        decAccu = sample;
+    }
+    odd++;
+
+
+    for(int i = 0; i < NBANDS; i++) {
+        int filtersamp = sample;
+
+        if (filters[i]->decimated()) {
+            // filter every 2nd decimated sample
+            if ((odd & 1) == 1) {
+                filtersamp = decSample;
+            } else {
+                continue;
+            }
+        } 
+        // filter without decimation
+        filtered = fixp_abs(filters[i]->ifilter(filtersamp));
+
+
+#if 0
         if (filtered > (FIXP_ONE>>1)) continue;  // maybe the filter is ringing, skip
+#endif
         if (peaks[i] < filtered) {
             peaks[i] = filtered;
             peaktimes[i] = 3000;
@@ -118,7 +141,7 @@ void processSample(int sample) {
         else {
             if (peaks[i] > 0) {
                 peaks[i] -= (peaks[i]>>5)+1;
-                //peaks[i] -= 1;
+                //peaks[i] = 1;
             }
         }
 
@@ -242,6 +265,7 @@ int main(void)
     xprintf("\033[H\033[2J");
 
     sampler.setHook(processSample);
+    processSample(DCVALUE);
     sampler.Start();
 
     minsample = 2048;

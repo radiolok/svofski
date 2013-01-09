@@ -26,11 +26,15 @@ done) | gnuplot
 echo 'set xlabel "Freq (Hz)"'
 echo 'set ylabel "mag (dB)"'
 echo 'set logscale x'
-echo 'set xrange [20:16000]'
+echo 'set xrange [40:14000]'
 echo 'set yrange [-20:0]'
 echo 'set output "bands.png"'
 echo 'set grid mxtics ytics'
 echo 'set ytics -20,1,0'
+for f in fr-*.txt; do
+    f=${f/fr-}
+    echo "#set xtics add ${f/%.txt}"
+done
 echo 'set title "Frequency responses superimposed"'
 babor=$(for f in $((for f in fr-*.txt; do
             f=${f/fr-}

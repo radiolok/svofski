@@ -8,13 +8,15 @@
 
 void plot1t(Biquad* const filter, int npoints) {
 	char filename[1024];
+	int decimation = filter->decimated() ? 2 : 1;
+	int freq = (int) filter->freq()/decimation;
 
-	sprintf(filename, "bq-%d-1t-f.txt", (int) filter->freq());
+	sprintf(filename, "bq-%d-1t-f.txt", freq);
 
     FILE* plot = fopen(filename, "w");
 
-    sprintf(filename, "# Biquad bandpass Fc=%d Hz 1(t) response, Q=%1.2f, scale=%d\n", 
-    	(int) filter->freq(), filter->Q(), filter->scale());
+    sprintf(filename, "# Biquad bandpass Fc=%d Hz 1(t) response, Q=%1.2f, decimation=%d\n", 
+    	(int) freq, filter->Q(), decimation);
     fprintf(plot, filename);
 
 	filter->ffilter(0.0);
@@ -24,11 +26,11 @@ void plot1t(Biquad* const filter, int npoints) {
 	}
 	fclose(plot);
 
-	sprintf(filename, "bq-%d-1t-i.txt", (int) filter->freq());
+	sprintf(filename, "bq-%d-1t-i.txt", (int) freq);
     plot = fopen(filename, "w");
 
-    sprintf(filename, "# %d Hz 1(t) response, Q=%1.2f, scale=%d\n", 
-    	(int) filter->freq(), filter->Q(), filter->scale());
+    sprintf(filename, "# %d Hz 1(t) response, Q=%1.2f, decimation=%d\n", 
+    	(int) freq, filter->Q(), decimation);
     fprintf(plot, filename);
 
 	filter->ifilter(0.0);
@@ -43,7 +45,7 @@ void plot1t(Biquad* const filter, int npoints) {
 
 	// now the frequency response
 
-	sprintf(filename, "fr-%d.txt", (int)filter->freq());
+	sprintf(filename, "fr-%d.txt", freq);
     plot = fopen(filename, "w");
 
     int len = 8192;
@@ -62,7 +64,7 @@ void plot1t(Biquad* const filter, int npoints) {
   			- log(pow(1+b1+b2, 2) - 4*(b1 + 4*b2 + b1*b2)*phi + 16*b2*phi*phi);
 		y = y * 10 / log(10);
 
-		fprintf(plot, "%f\t%f  # \n", 1.0*SAMPLERATE * i / (len - 1) / 1, y, 0, 0);
+		fprintf(plot, "%f\t%f  # \n", 1.0*(SAMPLERATE/decimation) * i / (len - 1) / 1, y, 0, 0);
 	}
 	fclose(plot);
 }
