@@ -17,7 +17,7 @@ public:
 #ifdef TESTBENCH
         , float q, float fa0, float fa1, float fa2, float fb1, float fb2
 #endif
-    ) {
+    ) : m_Decimate(decimate) {
         m_ia0 = a0;
         m_ia1 = a1;
         m_ia2 = a2;
@@ -26,7 +26,6 @@ public:
         m_ix_1 = m_ix_2 = m_iy_1 = m_iy_2 = 0;
         m_id_1 = m_id_2 = 0;
         m_Freq = freq;
-        m_Decimate = decimate;
 #ifdef TESTBENCH
         m_Q = q;
         m_a0 = fa0;
@@ -109,11 +108,11 @@ private:
     int m_ia0, m_ia1, m_ia2, m_ib1, m_ib2;
     int m_ix_1, m_ix_2, m_iy_1, m_iy_2;
     int m_id_1, m_id_2;
-    int m_Decimate;
+    const int m_Decimate;
 };
 
 #ifdef TESTBENCH
-Biquad::Biquad(int sampleRate, float freq, float Q, int decimate) {
+Biquad::Biquad(int sampleRate, float freq, float Q, int decimate) : m_Decimate(decimate) {
     m_Freq = freq;
     m_Q = Q;
     calcBandpass(sampleRate, freq, m_Q);
@@ -122,7 +121,6 @@ Biquad::Biquad(int sampleRate, float freq, float Q, int decimate) {
     m_x_1 = m_x_2 = m_y_1 = m_y_2 = 0;
     m_ix_1 = m_ix_2 = m_iy_1 = m_iy_2 = 0;
     m_id_1 = m_id_2 = 0;
-    m_Decimate = decimate;
 }
 
 void Biquad::calcBandpass(int sampleRate, float freq, float Q) {

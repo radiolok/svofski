@@ -81,11 +81,14 @@ volatile int debugsample;
 volatile int minsample;
 volatile int maxsample;
 
+int sample_odd;
+int sample_decAccu;
+
 void processSample(int sample) {
     int filtered;
     static int lastsample = DCVALUE;
-    static int odd = 0;
-    static int decAccu = 0;
+    //static int sample_odd = 0;
+    //static int sample_decAccu = DCVALUE;
     int decSample = DCVALUE;    // decimated sample value
 
 #ifdef TESTTTY
@@ -105,19 +108,20 @@ void processSample(int sample) {
     sample -= DCVALUE;
     sample <<= 6;
 
-    decSample = (sample + decAccu) >> 1;
-    if ((odd & 1) == 0) {
-        decAccu = sample;
+    decSample = (sample + sample_decAccu) >> 1;
+    if ((sample_odd & 1) == 0) {
+        sample_decAccu = sample;
     }
-    odd++;
+    sample_odd++;
 
 
     for(int i = 0; i < NBANDS; i++) {
         int filtersamp = sample;
 
-        if (filters[i]->decimated()) {
+        // hackish but reduces overhead: bands 0 and 1 are decimated
+        if (i < 2 /*filters[i]->decimated()*/) {
             // filter every 2nd decimated sample
-            if ((odd & 1) == 1) {
+            if ((sample_odd & 1) == 1) {
                 filtersamp = decSample;
             } else {
                 continue;
@@ -141,7 +145,6 @@ void processSample(int sample) {
         else {
             if (peaks[i] > 0) {
                 peaks[i] -= (peaks[i]>>5)+1;
-                //peaks[i] = 1;
             }
         }
 
@@ -200,6 +203,9 @@ void initFilters() {
         peaktimes[i] = 0;
         peaks[i] = 0;
     }
+
+    sample_odd = 0;
+    sample_decAccu = DCVALUE;
 }
 
 void testFilters(void) 
@@ -254,8 +260,9 @@ int main(void)
     int pwmtest = bargraphs.resolution()*4/3;
     int pwmdir = 0;
 
-    initFilters();
     init_board();
+    delay_ms(250);
+    initFilters();
     BoostGen_SetParam(pwm_div, pwm_cmp);
 
     runDiags();

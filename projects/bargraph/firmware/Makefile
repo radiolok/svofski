@@ -1,16 +1,15 @@
 #  Project Name
 PROJECT = blink
 
-DEFS=-DSAMPLERATE=26000
-USETTY=-DUSETTY
+DEFS=-DSAMPLERATE=26500
+#USETTY=-DUSETTY
 #TEST=-DTESTTTY
-#TEST=
 SERIAL=/dev/tty.SLAB_USBtoUART
 BITRATE=230400
 
 ARCH=-mthumb -mcpu=cortex-m3
 #OPTIMIZATION = -O0 -g
-OPTIMIZATION = -Os -g -funroll-all-loops -fprefetch-loop-arrays
+OPTIMIZATION = -save-temps -fverbose-asm -O3 -g -funroll-all-loops -fprefetch-loop-arrays
 
 # Directory structure
 SOURCEDIRS = src src/drivers
