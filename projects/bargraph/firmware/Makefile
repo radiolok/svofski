@@ -9,7 +9,7 @@ BITRATE=230400
 
 ARCH=-mthumb -mcpu=cortex-m3
 #OPTIMIZATION = -O0 -g
-OPTIMIZATION = -save-temps -fverbose-asm -O3 -g -funroll-all-loops -fprefetch-loop-arrays
+OPTIMIZATION = -save-temps -fverbose-asm -Os -g -funroll-all-loops -fprefetch-loop-arrays
 
 # Directory structure
 SOURCEDIRS = src src/drivers

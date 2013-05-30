@@ -106,7 +106,7 @@ void processSample(int sample) {
 #endif
 
     sample -= DCVALUE;
-    sample <<= 6;
+    sample <<= 5;
 
     decSample = (sample + sample_decAccu) >> 1;
     if ((sample_odd & 1) == 0) {
@@ -126,7 +126,10 @@ void processSample(int sample) {
             } else {
                 continue;
             }
-        } 
+        }
+        //else if (i == NBANDS-1) {
+        //    filtersamp = sample << 2;
+        //}
         // filter without decimation
         filtered = fixp_abs(filters[i]->ifilter(filtersamp));
 
