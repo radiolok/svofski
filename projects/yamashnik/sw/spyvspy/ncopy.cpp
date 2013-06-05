@@ -27,13 +27,7 @@
 
 #define SECTORSIZE  128
 
-FILE *infile;
-
-uint8_t Sector[SECTORSIZE];
-
 unsigned short int studentNo = 0;
-
-struct stat stat_p;
 
 void pingPong(PacketSender& ps, int adr) 
 {
@@ -46,9 +40,76 @@ void pingPong(PacketSender& ps, int adr)
     info("\nGot PONG.\n");
 }
 
+void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
+{
+    uint8_t Sector[SECTORSIZE];
+    FILE* infile;
+    struct stat stat_p;
+    int sectNo = 0;
+
+
+    // check the size of file
+    stat(fileName, &stat_p);
+
+    infile = fopen(fileName, "rb");
+    if (infile == 0) {
+        eggog("Error: cannot open %s\n", fileName);
+    }
+
+    // Send ping
+    pingPong(packetSender, studentNo);
+
+    // Create file on the net disk
+    {
+        NetCreateFilePacket createFile(0, studentNo, fileName);
+        do {
+           packetSender.SendPacket(&createFile);
+        } while (!packetSender.ReceivePacket());
+    }
+    verbose("\nGot re: NET_CREATE_FILE.\n");
+
+    // Reading the file sector-by-sector and writing them onto the net disk
+
+    info("\nNumber of sectors to send: %zd\n", (size_t) ((stat_p.st_size / sizeof (Sector)) + (stat_p.st_size % sizeof (Sector))));
+
+    while (!feof(infile))
+    {
+        if (fread(Sector, sizeof(Sector), 1, infile) == 0) break;
+
+        {
+            NetMasterDataPacket masterData(0, studentNo, Sector, SECTORSIZE);
+            packetSender.SendPacket(&masterData);
+
+            NetWriteFilePacket writeFile(0, studentNo, packetSender.GetPacketData());
+            do {
+                packetSender.SendPacket(&writeFile);
+            } while (!packetSender.ReceivePacket());
+        }
+        verbose("\nSent sector No.%d", sectNo);
+
+        if ((sectNo+1) % 10 == 0) {
+            info(". %d ", sectNo+1);
+        }
+        else {
+            info(".");
+        }
+
+        sectNo++;
+    }
+
+    // close the file on the net disk
+    {
+        NetCloseFilePacket closeFile(0, studentNo, packetSender.GetPacketData());
+        do {
+            packetSender.SendPacket(&closeFile);
+        } while (!packetSender.ReceivePacket());
+    }
+    info("\nSendFile Done.\n");
+
+}
+
 int main(int argc, char *argv[]) {
     int argNo = 1;
-    int sectNo = 0;
     char portBuf[32] = IOPORT;
     char* port = portBuf;
 
@@ -103,62 +164,6 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    // check the size of file
-    stat(argv[argNo], &stat_p);
-
-    infile = fopen(argv[argNo], "rb");
-    if (infile == 0) {
-        eggog("Error: cannot open %s\n", argv [argNo]);
-    }
-
-    // Send ping
-    pingPong(packetSender, studentNo);
-
-    // Create file on the net disk
-    {
-        NetCreateFilePacket createFile(0, studentNo, argv[argNo]);
-        do {
-           packetSender.SendPacket(&createFile);
-        } while (!packetSender.ReceivePacket());
-    }
-    verbose("\nGot re: NET_CREATE_FILE.\n");
-
-    // Reading the file sector-by-sector and writing them onto the net disk
-
-    info("\nNumber of sectors to send: %zd\n", (size_t) ((stat_p.st_size / sizeof (Sector)) + (stat_p.st_size % sizeof (Sector))));
-
-    while (!feof(infile))
-    {
-        if (fread(Sector, sizeof(Sector), 1, infile) == 0) break;
-
-        {
-            NetMasterDataPacket masterData(0, studentNo, Sector, SECTORSIZE);
-            packetSender.SendPacket(&masterData);
-
-            NetWriteFilePacket writeFile(0, studentNo, packetSender.GetPacketData());
-            do {
-                packetSender.SendPacket(&writeFile);
-            } while (!packetSender.ReceivePacket());
-        }
-        verbose("\nSent sector No.%d", sectNo);
-
-        if ((sectNo+1) % 10 == 0) {
-            info(". %d ", sectNo+1);
-        }
-        else {
-            info(".");
-        }
-
-        sectNo++;
-    }
-
-    // close the file on the net disk
-    {
-        NetCloseFilePacket closeFile(0, studentNo, packetSender.GetPacketData());
-        do {
-            packetSender.SendPacket(&closeFile);
-        } while (!packetSender.ReceivePacket());
-    }
-    info("\nDone.\n");
+    sendFile(argv[argNo], packetSender, studentNo);
 }
 
