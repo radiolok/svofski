@@ -47,7 +47,6 @@ void pingPong(PacketSender& ps, int adr)
 }
 
 int main(int argc, char *argv[]) {
-    unsigned int i;
     int argNo = 1;
     int sectNo = 0;
     char portBuf[32] = IOPORT;
@@ -132,12 +131,15 @@ int main(int argc, char *argv[]) {
     {
         if (fread(Sector, sizeof(Sector), 1, infile) == 0) break;
 
-        packetSender.SendPacket(0, studentNo, NET_MASTER_DATA, Sector, SECTORSIZE);
+        {
+            NetMasterDataPacket masterData(0, studentNo, Sector, SECTORSIZE);
+            packetSender.SendPacket(&masterData);
 
-        do {
-            packetSender.SendPacket(0, studentNo, NET_WRITE_FILE, (uint8_t *)packetSender.GetPacketData(), sizeof (*packetSender.GetPacketData()));
-        } while (!packetSender.ReceivePacket());
-
+            NetWriteFilePacket writeFile(0, studentNo, packetSender.GetPacketData());
+            do {
+                packetSender.SendPacket(&writeFile);
+            } while (!packetSender.ReceivePacket());
+        }
         verbose("\nSent sector No.%d", sectNo);
 
         if ((sectNo+1) % 10 == 0) {
@@ -151,10 +153,12 @@ int main(int argc, char *argv[]) {
     }
 
     // close the file on the net disk
-    do {
-        packetSender.SendPacket(0, studentNo, NET_CLOSE_FILE, (uint8_t *)packetSender.GetPacketData(), sizeof (*packetSender.GetPacketData()));
-    } while (!packetSender.ReceivePacket());
-
+    {
+        NetCloseFilePacket closeFile(0, studentNo, packetSender.GetPacketData());
+        do {
+            packetSender.SendPacket(&closeFile);
+        } while (!packetSender.ReceivePacket());
+    }
     info("\nDone.\n");
 }
 

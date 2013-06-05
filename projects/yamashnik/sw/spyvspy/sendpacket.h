@@ -55,21 +55,30 @@ private:
 	int m_Length;
 	int m_SrcAddr;
 	int m_DstAddr;
-	uint8_t* m_Data;
+	uint8_t* m_OwnData;
+	const uint8_t* m_ExtData;
 
 protected:
 	GenericPacket(int srcAddr, int dstAddr, int cmdType, int length) 
 		: m_Cmd(cmdType), m_Length(length), 
 		  m_SrcAddr(srcAddr), m_DstAddr(dstAddr), 
-		  m_Data(new uint8_t[length])
+		  m_OwnData(new uint8_t[length]),
+		  m_ExtData(0)
+	{}	
+
+	GenericPacket(int srcAddr, int dstAddr, int cmdType, const uint8_t* data, int length) 
+		: m_Cmd(cmdType), m_Length(length), 
+		  m_SrcAddr(srcAddr), m_DstAddr(dstAddr), 
+		  m_OwnData(0),
+		  m_ExtData(data)
 	{}	
 
 	~GenericPacket() {
-		delete[] m_Data;
+		if (m_OwnData) delete[] m_OwnData;
 	}
 
-	void SetData(const uint8_t* data, int length) {
-		memcpy(m_Data, data, length);
+	void AssignData(const uint8_t* data) {
+		if (m_OwnData) memcpy(m_OwnData, data, m_Length);
 	}
 
 public:
@@ -77,7 +86,7 @@ public:
 	int GetDstAddr() const { return m_DstAddr; }
 	int GetCmd() const { return m_Cmd; }
 	int GetLength() const { return m_Length; }
-	virtual const uint8_t* GetData() const { return m_Data; }
+	virtual const uint8_t* GetData() const { return m_OwnData ? m_OwnData : m_ExtData; }
 };
 
 class PingPacket : public GenericPacket 
@@ -92,43 +101,38 @@ public:
 	SNDCMDPacket(int srcAddr, int dstAddr, const char* cmd) 
 		: GenericPacket(srcAddr, dstAddr, PCMD_SNDCMD, (int) strlen(cmd)) 
 	{
-		SetData((uint8_t *) cmd, GetLength());
+		AssignData((uint8_t *) cmd);
 	}
-};
-
-class DataPacket : public GenericPacket 
-{
-protected:
-	DataPacket(int srcAddr, int dstAddr, PACKETCMD cmd, const uint8_t* data, int length) 
-		: GenericPacket(srcAddr, dstAddr, cmd, length)
-	{
-		SetData((uint8_t *) cmd, GetLength());
-	}
-};
-
-class NetMasterDataPacket : public DataPacket
-{
-public:
-	NetMasterDataPacket(int srcAddr, int dstAddr, const uint8_t* data, int length)
-		: DataPacket(srcAddr, dstAddr, NET_MASTER_DATA, data, length)
-	{}
 };
 
 class NetFCBPacket : public GenericPacket
 {
-private:
-	CPMPacketData m_FCB;
 protected:
 	NetFCBPacket(int srcAddr, int dstAddr, PACKETCMD cmd, const char* fileName)
-		: GenericPacket(srcAddr, dstAddr, cmd, sizeof(CPMPacketData)), m_FCB(0,0,0, fileName)
+		: GenericPacket(srcAddr, dstAddr, cmd, sizeof(CPMPacketData))
 	{
-		info("NetFCBPacket: ");
-		for (int i = 0; i < GetLength(); i++) {
-			info("%x ", GetData()[i]);
-		}
+		AssignData((uint8_t *) &CPMPacketData(0,0,0, fileName));
+//		info("NetFCBPacket: ");
+//		for (int i = 0; i < GetLength(); i++) {
+//			info("%x ", GetData()[i]);
+//		}
 	}
 public:
-	const uint8_t* GetData() const { return (uint8_t *) &m_FCB; }
+	NetFCBPacket(NetFCBPacket& otro, PACKETCMD cmd)
+		: GenericPacket(otro.GetSrcAddr(), otro.GetDstAddr(), cmd, sizeof(CPMPacketData)) 
+	{
+		AssignData((uint8_t *) otro.GetData());
+	}
+
+	NetFCBPacket(int srcAddr, int dstAddr, PACKETCMD cmd, const CPMPacketData* FCB)
+		: GenericPacket(srcAddr, dstAddr, cmd, sizeof(CPMPacketData))
+	{
+		AssignData((uint8_t *) FCB);
+	}
+
+
+public:
+	CPMPacketData* GetFCB() const { return (CPMPacketData*) GetData(); }
 };
 
 class NetCreateFilePacket : public NetFCBPacket
@@ -142,18 +146,36 @@ public:
 class NetWriteFilePacket : public NetFCBPacket
 {
 public:
-	NetWriteFilePacket(int srcAddr, int dstAddr, const char* fileName)
-		: NetFCBPacket(srcAddr, dstAddr, NET_WRITE_FILE, fileName)
+	NetWriteFilePacket(int srcAddr, int dstAddr, const CPMPacketData* FCB)
+		: NetFCBPacket(srcAddr, dstAddr, NET_WRITE_FILE, FCB)
 	{}
 };
 
 class NetCloseFilePacket : public NetFCBPacket
 {
 public:
-	NetCloseFilePacket(int srcAddr, int dstAddr, const char* fileName)
-		: NetFCBPacket(srcAddr, dstAddr, NET_CLOSE_FILE, fileName)
+	NetCloseFilePacket(int srcAddr, int dstAddr, const CPMPacketData* FCB)
+		: NetFCBPacket(srcAddr, dstAddr, NET_CLOSE_FILE, FCB)
 	{}
 };
+
+class DataPacket : public GenericPacket 
+{
+protected:
+	DataPacket(int srcAddr, int dstAddr, PACKETCMD cmd, const uint8_t* data, int length) 
+		: GenericPacket(srcAddr, dstAddr, cmd, data, length)
+	{
+	}
+};
+
+class NetMasterDataPacket : public DataPacket
+{
+public:
+	NetMasterDataPacket(int srcAddr, int dstAddr, const uint8_t* data, int length)
+		: DataPacket(srcAddr, dstAddr, NET_MASTER_DATA, data, length)
+	{}
+};
+
 
 
 class PacketSender : public SerialListener {
