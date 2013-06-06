@@ -6,7 +6,13 @@ typedef enum _PACKETCMD {
 	PCMD_PING = 0x05,
 	PCMD_ACK  = 0x06,
 	PCMD_PONG = 0x15,
+
+	PCMD_SHEXDATA = 0x42, 
+	
 	PCMD_SNDCMD = 0x48,
+
+	PCMD_SHEXHEADER = 0x52, 
+
 
 	NET_CLOSE_FILE     = 0x20,
  	NET_WRITE_FILE     = 0x25,
