@@ -41,7 +41,7 @@ void PacketSender::SendEscapedBlockWithChecksum(const uint8_t *buf, int len) {
 /*
  * SendPacket
  */
-void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8_t *buf, uint16_t len) {
+void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8_t *buf, uint16_t len, uint16_t addr1, uint16_t addr2, int last) {
     uint8_t Header[] = { 0xf0, 0x00, 0x00, 0x01, 0x00 };
     int l;
 
@@ -109,6 +109,22 @@ void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8
         SendEscapedBlockWithChecksum(buf, len);
         SendByte(LAST);
         break;
+
+    case PCMD_SHEXHEADER:
+        SendHeader(Header);
+        SendEscapedByte(PCMD_SHEXHEADER);
+        SendEscapedWord(addr1);
+        SendEscapedWord(addr2);
+        SendByte(last ? LAST : INTERMEDIATE);
+        break;
+
+    case PCMD_SHEXDATA:
+        SendHeader(Header);
+        SendEscapedByte(PCMD_SHEXDATA);
+        SendEscapedWord(len);
+        SendEscapedBlockWithChecksum(buf, len);
+        SendByte(last ? LAST : INTERMEDIATE);
+        break;
     }
 
     // Debug
@@ -118,7 +134,9 @@ void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8
 void PacketSender::SendPacket(GenericPacket* packet) 
 {
     SendPacket(packet->GetSrcAddr(), packet->GetDstAddr(), packet->GetCmd(),
-        packet->GetData(), packet->GetLength());
+        packet->GetData(), packet->GetLength(), 
+        packet->GetAddr1(), packet->GetAddr2(),
+        packet->GetIsLast());
 }
 
 int PacketSender::ReceivePacket() {
@@ -128,6 +146,8 @@ int PacketSender::ReceivePacket() {
 
 void PacketSender::CheckPacket() {
     int src, dst;
+
+    morbose("CheckPacket -- \n");
 
     // Header
     if ((buf[0] == 0xf0) || (buf [0] == 0x78) // sorry :)

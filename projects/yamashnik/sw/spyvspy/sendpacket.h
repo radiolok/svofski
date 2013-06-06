@@ -39,7 +39,7 @@ typedef struct _xdata {
 	    }
     	memset(&FCB[12], 0, sizeof(FCB) - 12);
     }
-} CPMPacketData;
+} NetFCB;
 
 class PacketUtil {
 private:
@@ -57,21 +57,36 @@ private:
 	int m_DstAddr;
 	uint8_t* m_OwnData;
 	const uint8_t* m_ExtData;
+	uint16_t m_Addr1;
+	uint16_t m_Addr2;
 
 protected:
 	GenericPacket(int srcAddr, int dstAddr, int cmdType, int length) 
 		: m_Cmd(cmdType), m_Length(length), 
 		  m_SrcAddr(srcAddr), m_DstAddr(dstAddr), 
 		  m_OwnData(new uint8_t[length]),
-		  m_ExtData(0)
+		  m_ExtData(0),
+		  m_Addr1(0),
+		  m_Addr2(0)
 	{}	
 
 	GenericPacket(int srcAddr, int dstAddr, int cmdType, const uint8_t* data, int length) 
 		: m_Cmd(cmdType), m_Length(length), 
 		  m_SrcAddr(srcAddr), m_DstAddr(dstAddr), 
 		  m_OwnData(0),
-		  m_ExtData(data)
+		  m_ExtData(data),
+		  m_Addr1(0),
+		  m_Addr2(0)
 	{}	
+
+	GenericPacket(int srcAddr, int dstAddr, int cmdType, uint16_t addr1, uint16_t addr2)
+		: m_Cmd(cmdType), m_Length(0), 
+		  m_SrcAddr(srcAddr), m_DstAddr(dstAddr), 
+		  m_OwnData(0),
+		  m_ExtData(0),
+		  m_Addr1(addr1),
+		  m_Addr2(addr2)
+	{}
 
 	~GenericPacket() {
 		if (m_OwnData) delete[] m_OwnData;
@@ -86,6 +101,9 @@ public:
 	int GetDstAddr() const { return m_DstAddr; }
 	int GetCmd() const { return m_Cmd; }
 	int GetLength() const { return m_Length; }
+	uint16_t GetAddr1() const { return m_Addr1; }
+	uint16_t GetAddr2() const { return m_Addr2; }
+	virtual int GetIsLast() const { return 1; }
 	virtual const uint8_t* GetData() const { return m_OwnData ? m_OwnData : m_ExtData; }
 };
 
@@ -109,9 +127,9 @@ class NetFCBPacket : public GenericPacket
 {
 protected:
 	NetFCBPacket(int srcAddr, int dstAddr, PACKETCMD cmd, const char* fileName)
-		: GenericPacket(srcAddr, dstAddr, cmd, sizeof(CPMPacketData))
+		: GenericPacket(srcAddr, dstAddr, cmd, sizeof(NetFCB))
 	{
-		AssignData((uint8_t *) &CPMPacketData(0,0,0, fileName));
+		AssignData((uint8_t *) &NetFCB(0,0,0, fileName));
 //		info("NetFCBPacket: ");
 //		for (int i = 0; i < GetLength(); i++) {
 //			info("%x ", GetData()[i]);
@@ -119,20 +137,20 @@ protected:
 	}
 public:
 	NetFCBPacket(NetFCBPacket& otro, PACKETCMD cmd)
-		: GenericPacket(otro.GetSrcAddr(), otro.GetDstAddr(), cmd, sizeof(CPMPacketData)) 
+		: GenericPacket(otro.GetSrcAddr(), otro.GetDstAddr(), cmd, sizeof(NetFCB)) 
 	{
 		AssignData((uint8_t *) otro.GetData());
 	}
 
-	NetFCBPacket(int srcAddr, int dstAddr, PACKETCMD cmd, const CPMPacketData* FCB)
-		: GenericPacket(srcAddr, dstAddr, cmd, sizeof(CPMPacketData))
+	NetFCBPacket(int srcAddr, int dstAddr, PACKETCMD cmd, const NetFCB* FCB)
+		: GenericPacket(srcAddr, dstAddr, cmd, sizeof(NetFCB))
 	{
 		AssignData((uint8_t *) FCB);
 	}
 
 
 public:
-	CPMPacketData* GetFCB() const { return (CPMPacketData*) GetData(); }
+	NetFCB* GetFCB() const { return (NetFCB*) GetData(); }
 };
 
 class NetCreateFilePacket : public NetFCBPacket
@@ -146,7 +164,7 @@ public:
 class NetWriteFilePacket : public NetFCBPacket
 {
 public:
-	NetWriteFilePacket(int srcAddr, int dstAddr, const CPMPacketData* FCB)
+	NetWriteFilePacket(int srcAddr, int dstAddr, const NetFCB* FCB)
 		: NetFCBPacket(srcAddr, dstAddr, NET_WRITE_FILE, FCB)
 	{}
 };
@@ -154,7 +172,7 @@ public:
 class NetCloseFilePacket : public NetFCBPacket
 {
 public:
-	NetCloseFilePacket(int srcAddr, int dstAddr, const CPMPacketData* FCB)
+	NetCloseFilePacket(int srcAddr, int dstAddr, const NetFCB* FCB)
 		: NetFCBPacket(srcAddr, dstAddr, NET_CLOSE_FILE, FCB)
 	{}
 };
@@ -176,6 +194,28 @@ public:
 	{}
 };
 
+class SHEXHeaderPacket : public GenericPacket
+{
+public:
+	SHEXHeaderPacket(int srcAddr, int dstAddr, uint16_t startAddr, uint16_t endAddr)
+		: GenericPacket(srcAddr, dstAddr, PCMD_SHEXHEADER, startAddr, endAddr)
+	{}
+};
+
+// SHEX data packet type 0x42
+// LENGTH|2, payload (max 52 bytes), CHECKSUM|2, 0x97/0x83
+class SHEXDataPacket : public DataPacket
+{
+private:
+	int m_Last;
+
+public:
+	SHEXDataPacket(int srcAddr, int dstAddr, const uint8_t* data, int length, int last)
+		: DataPacket(srcAddr, dstAddr, PCMD_SHEXDATA, data, length), m_Last(last)
+	{}
+protected:
+	int GetIsLast() const { return m_Last; }
+};
 
 
 class PacketSender : public SerialListener {
@@ -183,7 +223,7 @@ private:
 	SerialPort* serial;
 	unsigned char buf[1024];
 	int pos;
-	CPMPacketData m_RxData;
+	NetFCB m_RxData;
 
 private:
 	int RxHandler();
@@ -199,8 +239,8 @@ public:
 	void SendEscapedWord(uint16_t w) const;
 	void SendHeader(const uint8_t* h) const;
 	void SendEscapedBlockWithChecksum(const uint8_t* buf, int len);
-	void SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8_t* buf, uint16_t len);
+	void SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8_t* buf, uint16_t len, uint16_t addr1, uint16_t addr2, int last);
 	void SendPacket(GenericPacket*);
 	int ReceivePacket();
-	const CPMPacketData* GetPacketData() const { return &m_RxData; }
+	const NetFCB* GetNetFCB() const { return &m_RxData; }
 };

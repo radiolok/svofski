@@ -74,9 +74,11 @@ int SerialPort::waitRx()
 		}
 
 		if (readfdSet > 0) {
+			morbose("SerialPort::waitRx calling m_RxListener\n");
 			if (m_RxListener == 0) break;
 			if (m_RxListener->RxHandler()) break;
 		}
+
 		count++;
 		usleep(10000);
 
