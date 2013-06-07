@@ -5,12 +5,12 @@ CPP=g++
 LINK=g++
 
 #all:	ncopy send
-all:	ncopy
+all:	msxnet
 
 clean:	
-	rm ncopy send *.o
+	rm msxnet *.o
 
-ncopy: serial.o ncopy.o sendpacket.o commands.h diags.o
+msxnet: msxnet.o serial.o ncopy.o sendpacket.o commands.h diags.o netsend.o
 
 serial.o:	serial.h
 
