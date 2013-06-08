@@ -10,7 +10,7 @@ all:	msxnet
 clean:	
 	rm msxnet *.o
 
-msxnet: msxnet.o serial.o ncopy.o sendpacket.o commands.h diags.o netsend.o
+msxnet: msxnet.o serial.o ncopy.o sendpacket.o commands.h diags.o basicsend.o
 
 serial.o:	serial.h
 

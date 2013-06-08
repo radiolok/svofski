@@ -18,7 +18,7 @@
 #include "serial.h"
 #include "diags.h"
 
-#include "netsend.h"
+#include "basicsend.h"
 #include "ncopy.h"
 
 #define IOPORT "/dev/ttyS0"
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
                 // SendROM/BIN/BASIC
             case 7:
                 if ((nfiles = argc - optind) > 0) {
-                    netSend(port, studentNo, nfiles, &argv[optind]);
+                    BasicSender basicSender(port, studentNo, nfiles, &argv[optind]);
                     exit(0);
                 }
                 else {
