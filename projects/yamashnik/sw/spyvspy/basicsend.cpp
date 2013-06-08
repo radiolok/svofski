@@ -6,6 +6,10 @@
 #include "serial.h"
 #include "sendpacket.h"
 #include "ncopy.h"
+#include "basicsend.h"
+
+
+
 
 /************************************************************************
  * ROM images
@@ -14,7 +18,7 @@ const int SIZE32K = 32*1024;
 const int SIZE16K = 16*1024;
 const int MAXBLKSIZE = 56;
 
-uint8_t ROM2BIN_startCode[] =
+const uint8_t ROM2BIN_startCode[] =
 {
 /*
     commented because this code section is needed only for
@@ -66,7 +70,7 @@ uint8_t ROM2BIN_startCode[] =
 
 unsigned char binBuf[SIZE32K + sizeof(ROM2BIN_startCode)];  // enough for any bloadable binary
 
-void sendBlocks(PacketSender& packetSender, int studentNo, int start, int end)
+void BasicSender::sendBlocks(int start, int end)
 {
 	static const char progressChar[] = "_,-'\".*oO0";
     int lastblock = (end - start) / MAXBLKSIZE;
@@ -87,9 +91,9 @@ void sendBlocks(PacketSender& packetSender, int studentNo, int start, int end)
         }
 
         {
-            SHEXDataPacket data(0, studentNo, &binBuf[binBufOffset], MAXBLKSIZE, 0);
-            packetSender.SendPacket(&data);
-            if (!packetSender.ReceivePacket()) {
+            SHEXDataPacket data(0, m_studentNo, &binBuf[binBufOffset], MAXBLKSIZE, 0);
+            m_packetSender.SendPacket(&data);
+            if (!m_packetSender.ReceivePacket()) {
             	eggog("send: ack timeout on SHEX data\n");
             }
         }
@@ -100,26 +104,26 @@ void sendBlocks(PacketSender& packetSender, int studentNo, int start, int end)
     // Calculate the rest
     verbose("\nLast block: %d bytes\n", end - current + 1);
     {
-        SHEXDataPacket data(0, studentNo, &binBuf[binBufOffset], end - current + 1, 1);
-        packetSender.SendPacket(&data);
-        packetSender.ReceivePacket();
+        SHEXDataPacket data(0, m_studentNo, &binBuf[binBufOffset], end - current + 1, 1);
+        m_packetSender.SendPacket(&data);
+        m_packetSender.ReceivePacket();
     }
 
     info("\n");
 }
 
-int sendSHEXHeader(PacketSender& packetSender, int studentNo, uint16_t start, uint16_t end) 
+int BasicSender::sendSHEXHeader(uint16_t start, uint16_t end) 
 {
-    if (!pingPong(packetSender, studentNo)) {
-    	info("sendSHEXHeader: no PONG from workstation %d\n", studentNo);
+    if (!pingPong(m_packetSender, m_studentNo)) {
+    	info("sendSHEXHeader: no PONG from workstation %d\n", m_studentNo);
     	return 0;
     }
 
-    verbose("Sending SHEX header packet to %d start=%04x end=%04x\n", studentNo, start, end);
+    verbose("Sending SHEX header packet to %d start=%04x end=%04x\n", m_studentNo, start, end);
 
-    packetSender.SendPacket(&SHEXHeaderPacket(0, studentNo, start, end));
-    if (!packetSender.ReceivePacket()) {
-    	info("no ack on SHEX header from %d\n", studentNo);
+    m_packetSender.SendPacket(&SHEXHeaderPacket(0, m_studentNo, start, end));
+    if (!m_packetSender.ReceivePacket()) {
+    	info("no ack on SHEX header from %d\n", m_studentNo);
     	return 0;
     }
 
@@ -127,7 +131,7 @@ int sendSHEXHeader(PacketSender& packetSender, int studentNo, uint16_t start, ui
     return 1;
 }
 
-void runROM(PacketSender& packetSender, int studentNo, uint16_t defusr)
+void BasicSender::runROM(uint16_t defusr)
 {
     char command[40];
     sprintf(command, " _nete:DefUsr=&H%.4x:?Usr(0):_neti", defusr);
@@ -135,17 +139,17 @@ void runROM(PacketSender& packetSender, int studentNo, uint16_t defusr)
     info("Starting up ROM\n");
     verbose("Run command: '%s'\n", command);
 
-    if (!pingPong(packetSender, studentNo)) {
-    	eggog("runROM: no PONG reply from %d\n", studentNo);
+    if (!pingPong(m_packetSender, m_studentNo)) {
+    	eggog("runROM: no PONG reply from %d\n", m_studentNo);
     }
 
-    packetSender.SendPacket(&SNDCMDPacket(0, studentNo, command));
-    if (!packetSender.ReceivePacket()) {
+    m_packetSender.SendPacket(&SNDCMDPacket(0, m_studentNo, command));
+    if (!m_packetSender.ReceivePacket()) {
     	info("Warning: ack timeout after run SNDCMD\n");
     }
 }
 
-int sendROMSection(PacketSender& packetSender, int studentNo, FILE* file, int sectionSize, int patchAddr, uint8_t patchVal) 
+int BasicSender::sendROMSection(FILE* file, int sectionSize, int patchAddr, uint8_t patchVal) 
 {
     uint16_t start = 0x9000;
     uint16_t end = start + sectionSize + sizeof(ROM2BIN_startCode) - 1;
@@ -162,10 +166,10 @@ int sendROMSection(PacketSender& packetSender, int studentNo, FILE* file, int se
 
     info("sendROM Start: %x, End: %x, Run: %x\n", start, end, run);
 
-    if (sendSHEXHeader(packetSender, studentNo, start, end)) {
-	    sendBlocks(packetSender, studentNo, start, end);
+    if (sendSHEXHeader(start, end)) {
+	    sendBlocks(start, end);
 	    usleep(10000);
-	    runROM(packetSender, studentNo, run);
+	    runROM(run);
 	    usleep(500000);	
 	} else {
 		info("sendROMSection: unable to initiate transfer\n");
@@ -175,7 +179,7 @@ int sendROMSection(PacketSender& packetSender, int studentNo, FILE* file, int se
 	return 1;
 }
 
-int sendROM(PacketSender& packetSender, int studentNo, FILE* file)
+int BasicSender::sendROM(FILE* file)
 {
     long romSize;
     int result = 0;
@@ -201,15 +205,15 @@ int sendROM(PacketSender& packetSender, int studentNo, FILE* file)
 
   	rewind(file);
     if (romSize < SIZE32K) {
-    	result = sendROMSection(packetSender, studentNo, file, romSize, -1, 0);
+    	result = sendROMSection(file, romSize, -1, 0);
     }
     else {
         // replace last Z80 command "jp hl" with "nop"
-        result = sendROMSection(packetSender, studentNo, file, SIZE16K, SIZE16K + sizeof(ROM2BIN_startCode) - 9, 0);
+        result = sendROMSection(file, SIZE16K, SIZE16K + sizeof(ROM2BIN_startCode) - 9, 0);
         
         if (result) {
 	        // patch: replace Z80 command "ld de,4000" with "ld de,8000"
-	        result = sendROMSection(packetSender, studentNo, file, SIZE16K, SIZE16K + sizeof(ROM2BIN_startCode) - 21, 0x80);
+	        result = sendROMSection(file, SIZE16K, SIZE16K + sizeof(ROM2BIN_startCode) - 21, 0x80);
 	    }
     }
 
@@ -218,13 +222,8 @@ int sendROM(PacketSender& packetSender, int studentNo, FILE* file)
     return result;
 }
 
-int sendBIN(PacketSender& packetSender, int studentNo, FILE* file)
+int BasicSender::sendBIN(FILE* file)
 {
-	// -----------------------------------------------------
-	//
-	//                      BINARY FILE
-	//
-	// -----------------------------------------------------
 	uint16_t start;
 	uint16_t end;
 	uint16_t run;
@@ -238,10 +237,10 @@ int sendBIN(PacketSender& packetSender, int studentNo, FILE* file)
 
     info("sendBIN Start: %x, End: %x, Run: %x\n", start, end, run);
 
-    if (sendSHEXHeader(packetSender, studentNo, start, end)) {
-	    sendBlocks(packetSender, studentNo, start, end);
+    if (sendSHEXHeader(start, end)) {
+	    sendBlocks(start, end);
 	    usleep(10000);
-	    runROM(packetSender, studentNo, run);
+	    runROM(run);
 	    usleep(500000);	
 	    result = 1;
 	} else {
@@ -252,12 +251,12 @@ int sendBIN(PacketSender& packetSender, int studentNo, FILE* file)
     return result;	
 }
 
-int sendPoke(PacketSender& packetSender, int studentNo, uint16_t addr, uint8_t value)
+int BasicSender::sendPoke(uint16_t addr, uint8_t value)
 {
-	PokePacket poke(0, studentNo, addr, value);
-	packetSender.SendPacket(&poke);
-	if (!packetSender.ReceivePacket()) {
-		info("Timeout in poke(%04x,%02x) to workstation %d\n", addr, value, studentNo);
+	PokePacket poke(0, m_studentNo, addr, value);
+	m_packetSender.SendPacket(&poke);
+	if (!m_packetSender.ReceivePacket()) {
+		info("Timeout in poke(%04x,%02x) to workstation %d\n", addr, value, m_studentNo);
 		return 0;
 	}
 	return 1;
@@ -268,7 +267,7 @@ int sendPoke(PacketSender& packetSender, int studentNo, uint16_t addr, uint8_t v
 //                      BASIC
 //
 // -----------------------------------------------------
-int sendBASIC(PacketSender& packetSender, int studentNo, FILE* file)
+int BasicSender::sendBASIC(FILE* file)
 {
 	long basSize;
 	int result = 0;
@@ -288,8 +287,8 @@ int sendBASIC(PacketSender& packetSender, int studentNo, FILE* file)
 	uint16_t end = start + basSize - 1;
     info("Tokenized BASIC file, %ld bytes; Start: %x, End: %x\n", basSize, start, end);
 
-    if (sendSHEXHeader(packetSender, studentNo, start, end)) {
-	    sendBlocks(packetSender, studentNo, start, end);
+    if (sendSHEXHeader(start, end)) {
+	    sendBlocks(start, end);
 	    usleep(10000);
 	    result = 1;
 	} else {
@@ -297,25 +296,16 @@ int sendBASIC(PacketSender& packetSender, int studentNo, FILE* file)
 		result = 0;
 	}
 
-	result &= sendPoke(packetSender, studentNo, 0xF6C2, end % 0x100);
-	result &= sendPoke(packetSender, studentNo, 0xF6C3, end / 0x100);
+	result &= sendPoke(0xF6C2, end % 0x100);
+	result &= sendPoke(0xF6C3, end / 0x100);
 
 	if (result) info("Sending BASIC file done\n");
 
 	return result;
 }
 
-
-
-void netSend(const char* port, int studentNo, int nfiles, char* file[])
+int BasicSender::netSend(int nfiles, char* file[])
 {
-    SerialPort serialPort(port);
-    PacketSender packetSender(&serialPort);
-
-    if (serialPort.Setup() != ERR_NONE) {
-       eggog("Error: cannot open %s\n", port);
-    }
-
     for (int fileIdx = 0; fileIdx < nfiles; fileIdx++) {
         uint8_t magic;
 
@@ -332,21 +322,23 @@ void netSend(const char* port, int studentNo, int nfiles, char* file[])
             case 0xfe:
                 // Binary file
             	info("Sending BIN %s\n", file[fileIdx]);
-                sendBIN(packetSender, studentNo, infile);
+                sendBIN(infile);
                 break;
             case 0xff:
                 // tokenized BASIC
             	info("Sending BASIC %s\n", file[fileIdx]);
-                sendBASIC(packetSender, studentNo, infile);
+                sendBASIC(infile);
                 break;
             case 0x41:
                 // ROM image
             	info("Sending ROM %s\n", file[fileIdx]);
-                sendROM(packetSender, studentNo, infile);
+                sendROM(infile);
                 break;
             default:
                 eggog("Error: %s has unsupported file type %02x - cannot send\n", file[fileIdx], magic);
         }
     }
+
+    return 1;
 }
 

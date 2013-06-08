@@ -10,7 +10,11 @@ int pingPong(PacketSender& ps, int adr)
     PingPacket ping(0, adr);
 
     verbose("PING(%d)...", adr);
+    do {
+        ps.SendPacket(&ping);
+    } while (!ps.ReceivePacket());
 
+/*
     ps.SendPacket(&ping);
     if (ps.ReceivePacket()) {
         verbose("PONG");
@@ -20,6 +24,8 @@ int pingPong(PacketSender& ps, int adr)
         verbose("PONG timeout from %d\n", adr);
         return 0;
     }
+*/
+    return 1;
 }
 
 void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
