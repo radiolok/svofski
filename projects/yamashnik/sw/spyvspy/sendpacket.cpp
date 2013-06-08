@@ -124,10 +124,21 @@ void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8
         SendEscapedBlockWithChecksum(buf, len);
         SendByte(last ? LAST : INTERMEDIATE);
         break;
+
+    case PCMD_POKE:
+        SendHeader(Header);
+        SendEscapedByte(PCMD_POKE);
+        SendEscapedWord(addr1);
+        SendEscapedByte((uint8_t) (addr2 & 0377));
+        SendByte(LAST);
+        break;
+
+    default:
+        eggog("unsupported packet type %02x\n", cmdType);
     }
 
     // Debug
-    verbose("\n");
+    verbose(" SendPacket out\n");
 }
 
 void PacketSender::SendPacket(GenericPacket* packet) 

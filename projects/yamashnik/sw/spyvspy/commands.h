@@ -13,6 +13,8 @@ typedef enum _PACKETCMD {
 
 	PCMD_SHEXHEADER = 0x52, 
 
+	PCMD_POKE = 0x5c,
+
 
 	NET_CLOSE_FILE     = 0x20,
  	NET_WRITE_FILE     = 0x25,
