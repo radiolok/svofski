@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
                 }
                 break;
 
-                // SendROM
+                // SendROM/BIN/BASIC
             case 7:
                 if ((nfiles = argc - optind) > 0) {
                     netSend(port, studentNo, nfiles, &argv[optind]);

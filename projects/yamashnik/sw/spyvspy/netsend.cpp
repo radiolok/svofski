@@ -7,11 +7,6 @@
 #include "sendpacket.h"
 #include "ncopy.h"
 
-void sendBASIC(PacketSender& packetSender, int studentNo, FILE* file)
-{
-    eggog("Sending BASIC is not implemented");
-}
-
 /************************************************************************
  * ROM images
  ************************************************************************/
@@ -113,6 +108,25 @@ void sendBlocks(PacketSender& packetSender, int studentNo, int start, int end)
     info("\n");
 }
 
+int sendSHEXHeader(PacketSender& packetSender, int studentNo, uint16_t start, uint16_t end) 
+{
+    if (!pingPong(packetSender, studentNo)) {
+    	info("sendSHEXHeader: no PONG from workstation %d\n", studentNo);
+    	return 0;
+    }
+
+    verbose("Sending SHEX header packet to %d start=%04x end=%04x\n", studentNo, start, end);
+
+    packetSender.SendPacket(&SHEXHeaderPacket(0, studentNo, start, end));
+    if (!packetSender.ReceivePacket()) {
+    	info("no ack on SHEX header from %d\n", studentNo);
+    	return 0;
+    }
+
+    morbose("SHEX header acknowledged\n");
+    return 1;
+}
+
 void runROM(PacketSender& packetSender, int studentNo, uint16_t defusr)
 {
     char command[40];
@@ -131,7 +145,7 @@ void runROM(PacketSender& packetSender, int studentNo, uint16_t defusr)
     }
 }
 
-void sendROMSection(PacketSender& packetSender, int studentNo, FILE* file, int sectionSize, int patchAddr, uint8_t patchVal) 
+int sendROMSection(PacketSender& packetSender, int studentNo, FILE* file, int sectionSize, int patchAddr, uint8_t patchVal) 
 {
     uint16_t start = 0x9000;
     uint16_t end = start + sectionSize + sizeof(ROM2BIN_startCode) - 1;
@@ -148,60 +162,63 @@ void sendROMSection(PacketSender& packetSender, int studentNo, FILE* file, int s
 
     info("sendROM Start: %x, End: %x, Run: %x\n", start, end, run);
 
-    pingPong(packetSender, studentNo);
+    if (sendSHEXHeader(packetSender, studentNo, start, end)) {
+	    sendBlocks(packetSender, studentNo, start, end);
+	    usleep(10000);
+	    runROM(packetSender, studentNo, run);
+	    usleep(500000);	
+	} else {
+		info("sendROMSection: unable to initiate transfer\n");
+		return 0;
+	}
 
-    verbose("Sending SHEX header packet to %d start=%04x end=%04x\n", studentNo, start, end);
-
-    packetSender.SendPacket(&SHEXHeaderPacket(0, studentNo, start, end));
-    if (!packetSender.ReceivePacket()) {
-    	eggog("no ack on SHEX header from %d\n", studentNo);
-    }
-
-    morbose("SHEX header acknowledged\n");
-
-    sendBlocks(packetSender, studentNo, start, end);
-    usleep(10000);
-    runROM(packetSender, studentNo, run);
-    usleep(500000);	
+	return 1;
 }
 
-void sendROM(PacketSender& packetSender, int studentNo, FILE* file)
+int sendROM(PacketSender& packetSender, int studentNo, FILE* file)
 {
-    //int numblocks, i;
     long romSize;
+    int result = 0;
 
     if (fseek(file, 0, SEEK_END) == 0) {
         romSize = ftell(file);
     } 
     else {
-        eggog("Error: sendROM: cannot get file size\n");
+        info("Error: sendROM: cannot get file size\n");
+        return 0;
     }
 
-    info("\nROM file, %ld bytes\n", romSize);
+    info("ROM file, %ld bytes\n", romSize);
 
     if (romSize > SIZE32K) {
-        eggog("\nSending ROMs bigger than 32K is not supported\n");
+        info("Sending ROMs bigger than 32K is not supported\n");
+        return 0;
     }
     if (romSize != 8*1024 && romSize != SIZE16K && romSize != SIZE32K) {
-        eggog("\nSending ROMs with non-standard size (not 8, 16 or 32K) is not supported\n");
+        info("Sending ROMs with non-standard size (not 8, 16 or 32K) is not supported\n");
+        return 0;
     }
 
   	rewind(file);
     if (romSize < SIZE32K) {
-    	sendROMSection(packetSender, studentNo, file, romSize, -1, 0);
+    	result = sendROMSection(packetSender, studentNo, file, romSize, -1, 0);
     }
     else {
         // replace last Z80 command "jp hl" with "nop"
-        sendROMSection(packetSender, studentNo, file, SIZE16K, SIZE16K + sizeof(ROM2BIN_startCode) - 9, 0);
+        result = sendROMSection(packetSender, studentNo, file, SIZE16K, SIZE16K + sizeof(ROM2BIN_startCode) - 9, 0);
         
-        // patch: replace Z80 command "ld de,4000" with "ld de,8000"
-        sendROMSection(packetSender, studentNo, file, SIZE16K, SIZE16K + sizeof(ROM2BIN_startCode) - 21, 0x80);
+        if (result) {
+	        // patch: replace Z80 command "ld de,4000" with "ld de,8000"
+	        result = sendROMSection(packetSender, studentNo, file, SIZE16K, SIZE16K + sizeof(ROM2BIN_startCode) - 21, 0x80);
+	    }
     }
 
-    printf ("\nSending ROM done.\n");
+    info("Sending ROM done.\n");
+
+    return result;
 }
 
-void sendBIN(PacketSender& packetSender, int studentNo, FILE* file)
+int sendBIN(PacketSender& packetSender, int studentNo, FILE* file)
 {
 	// -----------------------------------------------------
 	//
@@ -211,6 +228,7 @@ void sendBIN(PacketSender& packetSender, int studentNo, FILE* file)
 	uint16_t start;
 	uint16_t end;
 	uint16_t run;
+	int result = 0;
 
 	fread (&start, 2, 1, file);
 	fread (&end, 2, 1,   file);
@@ -220,22 +238,73 @@ void sendBIN(PacketSender& packetSender, int studentNo, FILE* file)
 
     info("sendBIN Start: %x, End: %x, Run: %x\n", start, end, run);
 
-    pingPong(packetSender, studentNo);
+    if (sendSHEXHeader(packetSender, studentNo, start, end)) {
+	    sendBlocks(packetSender, studentNo, start, end);
+	    usleep(10000);
+	    runROM(packetSender, studentNo, run);
+	    usleep(500000);	
+	    result = 1;
+	} else {
+		info("sendROMSection: unable to initiate transfer\n");
+		result = 0;
+	}
 
-    verbose("Sending SHEX header packet to %d start=%04x end=%04x\n", studentNo, start, end);
+    return result;	
+}
 
-    packetSender.SendPacket(&SHEXHeaderPacket(0, studentNo, start, end));
-    if (!packetSender.ReceivePacket()) {
-    	eggog("no ack on SHEX header from %d\n", studentNo);
+int sendPoke(PacketSender& packetSender, int studentNo, uint16_t addr, uint8_t value)
+{
+	PokePacket poke(0, studentNo, addr, value);
+	packetSender.SendPacket(&poke);
+	if (!packetSender.ReceivePacket()) {
+		info("Timeout in poke(%04x,%02x) to workstation %d\n", addr, value, studentNo);
+		return 0;
+	}
+	return 1;
+}
+
+// -----------------------------------------------------
+//
+//                      BASIC
+//
+// -----------------------------------------------------
+int sendBASIC(PacketSender& packetSender, int studentNo, FILE* file)
+{
+	long basSize;
+	int result = 0;
+
+    if (fseek(file, 0, SEEK_END) == 0) {
+        basSize = ftell(file);
+    } 
+    else {
+        info("Error: sendBASIC: cannot get file size\n");
+        return 0;
     }
 
-    morbose("SHEX header acknowledged\n");
+    fseek(file, 1, SEEK_SET);
+	fread(&binBuf, basSize-1, 1, file);
 
-    sendBlocks(packetSender, studentNo, start, end);
-    usleep(10000);
-    runROM(packetSender, studentNo, run);
-    usleep(500000);	
+	uint16_t start = 0x8001;
+	uint16_t end = start + basSize - 1;
+    info("Tokenized BASIC file, %ld bytes; Start: %x, End: %x\n", basSize, start, end);
+
+    if (sendSHEXHeader(packetSender, studentNo, start, end)) {
+	    sendBlocks(packetSender, studentNo, start, end);
+	    usleep(10000);
+	    result = 1;
+	} else {
+		info("sendROMSection: unable to initiate transfer\n");
+		result = 0;
+	}
+
+	result &= sendPoke(packetSender, studentNo, 0xF6C2, end % 0x100);
+	result &= sendPoke(packetSender, studentNo, 0xF6C3, end / 0x100);
+
+	if (result) info("Sending BASIC file done\n");
+
+	return result;
 }
+
 
 
 void netSend(const char* port, int studentNo, int nfiles, char* file[])
@@ -280,3 +349,4 @@ void netSend(const char* port, int studentNo, int nfiles, char* file[])
         }
     }
 }
+

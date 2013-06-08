@@ -130,10 +130,6 @@ protected:
 		: GenericPacket(srcAddr, dstAddr, cmd, sizeof(NetFCB))
 	{
 		AssignData((uint8_t *) &NetFCB(0,0,0, fileName));
-//		info("NetFCBPacket: ");
-//		for (int i = 0; i < GetLength(); i++) {
-//			info("%x ", GetData()[i]);
-//		}
 	}
 public:
 	NetFCBPacket(NetFCBPacket& otro, PACKETCMD cmd)
@@ -182,8 +178,7 @@ class DataPacket : public GenericPacket
 protected:
 	DataPacket(int srcAddr, int dstAddr, PACKETCMD cmd, const uint8_t* data, int length) 
 		: GenericPacket(srcAddr, dstAddr, cmd, data, length)
-	{
-	}
+	{}
 };
 
 class NetMasterDataPacket : public DataPacket
@@ -215,6 +210,14 @@ public:
 	{}
 protected:
 	int GetIsLast() const { return m_Last; }
+};
+
+class PokePacket : public GenericPacket
+{
+public:
+	PokePacket(int srcAddr, int dstAddr, uint16_t address, uint8_t value)
+		: GenericPacket(srcAddr, dstAddr, PCMD_POKE, address, value) 
+	{}
 };
 
 
