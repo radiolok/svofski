@@ -5,24 +5,30 @@
 
 #define SECTORSIZE  128
 
-void pingPong(PacketSender& ps, int adr) 
+int pingPong(PacketSender& ps, int adr) 
 {
     PingPacket ping(0, adr);
-    // Send ping
-    info("\nSending PING.");
-    do {
-        ps.SendPacket(&ping);
-    } while (!ps.ReceivePacket());
-    info("\nGot PONG.\n");
+
+    verbose("PING(%d)...", adr);
+
+    ps.SendPacket(&ping);
+    if (ps.ReceivePacket()) {
+        verbose("PONG");
+        return 1;
+    } 
+    else {
+        verbose("PONG timeout from %d\n", adr);
+        return 0;
+    }
 }
 
 void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
 {
+    static const char progressChar[] = "_,-'\".*oO0";
     uint8_t Sector[SECTORSIZE];
     FILE* infile;
     struct stat stat_p;
     int sectNo = 0;
-
 
     // check the size of file
     stat(fileName, &stat_p);
@@ -32,17 +38,18 @@ void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
         eggog("Error: cannot open %s\n", fileName);
     }
 
-    verbose("ncopy:sendFile: sending file %s to workstation %d\n", fileName, studentNo);
+    info("Sending file %s to workstation %d\n", fileName, studentNo);
 
     // Send ping
-    pingPong(packetSender, studentNo);
+    if (!pingPong(packetSender, studentNo)) eggog("No reply from workstation %d\n", studentNo);
 
     // Create file on the net disk
     {
         NetCreateFilePacket createFile(0, studentNo, fileName);
-        do {
-           packetSender.SendPacket(&createFile);
-        } while (!packetSender.ReceivePacket());
+        packetSender.SendPacket(&createFile);
+        if (!packetSender.ReceivePacket()) {
+            eggog("No ack of create file from %d\n", studentNo);
+        }
     }
     verbose("\nGot re: NET_CREATE_FILE.\n");
 
@@ -59,17 +66,18 @@ void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
             packetSender.SendPacket(&masterData);
 
             NetWriteFilePacket writeFile(0, studentNo, packetSender.GetNetFCB());
-            do {
-                packetSender.SendPacket(&writeFile);
-            } while (!packetSender.ReceivePacket());
+            packetSender.SendPacket(&writeFile);
+            if (!packetSender.ReceivePacket()) {
+                eggog("No ack of file write from %d\n", studentNo);
+            }
         }
         verbose("\nSent sector No.%d", sectNo);
 
         if ((sectNo+1) % 10 == 0) {
-            info(". %d ", sectNo+1);
+            info("%d%c", sectNo+1, ((sectNo+1) % 100 == 0) ? '\n' : ' ');
         }
         else {
-            info(".");
+            info("%c\010", progressChar[sectNo % 10]);
         }
 
         sectNo++;
@@ -78,9 +86,10 @@ void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
     // close the file on the net disk
     {
         NetCloseFilePacket closeFile(0, studentNo, packetSender.GetNetFCB());
-        do {
-            packetSender.SendPacket(&closeFile);
-        } while (!packetSender.ReceivePacket());
+        packetSender.SendPacket(&closeFile);
+        if (!packetSender.ReceivePacket()) {
+            eggog("No ack of file close from %d\n", studentNo);
+        }
     }
     info("\nSendFile Done.\n");
 

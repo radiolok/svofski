@@ -91,7 +91,6 @@ void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8
 
             serial->waitRx();
         } while (l > 0);
-
         break;
 
     case NET_WRITE_FILE:
