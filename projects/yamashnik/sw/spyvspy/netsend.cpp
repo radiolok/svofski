@@ -262,17 +262,17 @@ void netSend(const char* port, int studentNo, int nfiles, char* file[])
         switch (magic) {
             case 0xfe:
                 // Binary file
-            	info("Sending BIN %s\n", file[fileIdx])
+            	info("Sending BIN %s\n", file[fileIdx]);
                 sendBIN(packetSender, studentNo, infile);
                 break;
             case 0xff:
                 // tokenized BASIC
-            	info("Sending BASIC %s\n", file[fileIdx])
+            	info("Sending BASIC %s\n", file[fileIdx]);
                 sendBASIC(packetSender, studentNo, infile);
                 break;
             case 0x41:
                 // ROM image
-            	info("Sending ROM %s\n", file[fileIdx])
+            	info("Sending ROM %s\n", file[fileIdx]);
                 sendROM(packetSender, studentNo, infile);
                 break;
             default:
