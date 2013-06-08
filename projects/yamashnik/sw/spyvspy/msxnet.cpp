@@ -70,10 +70,10 @@ int main(int argc, char *argv[]) {
     char portBuf[32] = IOPORT;
     char* port = portBuf;
     int studentNo = 127;
-
-
     int nfiles = 0;
      
+    int workdone = 0;
+
     while (1) {
         static struct option long_options[] =
          {
@@ -99,7 +99,8 @@ int main(int argc, char *argv[]) {
      
         /* Detect the end of the options. */
         if (c == -1) {
-            halp();
+            if (!workdone)
+                halp();
             break;
         }
      
@@ -126,8 +127,8 @@ int main(int argc, char *argv[]) {
                 break;
      
             case 4:
-                sendCommand(port, studentNo, " _CPM");
-                exit(0);
+                sendCommand(port, studentNo, "   _CPM");
+                workdone = 1;
                 break;
      
             case 5:
@@ -137,6 +138,11 @@ int main(int argc, char *argv[]) {
      
                 // CPM ncopy mode
             case 6:
+                if (workdone) {
+                    info("Waiting for CPM to boot...");
+                    sleep(3);
+                    info("\n");
+                }
                 if ((nfiles = argc - optind) > 0) {
                     ncopy(port, studentNo, nfiles, &argv[optind]);
                     exit(0);
