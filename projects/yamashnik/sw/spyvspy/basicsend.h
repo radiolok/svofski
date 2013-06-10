@@ -1,5 +1,8 @@
 #pragma once
 
+#include "serial.h"
+#include "sendpacket.h"
+
 class BasicSender {
 private:
 	SerialPort m_SerialPort;
@@ -9,10 +12,6 @@ private:
 	int netSend(int nfiles, char* file[]);
 
 private:
-	int sendBASIC(FILE* file);
-	int sendPoke(uint16_t addr, uint8_t value);
-	int sendBIN(FILE* file);
-	int sendROM(FILE* file);
 	int sendROMSection(FILE* file, int sectionSize, int patchAddr, uint8_t patchVal);
 	void runROM(uint16_t defusr);
 	int sendSHEXHeader(uint16_t start, uint16_t end);
@@ -31,5 +30,19 @@ public:
 
 		netSend(nfiles, file);
 	}
+
+	BasicSender(SerialPort* serial, int studentNo) 
+		: m_SerialPort(0),
+		  m_packetSender(serial),
+		  m_studentNo(studentNo)
+	{}
+
+	int sendBASIC(FILE* file);
+	int sendPoke(uint16_t addr, uint8_t value);
+	int sendBIN(FILE* file);
+	int sendROM(FILE* file);
+	int SendCommand(const char* cmd);
+
+
 };
 

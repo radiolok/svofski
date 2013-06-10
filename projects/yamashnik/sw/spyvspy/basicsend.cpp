@@ -131,6 +131,17 @@ int BasicSender::sendSHEXHeader(uint16_t start, uint16_t end)
     return 1;
 }
 
+int BasicSender::SendCommand(const char* cmd)
+{
+    m_packetSender.SendPacket(&SNDCMDPacket(0, m_studentNo, cmd));
+    if (!m_packetSender.ReceivePacket()) {
+        info("Warning: ack timeout after run SNDCMD\n");
+        return 0;
+    }
+
+    return 1;
+}
+
 void BasicSender::runROM(uint16_t defusr)
 {
     char command[40];
@@ -235,7 +246,7 @@ int BasicSender::sendBIN(FILE* file)
 
 	fread (&binBuf, end-start+1, 1, file);
 
-    info("sendBIN Start: %x, End: %x, Run: %x\n", start, end, run);
+    info("Start: %x, End: %x, Run: %x\n", start, end, run);
 
     if (sendSHEXHeader(start, end)) {
 	    sendBlocks(start, end);
@@ -244,7 +255,7 @@ int BasicSender::sendBIN(FILE* file)
 	    usleep(500000);	
 	    result = 1;
 	} else {
-		info("sendROMSection: unable to initiate transfer\n");
+		info("unable to initiate SHEX transfer\n");
 		result = 0;
 	}
 
@@ -296,8 +307,8 @@ int BasicSender::sendBASIC(FILE* file)
 		result = 0;
 	}
 
-	result &= sendPoke(0xF6C2, end % 0x100);
-	result &= sendPoke(0xF6C3, end / 0x100);
+	result = result && sendPoke(0xF6C2, end % 0x100);
+	result = result && sendPoke(0xF6C3, end / 0x100);
 
 	if (result) info("Sending BASIC file done\n");
 
