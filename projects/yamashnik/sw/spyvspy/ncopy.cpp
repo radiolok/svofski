@@ -14,17 +14,6 @@ int pingPong(PacketSender& ps, int adr)
         ps.SendPacket(&ping);
     } while (!ps.ReceivePacket());
 
-/*
-    ps.SendPacket(&ping);
-    if (ps.ReceivePacket()) {
-        verbose("PONG");
-        return 1;
-    } 
-    else {
-        verbose("PONG timeout from %d\n", adr);
-        return 0;
-    }
-*/
     return 1;
 }
 

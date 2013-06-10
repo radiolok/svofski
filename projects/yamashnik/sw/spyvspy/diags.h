@@ -4,7 +4,12 @@
 extern "C" {
 #endif
 
-typedef enum _loglevel {LOGLEVEL_ZERO = 0, LOGLEVEL_INFO = 1, LOGLEVEL_VERBOSE = 4, LOGLEVEL_MORBOSE = 5} LOGLEVEL;
+typedef enum _loglevel {
+	LOGLEVEL_ZERO = 0, 
+	LOGLEVEL_INFO = 1, 
+	LOGLEVEL_VERBOSE = 4, 
+	LOGLEVEL_MORBOSE = 5
+} LOGLEVEL;
 
 extern LOGLEVEL LogLevel;
 

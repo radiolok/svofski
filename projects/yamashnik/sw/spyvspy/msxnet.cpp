@@ -20,6 +20,7 @@
 
 #include "basicsend.h"
 #include "ncopy.h"
+#include "spy.h"
 
 #define IOPORT "/dev/ttyS0"
 
@@ -88,6 +89,7 @@ int main(int argc, char *argv[]) {
            {"ping",     no_argument,            0, 5},
            {"ncopy",    no_argument,            0, 6},
            {"send",     no_argument,            0, 7},
+           {"spy",      no_argument,            0, 8},
            {0, 0, 0, 0}
          };
 
@@ -160,6 +162,15 @@ int main(int argc, char *argv[]) {
                 }
                 else {
                     eggog("No files to send");
+                }
+                break;
+
+            case 8:
+                {
+                    nfiles = argc - optind;
+                    Spy spy(port, argv[0], studentNo, nfiles, &argv[optind]);
+                    spy.initData() &&
+                        spy.Bootstrap();
                 }
                 break;
 

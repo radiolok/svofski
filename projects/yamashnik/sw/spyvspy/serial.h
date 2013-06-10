@@ -3,6 +3,8 @@
 #include <inttypes.h>
 #include <unistd.h>
 
+#include "diags.h"
+
 #define BAUDRATE 		38400
 #define SELECT_WAIT		100000
 
@@ -23,10 +25,15 @@ private:
 
 public:
 	SerialPort(const char* device);
-	~SerialPort() { if (m_fd != -1) close(m_fd); }
+	~SerialPort() { 
+		if (m_fd != -1) close(m_fd); 
+		m_fd = -1; 
+		info("SERIAL DIE");
+	}
+
 	int Setup();
 
-	void SendByte(unsigned char b) const { ::write(m_fd, &b, 1); }
+	void SendByte(unsigned char b) const { write(&b, 1); }
 
 	size_t read(uint8_t* buf, size_t len) const;
 	size_t write(uint8_t* buf, size_t len) const;
