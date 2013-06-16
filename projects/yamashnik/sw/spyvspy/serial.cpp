@@ -68,14 +68,16 @@ int SerialPort::waitRx()
 						(fd_set *) 0,
 						(fd_set *) 0,
 						&timeout);
+
 		if (readfdSet < 0) {
-			printf("Error in select()\n");
-			exit(1);
+			eggog("Error in select()\n");
 		}
 
 		if (readfdSet > 0) {
-			morbose("SerialPort::waitRx calling m_RxListener\n");
-			if (m_RxListener == 0) break;
+			if (m_RxListener == 0) {
+				morbose("waitRx: m_RxListener==0\n");
+				break;
+			}
 			if (m_RxListener->RxHandler()) break;
 		}
 
@@ -83,11 +85,11 @@ int SerialPort::waitRx()
 		usleep(10000);
 
 		if (count == 10) {
-			verbose("\nFailed after %d select()'s", count);
+			morbose("\nwaitRx: failed after %d select()s\n", count);
 			return 0;
 		}
 	}
-	verbose("\nGot reply after %d select()'s", count);
+	morbose("\nwaitRx: got reply after %d select()s\n", count);
 	return 1;
 }
 

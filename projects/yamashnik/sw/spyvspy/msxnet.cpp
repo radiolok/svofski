@@ -90,6 +90,7 @@ int main(int argc, char *argv[]) {
            {"ncopy",    no_argument,            0, 6},
            {"send",     no_argument,            0, 7},
            {"spy",      no_argument,            0, 8},
+           {"test",     no_argument,            0, 9},
            {0, 0, 0, 0}
          };
 
@@ -174,8 +175,16 @@ int main(int argc, char *argv[]) {
                 }
                 break;
 
+            case 9:
+                {
+                    NetBDOS bdos;
+                    bdos.test();
+                    workdone = 1;
+                }
+                break;
+
             default:
-                eggog("Option error");
+                eggog("Option error\n");
         }
     }
 }

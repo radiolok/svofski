@@ -1,9 +1,16 @@
+BDOSVEC_HI:	equ 7
+
     org 100h
+
     ld c, 9
     ld de, msg
     call 5
 
-    ld hl, 0
+    jp TestMovingToHiMem
+
+ReturnToDump:
+
+    ld hl, $c000
 
 dumploop:
     ld a, l
@@ -13,7 +20,6 @@ dumploop:
     ld c, (hl)
     call space 
     call OutHex8
-    call checkkey
 
     inc l
     jr z, dl_nexth
@@ -24,6 +30,8 @@ dl_nexth:
     ret
 
 displayRest:
+    call checkkey
+
 	; chars
 	call space
 	
@@ -56,17 +64,16 @@ nl:
 
 checkkey:
 	push hl
-	ld c, 0bh
-	call 5
-	or a
+	rst 30h
+	db 70h
+	dw 9ch
 	jr z, checkkeyret
-
-	ld c, 1
-	call 5
-	ld c, 1
-	call 5
-	ld c, 1
-	call 5
+	rst 30h
+	db 70h
+	dw 9fh
+	rst 30h
+	db 70h
+	dw 9fh
 checkkeyret:
 	pop hl
 	ret
@@ -83,6 +90,7 @@ putchar:
 	ld c, 2
 	ld e, a
 	call 5
+	call checkkey
 	pop hl
 	pop de
 	pop bc
@@ -114,4 +122,66 @@ Conv:
    ret
 
 
-msg:    db 'TPA program launched', 0dh, 0ah, '$'
+msg:    db $0d,$0a,'TPA program launched', $0d, $0a, '$'
+
+msg_HiAddr:
+		db 'Moving test code to $'
+
+printmsg:
+	push af
+	push hl
+	ld c, 9
+	call 5
+	pop hl
+	pop af
+	ret
+
+TestMovingToHiMem:
+	; Relocate far_test far
+    ld      sp, 9000h	
+    ld      a, (BDOSVEC_HI)
+    ld      h, a
+    ld      l, 0
+    push    hl
+    ld      hl, (ResidentPartSize)
+    ld      de, (Whatever)
+    add     hl, de
+    xor     a
+    ex      de, hl
+    pop     hl
+    sbc     hl, de
+    ld      l, a
+    push    hl
+
+    push de
+    ld de, msg_HiAddr
+    call printmsg
+    call DispHLhex
+    pop de		
+
+    pop 	hl
+    push	hl
+
+    ex      de, hl
+    ld      hl, ResidentPartNearLoc ; rel D600
+    ld      bc, (ResidentPartSize)
+    ldir                    ; Copy code to higher memory
+
+    pop		hl
+    jp 		(hl)
+
+Whatever:			dw 0
+ResidentPartSize:	dw 0x1600 ; ResidentPartEnd - ResidentPartSrc
+
+ResidentPartNearLoc:
+	org $c000
+ResidentPartSrc:
+	ld c, 9
+	ld de, ResidentEvil
+	call 5
+	jp ReturnToDump
+
+ResidentEvil: 	db 'Soy la parte temerosa que vive en la alta memoria huhuhuhuu$'
+
+ResidentPartEnd:
+

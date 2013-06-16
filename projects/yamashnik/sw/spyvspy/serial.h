@@ -28,7 +28,6 @@ public:
 	~SerialPort() { 
 		if (m_fd != -1) close(m_fd); 
 		m_fd = -1; 
-		info("SERIAL DIE");
 	}
 
 	int Setup();

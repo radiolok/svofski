@@ -35,24 +35,13 @@ RemoteCodeEntryPoint:
                                         ; Ждите
                 call    rmtPuts
 
-                ld 	a, '1'
-                call CHPUT
-
 ; ---------------------------------------------------------------------------
                 rst     30h             ; 8F:4016 Vector to ENDNET
                 db 8Fh
                 dw 4016h
 ; ---------------------------------------------------------------------------
 
-                ld 	a, '2'
-                call CHPUT
-
-
                 call    rmtInitAndGetStudentNumber
-
-                ld 	a, '3'
-                call CHPUT
-
 
 skipintro:
                 di
@@ -62,15 +51,8 @@ skipintro:
                 ld      a, 0FFh
                 out     (0A8h), a       ; Primary slot register
 
-				ld 		a, '4'
-;;				call 	CHPUT
-
 rmtInitialCommandLoop:                  
                 call    rmtReadByteFromFIFO_Rx
-                push 	af
-                add 	'0' 		
-;;                call 	CHPUT
-                pop 	af
                 cp      1
                 jr      z, rmtReceiveStuff
                 cp      2
@@ -88,26 +70,9 @@ rmtReceiveStuff:
                 call    rmtReadByteFromFIFO_Rx
                 ld      c, a
 
-;                push hl
-;                push bc
-;                call DispHLhex
-;                pop bc
-;                push bc
-;				ld	h, b
-;				ld l, c
-;				call DispHLhex
-;				pop bc
-;				pop hl                
-
 rmtReceiveDataLoop:                     ; CODE XREF: ED4F
 
                 call    rmtReadByteFromFIFO_Rx
-
-;                push 	af
-;                ld 		a, '.'
-;                call 	CHPUT
-;                pop 	af
-
                 ld      (hl), a
                 inc     hl
                 dec     bc
@@ -117,12 +82,6 @@ rmtReceiveDataLoop:                     ; CODE XREF: ED4F
                 
                 ld      a, 2Eh ; '.'
                 out     (98h), a        ; VRAM data read/write
-
-                push 	af
-                ld 		a, '@'
-;;                call 	CHPUT
-                ;pop 	af
-
 
                 jr      rmtInitialCommandLoop
 ; ---------------------------------------------------------------------------
@@ -143,9 +102,9 @@ rmtLaunchMSXDOS:                        ; CODE XREF: ED31
                 ld      (byte_0_F279), a ; DISKWRT
 
 ; say hi
-				ld 		c, 9
-				ld 		de, MSG_Loaded
-				call	5
+;				ld 		c, 9
+;				ld 		de, MSG_Loaded
+;				call	5
 
 
 RemoteOSLoop:                           ; CODE XREF: ED7C
