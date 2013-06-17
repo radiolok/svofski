@@ -2,6 +2,7 @@
 
 #include <inttypes.h>
 #include <strings.h>
+#include <glob.h>
 #include "serial.h"
 #include "diags.h"
 
@@ -95,18 +96,76 @@ struct FCB {
 /*  1 */	uint8_t		NameExt[11];
 /* 12 */	uint16_t	CurrentBlock;
 /* 14 */	uint16_t 	RecordSize;
+
 /* 16 */	uint32_t	FileSize;
+
 /* 20 */	uint16_t	Date;
 /* 22 */	uint16_t	Time;
+
 /* 24 */	uint8_t		DeviceId;			// 40h + Drive (A=40h)
 /* 25 */	uint8_t		DirectoryLocation;
 /* 26 */	uint16_t	TopCluster;
 /* 28 */	uint16_t	LastClusterAccessed;
 /* 30 */	uint16_t 	RelativeLocation;
+
 /* 32 */	uint8_t		CurrentRecord;		// for seq access
 /* 33 */	uint32_t	RandomRecord;
 /* 36 */	uint32_t	Padding;
-};
+/* 40 */	uint8_t 	Padding2[3];
+
+	FCB() {
+		memset(this, 0, sizeof(FCB));
+	}
+
+	int SetNameExt(const char* fname) {
+		char* shrt = (shrt = strrchr(fname, '/')) ? shrt + 1 : (char *)fname;
+
+		char* dot = strchr(shrt, '.');
+		int namelen = dot == 0 ? strlen(shrt) : dot - shrt;
+		int extlen = strlen(shrt) - namelen - 1;
+		if (namelen > 8 || extlen > 3) {
+			info("ERROR: filenames must be 8.3\n");
+			return 0;
+		}
+
+		memset(NameExt, ' ', sizeof(NameExt));
+		memcpy(NameExt, shrt, namelen);
+		if (extlen > 0) {
+			memcpy(NameExt + 8, shrt + namelen + 1, extlen);
+		}		
+
+		return 1;
+	}
+
+	void GetFileName(char* normalname) {
+		int i = 0;
+		for (int c; i < 8 && (c = NameExt[i]) != ' '; normalname[i] = c, i++);
+		normalname[i++] = '.';
+		for (int s = 8, c; s < 11 && (c = NameExt[s]) != ' '; normalname[i] = c, i++, s++);
+		normalname[i] = 0;
+	}
+} __attribute__((packed));
+
+struct DIRENT {
+			uint8_t AlwaysFF;
+/*  0 */	char NameExt[11];
+/* 11 */	uint8_t Attrib;
+/* 12 */	uint8_t Space[10];
+/* 22 */	uint16_t Time;
+/* 24 */	uint16_t Date;
+/* 26 */	uint16_t Cluster;
+/* 28 */	uint32_t FileSize;
+
+	DIRENT() {
+		memset(this, 0, sizeof(DIRENT));
+		AlwaysFF = 0xff;
+	}
+
+	void InitFromFCB(FCB* fcb) {
+		memcpy(NameExt, fcb->NameExt, sizeof(NameExt));
+		FileSize = fcb->FileSize;
+	}
+} __attribute__((packed));;
 
 class SpyResponse;
 
@@ -313,12 +372,11 @@ public:
 		m_dmasize = n;
 	}
 
-	void SetDMA(const uint8_t *data, int length) {
-		if (m_DMA != 0 && m_dmasize <= length) {
-			memcpy(m_DMA, data, m_dmasize);
-		} else {
-			eggog("SpyResponse:setDMA wrong DMA size");
-		}
+	void AssignDMA(const uint8_t *data, int length) {
+		if (m_DMA) delete[] m_DMA;
+		m_dmasize = length;
+		m_DMA = new uint8_t[m_dmasize];
+		memcpy(m_DMA, data, m_dmasize);
 	}
 
 	void SetAuxData(uint8_t idx, int value)  {
@@ -368,16 +426,23 @@ class NetBDOS
 {
 private:
 	int m_disk;
+	glob_t m_globbuf;
+	int m_globbor;
 
 	SpyRequest* m_req;
 	SpyResponse* m_res;
 
-	void fileNameFromFCB(FCB* fcb, char* normalname) {
-		int i = 0;
-		for (int c; i < 8 && (c = fcb->NameExt[i]) != ' '; normalname[i] = c, i++);
-		normalname[i++] = '.';
-		for (int s = 8, c; s < 11 && (c = fcb->NameExt[s]) != ' '; normalname[i] = c, i++, s++);
-		normalname[i] = 0;
+	int internalGetFileSize(const char* filename) {
+		FILE* f = fopen(filename, "rb");
+		if (f == 0) return -1;
+
+		fseek(f, 0, SEEK_END);
+		long pos = ftell(f);
+		if (pos > 737820) {
+			pos = 737820;
+		}
+
+		return pos;
 	}
 
 	void selectDisk() {
@@ -394,7 +459,7 @@ private:
 
 	void openFile() {
 		char filename[13];
-		fileNameFromFCB(m_req->GetFCB(), filename);
+		m_req->GetFCB()->GetFileName(filename);
 		info("NetBDOS: openFile '%s' ", filename);
 		m_res->AssignFCB(m_req->GetFCB());
 
@@ -434,7 +499,7 @@ private:
 
 	void closeFile() {
 		char filename[13];
-		fileNameFromFCB(m_req->GetFCB(), filename);
+		m_req->GetFCB()->GetFileName(filename);
 		info("NetBDOS: closeFile '%s'\n", filename);
 		m_res->SetAuxData(0, 0x00);
 		m_res->respond((uint8_t[]){REQ_BYTE, 0});
@@ -448,23 +513,59 @@ private:
 
 	void searchFirst() {
 		char filename[13];
-		fileNameFromFCB(m_req->GetFCB(), filename);
+		m_req->GetFCB()->GetFileName(filename);
 		info("Search first: '%s'\n", filename);
+
+		if (m_globbuf.gl_pathc > 0) {
+			globfree(&m_globbuf);
+		}
+		
+		glob(filename, 0, /* errfunc */0, &m_globbuf);
+
+		morbose("glob() pathc=%d\n", m_globbuf.gl_pathc);
+
+		m_globbor = 0;
+
+		searchNext();
+	}
+
+	void searchNext() {
+		DIRENT dirent;
+		int result = 0xff;
+
+		if (m_globbor < m_globbuf.gl_pathc) {
+			morbose("glob() first match=%s\n", m_globbuf.gl_pathv[m_globbor]);
+
+			FCB fcb;
+
+			fcb.SetNameExt(m_globbuf.gl_pathv[m_globbor]);
+			fcb.FileSize = internalGetFileSize(m_globbuf.gl_pathv[m_globbor]);
+
+			dirent.InitFromFCB(&fcb);
+
+			result = 0;
+		} 
+		m_globbor++;
+
+		m_res->AssignDMA((uint8_t *)&dirent, sizeof(DIRENT));
+		m_res->SetAuxData(0, result);
+
+		m_res->respond((uint8_t[]){REQ_DMA, REQ_BYTE, 0});
 	}
 
 	void randomBlockRead() {
 		char filename[13];
-		fileNameFromFCB(m_req->GetFCB(), filename);
+		m_req->GetFCB()->GetFileName(filename);
 
 		int nrecords = m_req->getAuxData(0);
 		int recordsize = m_req->GetFCB()->RecordSize;
 		if (recordsize != 1) {
 			info("ERROR: records of sizes other than 1 not supported\n");
 		}
-		int recordno = m_req->GetFCB()->RandomRecord;
 
-		info("NetBDOS: random block read '%s' recsize=%d nrecords=%d current=%d\n", 
-			filename, recordsize, nrecords, recordno);
+		dump(morbose, (uint8_t *) m_req->GetFCB(), sizeof(FCB));
+
+		uint32_t recordno = m_req->GetFCB()->RandomRecord;
 
 		m_res->AssignFCB(m_req->GetFCB());
 
@@ -490,10 +591,56 @@ private:
 		m_res->respond((uint8_t[]){REQ_WORD, REQ_DMA, REQ_FCB, REQ_BYTE, 0});
 	}
 
+	void randomRead() {
+		char filename[13];
+		m_req->GetFCB()->GetFileName(filename);
+
+		int nrecords = 1;
+		int recordsize = 128;
+
+		dump(morbose, (uint8_t *) m_req->GetFCB(), sizeof(FCB));
+
+		uint32_t recordno = m_req->GetFCB()->RandomRecord;
+		recordno = recordno & 0x00ffffff;
+
+		m_res->AssignFCB(m_req->GetFCB());
+
+		FILE* f = fopen(filename, "rb");
+		do {
+			if (fseek(f, recordno*recordsize, SEEK_SET) != 0) {
+				m_res->SetDMASize(0);
+				m_res->SetAuxData(0,0);
+				m_res->SetAuxData(1,1);
+				info("seek error");
+				break;
+			}
+			m_res->AllocDMA(nrecords*recordsize);
+			int recordsread = fread(m_res->getDMA(), recordsize, nrecords, f);
+			m_res->SetDMASize(recordsread * recordsize);
+			m_res->SetAuxData(1, 0); 		   // no error
+			m_res->GetFCB()->RandomRecord += recordsread;
+		} while(0);
+
+
+		fclose(f);
+		m_res->respond((uint8_t[]){REQ_DMA, REQ_FCB, REQ_BYTE, 0});
+	}
+
 	void getLoginVector() {
 		info("NetBDOS: get login vector\n");
 		m_res->SetAuxData(0, 0x0001); // LSB corresponds to drive A
 		m_res->respond((uint8_t[]){REQ_WORD, 0});
+	}
+
+	void getFileSize() {
+		char filename[13];
+		m_req->GetFCB()->GetFileName(filename);
+		int size = internalGetFileSize(filename);
+		m_res->AssignFCB(m_req->GetFCB());
+		m_res->GetFCB()->FileSize = size;
+
+		m_res->SetAuxData(0, size == -1 ? 0xff : 0);
+		m_res->respond((uint8_t[]) {REQ_FCB, REQ_BYTE, 0});
 	}
 
 private:
@@ -501,28 +648,92 @@ private:
 		char filename[13];
 		FCB fcb;
 		memcpy(&fcb.NameExt, "AUTOEXECBAT", 11);
-		fileNameFromFCB(&fcb, filename);
+		fcb.GetFileName(filename);
 		info("test_fileNameFromPCB 1 '%s'\n", filename);
 
 		if (strcmp("AUTOEXEC.BAT", filename) != 0) return 0;
 
 		memcpy(&fcb.NameExt, "FOO     BAR", 11);
-		fileNameFromFCB(&fcb, filename);
+		fcb.GetFileName(filename);
 		info("test_fileNameFromPCB 2 '%s'\n", filename);
 		if (strcmp("FOO.BAR", filename) != 0) return 0;
 
 		memcpy(&fcb.NameExt, "FUUU    SO ", 11);
-		fileNameFromFCB(&fcb, filename);
+		fcb.GetFileName(filename);
 		info("test_fileNameFromPCB 3 '%s'\n", filename);
 		if (strcmp("FUUU.SO", filename) != 0) return 0;
+
+		return 1;
+	}
+
+	int test_FCBFromFileName() {
+		FCB fcb;
+		fcb.SetNameExt("foo.bar");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		fcb.SetNameExt("foo.b");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		fcb.SetNameExt("foo.");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		fcb.SetNameExt("foo");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+
+		fcb.SetNameExt(".e");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		fcb.SetNameExt(".err");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		fcb.SetNameExt("autoexec.bat");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		fcb.SetNameExt("/home/babor/autoexec.bat");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		fcb.SetNameExt("/home/babor/longnameislong.bat");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		fcb.SetNameExt("/home/babor/okname.longext");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		fcb.SetNameExt("okname.longext");
+		dump(info, (uint8_t *) &fcb, sizeof(FCB));
+
+		return 1;
+	}
+
+	int test_searchFirst() {
+		m_req = new SpyRequest();
+		m_req->GetFCB()->SetNameExt("AUTOEXEC.???");
+		searchFirst();
+
+		m_req = new SpyRequest();
+		m_req->GetFCB()->SetNameExt("NOSUCH.FIL");
+		searchFirst();
+
+		delete m_req;
+
+		return 1;
 	}
 
 public:
 	NetBDOS() : m_disk(0) {}
 
+	~NetBDOS() {
+		if (m_globbuf.gl_pathc > 0) {
+			globfree(&m_globbuf);
+		}
+	}
+
 	int test() {
 		
-		return test_fileNameFromPCB();
+		return test_fileNameFromPCB() 
+			&& test_FCBFromFileName()
+			&& test_searchFirst();
+
 	}
 
 	void ExecFunc(SpyRequest* request, SpyResponse* response) {
@@ -543,6 +754,7 @@ public:
 			searchFirst();
 			break;
 		case F12_SEARCH_NEXT:
+			searchNext();
 			break;
 		case F13_DELETE:
 			break;
@@ -563,10 +775,12 @@ public:
 		case F1B_GET_ALLOC_INFO:
 			break;
 		case F21_RANDOM_READ:
+			randomRead();
 			break;
 		case F22_RANDOM_WRITE:
 			break;
 		case F23_GET_FILE_SIZE:
+			getFileSize();
 			break;
 		case F24_SET_RANDOM_RECORD:
 			break;

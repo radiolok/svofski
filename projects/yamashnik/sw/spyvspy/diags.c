@@ -52,7 +52,7 @@ void dumpline(printfunc p, const uint8_t* data, int ofs, int length) {
 
 	p(" ");
 	for (int i = 0; i < length; i++) {
-		p("%c", (data[ofs+i] > 32 && data[ofs+i] < 128) ? 
+		p("%c", (data[ofs+i] >= 32 && data[ofs+i] < 128) ? 
 			data[ofs+i] : '.');
 	}
 	p("\n");
