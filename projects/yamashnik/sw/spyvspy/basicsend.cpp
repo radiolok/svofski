@@ -75,13 +75,13 @@ void BasicSender::sendBlocks(int start, int end)
 	static const char progressChar[] = "_,-'\".*oO0";
     int lastblock = (end - start) / MAXBLKSIZE;
 
-    info("send: %d blocks to send\n", lastblock);
+    info("%d blocks to send\n", lastblock);
 
     int current = start;
     int binBufOffset = 0;
 
     for (int i = 0; i < lastblock; i++) {
-        verbose("\nSending block %d\n", i + 1);
+        verbose("\nSending block %d (", i + 1);
 
         if ((i+1) % 10 == 0) {
             info("%d%c", i + 1, ((i+1) % 100 == 0) ? '\n' : ' ');
@@ -90,9 +90,11 @@ void BasicSender::sendBlocks(int start, int end)
             info("%c\010", progressChar[i % 10]);  //_,-'"
         }
 
-        {
-            SHEXDataPacket data(0, m_studentNo, &binBuf[binBufOffset], MAXBLKSIZE, 0);
-            m_packetSender.SendPacket(&data);
+        verbose(")");
+
+        {   
+            SHEXDataPacket shexdata(0, m_studentNo, &binBuf[binBufOffset], MAXBLKSIZE, 0);
+            m_packetSender.SendPacketVal(shexdata);
             if (!m_packetSender.ReceivePacket()) {
             	eggog("send: ack timeout on SHEX data\n");
             }
@@ -104,8 +106,8 @@ void BasicSender::sendBlocks(int start, int end)
     // Calculate the rest
     verbose("\nLast block: %d bytes\n", end - current + 1);
     {
-        SHEXDataPacket data(0, m_studentNo, &binBuf[binBufOffset], end - current + 1, 1);
-        m_packetSender.SendPacket(&data);
+        SHEXDataPacket shexdata(0, m_studentNo, &binBuf[binBufOffset], end - current + 1, 1);
+        m_packetSender.SendPacketVal(shexdata);
         m_packetSender.ReceivePacket();
     }
 
@@ -121,7 +123,8 @@ int BasicSender::sendSHEXHeader(uint16_t start, uint16_t end)
 
     verbose("Sending SHEX header packet to %d start=%04x end=%04x\n", m_studentNo, start, end);
 
-    m_packetSender.SendPacket(&SHEXHeaderPacket(0, m_studentNo, start, end));
+    SHEXHeaderPacket shex(0, m_studentNo, start, end);
+    m_packetSender.SendPacketVal(shex);
     if (!m_packetSender.ReceivePacket()) {
     	info("no ack on SHEX header from %d\n", m_studentNo);
     	return 0;
@@ -133,7 +136,8 @@ int BasicSender::sendSHEXHeader(uint16_t start, uint16_t end)
 
 int BasicSender::SendCommand(const char* cmd)
 {
-    m_packetSender.SendPacket(&SNDCMDPacket(0, m_studentNo, cmd));
+    SNDCMDPacket cmdPacket(0, m_studentNo, cmd);
+    m_packetSender.SendPacketVal(cmdPacket);
     if (!m_packetSender.ReceivePacket()) {
         info("Warning: ack timeout after run SNDCMD\n");
         return 0;
@@ -154,7 +158,8 @@ void BasicSender::runROM(uint16_t defusr)
     	eggog("runROM: no PONG reply from %d\n", m_studentNo);
     }
 
-    m_packetSender.SendPacket(&SNDCMDPacket(0, m_studentNo, command));
+    SNDCMDPacket cmd(0, m_studentNo, command);
+    m_packetSender.SendPacketVal(cmd);
     if (!m_packetSender.ReceivePacket()) {
     	info("Warning: ack timeout after run SNDCMD\n");
     }
@@ -175,7 +180,7 @@ int BasicSender::sendROMSection(FILE* file, int sectionSize, int patchAddr, uint
 
     binBuf[0] = 0; 						// destroy "AB" signature so it won't reboot
 
-    info("sendROM Start: %x, End: %x, Run: %x\n", start, end, run);
+    info("Send ROM section: Start: %x, End: %x, Run: %x ", start, end, run);
 
     if (sendSHEXHeader(start, end)) {
 	    sendBlocks(start, end);
@@ -183,7 +188,7 @@ int BasicSender::sendROMSection(FILE* file, int sectionSize, int patchAddr, uint
 	    runROM(run);
 	    usleep(500000);	
 	} else {
-		info("sendROMSection: unable to initiate transfer\n");
+		info("unable to initiate transfer\n");
 		return 0;
 	}
 
@@ -268,8 +273,8 @@ int BasicSender::sendBIN(FILE* file, uint16_t* out_start, uint16_t* out_end, uin
 
 int BasicSender::sendPoke(uint16_t addr, uint8_t value)
 {
-	PokePacket poke(0, m_studentNo, addr, value);
-	m_packetSender.SendPacket(&poke);
+    PokePacket pokor(0, m_studentNo, addr, value);
+	m_packetSender.SendPacketVal(pokor);
 	if (!m_packetSender.ReceivePacket()) {
 		info("Timeout in poke(%04x,%02x) to workstation %d\n", addr, value, m_studentNo);
 		return 0;

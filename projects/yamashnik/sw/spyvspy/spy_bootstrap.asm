@@ -104,13 +104,12 @@ rmtLaunchMSXDOS:
                 ld      (byte_0_F270), a ; DISKREAD
                 ld      (byte_0_F279), a ; DISKWRT
 
-; say hi
-;				ld 		c, 9
-;				ld 		de, MSG_Loaded
-;				call	5
-
                 ld      hl, $D5D3
                 ld      sp, hl
+
+                ; Initialize BDOS:
+                ;   Patch BIOS Jump table
+                call    rbdos_EntryPoint + 3
 
                 ld      c, 0Dh          ; Disk Reset 
                 call    5

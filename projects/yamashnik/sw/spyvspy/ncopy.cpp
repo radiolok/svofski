@@ -11,7 +11,7 @@ int pingPong(PacketSender& ps, int adr)
 
     verbose("PING(%d)...", adr);
     do {
-        ps.SendPacket(&ping);
+        ps.SendPacketVal(ping);
     } while (!ps.ReceivePacket());
 
     return 1;
@@ -41,7 +41,7 @@ void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
     // Create file on the net disk
     {
         NetCreateFilePacket createFile(0, studentNo, fileName);
-        packetSender.SendPacket(&createFile);
+        packetSender.SendPacketVal(createFile);
         if (!packetSender.ReceivePacket()) {
             eggog("No ack of create file from %d\n", studentNo);
         }
@@ -57,11 +57,11 @@ void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
         if (fread(Sector, sizeof(Sector), 1, infile) == 0) break;
 
         {
-            NetMasterDataPacket masterData(0, studentNo, Sector, SECTORSIZE);
-            packetSender.SendPacket(&masterData);
+            NetMasterDataPacket data(0, studentNo, Sector, SECTORSIZE);
+            packetSender.SendPacketVal(data);
 
             NetWriteFilePacket writeFile(0, studentNo, packetSender.GetNetFCB());
-            packetSender.SendPacket(&writeFile);
+            packetSender.SendPacketVal(writeFile);
             if (!packetSender.ReceivePacket()) {
                 eggog("No ack of file write from %d\n", studentNo);
             }
@@ -81,7 +81,7 @@ void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
     // close the file on the net disk
     {
         NetCloseFilePacket closeFile(0, studentNo, packetSender.GetNetFCB());
-        packetSender.SendPacket(&closeFile);
+        packetSender.SendPacketVal(closeFile);
         if (!packetSender.ReceivePacket()) {
             eggog("No ack of file close from %d\n", studentNo);
         }

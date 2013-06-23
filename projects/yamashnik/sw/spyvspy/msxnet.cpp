@@ -18,6 +18,7 @@
 #include "serial.h"
 #include "diags.h"
 
+#include "spybdos.h"
 #include "basicsend.h"
 #include "ncopy.h"
 #include "spy.h"
@@ -49,8 +50,10 @@ void sendCommand(const char* port, int studentNo, const char* command)
 
     pingPong(packetSender, studentNo);
 
-    packetSender.SendPacket(&SNDCMDPacket(0, studentNo, command));
-    packetSender.ReceivePacket();
+    {   SNDCMDPacket cmd(0, studentNo, command);
+        packetSender.SendPacketVal(cmd);
+        packetSender.ReceivePacket();
+    }
 }
 
 void halp() 

@@ -45,7 +45,7 @@ void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8
     uint8_t Header[] = { 0xf0, 0x00, 0x00, 0x01, 0x00 };
     int l;
 
-    verbose("\nSendPacket: from %d to %d, cmd: 0x%.2x, %d bytes",
+    verbose("\nSendPacket: from %d to %d, cmd: 0x%.2x, %d bytes ",
         srcAddr, dstAddr, cmdType, len);
 
     // Header fields, common for all packets
@@ -134,19 +134,28 @@ void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8
         break;
 
     default:
-        eggog("unsupported packet type %02x\n", cmdType);
+        eggog(" unsupported packet type %02x\n", cmdType);
     }
 
     // Debug
-    verbose(" SendPacket out\n");
+    verbose("\n");
 }
 
-void PacketSender::SendPacket(GenericPacket* packet) 
+//void PacketSender::SendPacket(GenericPacket* packet) 
+//{
+//    SendPacket(packet->GetSrcAddr(), packet->GetDstAddr(), packet->GetCmd(),
+//        packet->GetData(), packet->GetLength(), 
+//        packet->GetAddr1(), packet->GetAddr2(),
+//        packet->GetIsLast());
+//}
+
+
+void PacketSender::SendPacketVal(GenericPacket& packet) 
 {
-    SendPacket(packet->GetSrcAddr(), packet->GetDstAddr(), packet->GetCmd(),
-        packet->GetData(), packet->GetLength(), 
-        packet->GetAddr1(), packet->GetAddr2(),
-        packet->GetIsLast());
+    SendPacket(packet.GetSrcAddr(), packet.GetDstAddr(), packet.GetCmd(),
+        packet.GetData(), packet.GetLength(), 
+        packet.GetAddr1(), packet.GetAddr2(),
+        packet.GetIsLast());
 }
 
 int PacketSender::ReceivePacket() {
@@ -157,7 +166,7 @@ int PacketSender::ReceivePacket() {
 void PacketSender::CheckPacket() {
     int src, dst;
 
-    morbose("CheckPacket -- \n");
+    morbose("CheckPacket: ");
 
     // Header
     if ((buf[0] == 0xf0) || (buf [0] == 0x78) // sorry :)
@@ -171,38 +180,38 @@ void PacketSender::CheckPacket() {
             case PCMD_BASE:
                 switch (buf [6]) {
                     case RE_NET_CREATE_FILE:
-                        verbose("\n *** RE_NET_CREATE_FILE from %d to %d", src, dst);
-                        readEscWord = PacketUtil::ReadEscapedWord (&(buf [7]));
-                        verbose("\n *** Payload: %d bytes", readEscWord);
+                        morbose("RE_NET_CREATE_FILE from %d to %d ", src, dst);
+                        readEscWord = PacketUtil::ReadEscapedWord (&(buf[7]));
+                        morbose("Payload: %d bytes ", readEscWord);
                         GetRxData(buf);
                         break;
                     case RE_NET_CLOSE_FILE:
-                        verbose("\n *** RE_NET_CLOSE_FILE from %d to %d", src, dst);
-                        readEscWord = PacketUtil::ReadEscapedWord (&(buf [7]));
-                        verbose("\n *** Payload: %d bytes", readEscWord);
+                        morbose("RE_NET_CLOSE_FILE from %d to %d ", src, dst);
+                        readEscWord = PacketUtil::ReadEscapedWord (&(buf[7]));
+                        morbose("Payload: %d bytes ", readEscWord);
                         GetRxData(buf);
                         break;
                     case RE_NET_WRITE_FILE:
-                        verbose("\n *** RE_NET_WRITE_FILE from %d to %d", src, dst);
-                        readEscWord = PacketUtil::ReadEscapedWord (&(buf [7]));
-                        verbose("\n *** Payload: %d bytes", readEscWord);
+                        morbose("RE_NET_WRITE_FILE from %d to %d ", src, dst);
+                        readEscWord = PacketUtil::ReadEscapedWord (&(buf[7]));
+                        morbose("Payload: %d bytes ", readEscWord);
                         GetRxData(buf);
                         break;
                     default:
-                        verbose("\n *** Unknown BASE packet 0x%.2x.", buf [6]);
+                        info("Unknown BASE packet 0x%.2x. ", buf[6]);
                         break;
                 }
                 break;
             case PCMD_PING:
                 break;
             case PCMD_ACK:
-                verbose("\n *** ACK from %d to %d", src, dst);
+                morbose("ACK from %d to %d ", src, dst);
                 break;
             case PCMD_PONG:
-                verbose("\nPONG from %d to %d STATUS=%02x.", src, dst, buf[5]);
+                morbose("PONG from %d to %d STATUS=%02x. ", src, dst, buf[5]);
                 break;
         }
-        // printf ("\n");
+        morbose("\n");
     }
 }
 
@@ -224,22 +233,21 @@ int PacketSender::RxHandler() {
 
     pos += n = serial->read(&(buf[pos]), 1024 - pos);
 
-    // Debug
-    morbose("\n****************************************");
-    morbose("\nRecvData: got %d bytes, pos=%d, last byte: 0x%.2x\n", n, pos, buf [pos]);
-    for (int i = 0; i < pos; i++)
-    {
-        morbose("%.2x ", buf [i]);
-    }
-    morbose("\n****************************************\n");
-
     if (pos > 256) {
         pos = 0;
+        info("\nERROR: RxHandler: buffer overrun\n");
     }
     else {
         if ( (buf[pos - 1] == 0x83) || (buf[pos - 1] == 0x97)) {
             CheckPacket();
             result = 1;
+
+            morbose("RxHandler: got %d bytes, pos=%d, last byte: 0x%.2x: ", n, pos, buf [pos]);
+            for (int i = 0; i < pos; i++)
+            {
+                morbose("%.2x ", buf [i]);
+            }
+            morbose("\n");
         }
     }
 
