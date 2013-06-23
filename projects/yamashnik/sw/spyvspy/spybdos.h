@@ -319,6 +319,37 @@ private:
         m_res->respond((uint8_t[]) {REQ_FCB, REQ_BYTE, 0});
     }
 
+    void getAllocInfo() {
+        announce("get allocation information");
+
+        uint8_t drive = m_req->GetAuxData(0);
+        uint8_t dpb[32];
+
+        memset(dpb, 0, 32);
+
+        m_res->AllocDMA(32);
+        m_res->SetDMASize(32);
+        m_res->AssignDMA((uint8_t *)dpb, 32);
+
+        m_res->SetAuxData(0, 0xF195);
+        m_res->SetAuxData(1, 0xE595);
+        m_res->SetAuxData(2, 0x200);    // BC, sector size
+        m_res->SetAuxData(3, 0x2c9);    // DE, total clusters
+        m_res->SetAuxData(4, 0x2c9);    // HL, free clusters
+        m_res->SetAuxData(5, 2);        // A, sectors per cluster
+
+        m_res->respond((uint8_t[]) {
+            /* pointer to DPB */ REQ_WORD,  /* IX  = F195 */
+            /* DPB */            REQ_DMA,
+            /* pointer to FAT */ REQ_WORD,  /* IY = E595 */
+            /* FAT */            REQ_DMA,
+            /* Sector size */    REQ_WORD,
+            /* Total clusters */ REQ_WORD,
+            /* Free clusters */  REQ_WORD,
+            /* Sctrs per clstr */REQ_BYTE
+        });
+    }
+
 private:
     int test_fileNameFromPCB() {
         char filename[13];
@@ -452,6 +483,7 @@ public:
             getCurrentDrive();
             break;
         case F1B_GET_ALLOC_INFO:
+            getAllocInfo();
             break;
         case F21_RANDOM_READ:
             randomRead();

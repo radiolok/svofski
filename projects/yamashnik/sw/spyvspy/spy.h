@@ -2,7 +2,6 @@
 
 #include <inttypes.h>
 #include <strings.h>
-#include <glob.h>
 #include "serial.h"
 #include "diags.h"
 #include "spydata.h"
