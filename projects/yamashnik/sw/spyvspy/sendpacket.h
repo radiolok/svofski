@@ -88,15 +88,15 @@ protected:
 		  m_Addr2(addr2)
 	{}
 
-	~GenericPacket() {
-		if (m_OwnData) delete[] m_OwnData;
-	}
-
 	void AssignData(const uint8_t* data) {
 		if (m_OwnData) memcpy(m_OwnData, data, m_Length);
 	}
 
 public:
+	~GenericPacket() {
+		if (m_OwnData) delete[] m_OwnData;
+	}
+
 	int GetSrcAddr() const { return m_SrcAddr; }
 	int GetDstAddr() const { return m_DstAddr; }
 	int GetCmd() const { return m_Cmd; }
@@ -243,7 +243,7 @@ public:
 	void SendHeader(const uint8_t* h) const;
 	void SendEscapedBlockWithChecksum(const uint8_t* buf, int len);
 	void SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8_t* buf, uint16_t len, uint16_t addr1, uint16_t addr2, int last);
-	void SendPacket(GenericPacket*);
+	void SendPacketVal(GenericPacket&);
 	int ReceivePacket();
 	const NetFCB* GetNetFCB() const { return &m_RxData; }
 };

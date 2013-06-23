@@ -12,20 +12,22 @@ DEBUG:			equ 0
 				org $E900
 
 
-EntryPoint:                       
+EntryPoint:     jp EntryPoint_
+				jp Init
+EntryPoint_:               
                 ld      (SaveDE), de
 
                 ld		(STORESP), sp
                 ;ld		(SaveSP), sp
                 ld 		sp, $DC00 
 
-                di
-                push af
-                ld      a, 0AAh         ; Secondary slot select register
-                ld      (SLTSL), a      ; Select expansion slot 2 in all 4 pages
-                ld      a, 0FFh
-                out     (0A8h), a       ; Primary slot register
-                pop af
+;                di
+;                push af
+;                ld      a, 0AAh         ; Secondary slot select register
+;                ld      (SLTSL), a      ; Select expansion slot 2 in all 4 pages
+;                ld      a, 0FFh
+;                out     (0A8h), a       ; Primary slot register
+;                pop af
 
 
                 ; put local return address on stack
@@ -930,6 +932,55 @@ DispatchTable:dw Func0_ProgramTerminate
                 dw Func2E_SetResetVerifyFlag ; nop
                 dw Func2F_AbsoluteSectorRead
                 dw Func30_AbsoluteSectorWrite
+
+Init:			call PatchBIOSCalls
+				ret
+
+PatchBIOSCalls:
+				ld hl, ($0001) 	; points to dc03: jmp WARMBOOT
+				ld bc, 3
+				add hl, bc
+				; HL points to CONST vector
+
+				ex de, hl 		; DE = BIOS Jump Table
+				ld hl, PatchJumpTable
+				ld bc, PatchJumpTable_End - PatchJumpTable
+				ldir
+				ret
+
+PatchJumpTable:	;jp WARMBOOT
+				jp CONST 
+				jp CONIN
+				jp CONOUT
+				jp CONOUT ; LIST
+				jp CONOUT ; PUNCH 
+				jp CONIN ; READER				
+				;
+PatchJumpTable_End:
+
+WARMBOOT:		jp $
+
+CONST:			
+                ld		(STORESP), sp
+                ld 		sp, $DC00 
+				call 	FuncB_ConsoleStatus
+				ld 		sp, (STORESP)
+				ret
+CONIN:			
+                ld		(STORESP), sp
+                ld 		sp, $DC00 
+				call 	Func8_ConsoleInputNoEcho
+				ld 		sp, (STORESP)
+				ret
+
+CONOUT:			
+                ld		(STORESP), sp
+                ld 		sp, $DC00 
+				ld 		e, c
+				call 	Func2_ConsoleOutput
+				ld 		sp, (STORESP)
+				ret
+
 
 ;Display a 16- or 8-bit number in hex.
 DispHLhex:

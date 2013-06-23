@@ -7,6 +7,7 @@
 #include "spy.h"
 #include "diags.h"
 #include "basicsend.h"
+#include "spybdos.h"
 
 const char* RAMIMAGE = "memory.ram";
 const char* BDOS = "spy_bdos_e900.ram";
@@ -66,7 +67,7 @@ int Spy::loadFile(const char* filename, uint8_t** buf, int expectedSize)
 		}
 	}
 
-	morbose("filename=%s expectedSize=%d\n", filename, expectedSize);
+	morbose("loadFile: filename=%s expectedSize=%d\n", filename, expectedSize);
 
 	FILE* file = fopen(path, "rb");
 	if (file == 0) {
@@ -79,7 +80,7 @@ int Spy::loadFile(const char* filename, uint8_t** buf, int expectedSize)
 	int size = fread(*buf, 1, expectedSize, file);
 	fclose(file);
 
-	morbose("bytes read=%d\n", size);
+	morbose("loadFile: bytes read=%d\n", size);
 
 	return size;
 }
@@ -149,7 +150,7 @@ int Spy::Bootstrap()
 	{
 		info("Uploading zero page\n");
 		// Zero page
-		transport.SendMemory(m_MSXRAM + 0x0000, 0x0000, 255);
+		transport.SendMemory(m_MSXRAM + 0x0000, 0x0000, 256);
 
 		// MSX-DOS BDOS area .. 0xED00
 		uint16_t start = m_MSXRAM[6] | (m_MSXRAM[7] << 8);
@@ -195,14 +196,14 @@ int Spy::Bootstrap()
 
 	sleep(1);
 
-	info("\nServing workstation %d", m_studentNo);
+	info("\nServing workstation %d\n", m_studentNo);
 
 	NetBDOS bdos;
 	SpyRequest request;
 
 	for(;;) {
 		if (!transport.Poll(m_studentNo)) {
-			verbose(".");
+			morbose(".");
 			continue;
 		}
 
@@ -405,7 +406,7 @@ int SpyTransport::ReceiveRequest(SpyRequest* request)
 		break;
 	}
 
-	verbose("Request function %d (BDOS %02xh): ", m_func, m_func + 14); 
+	verbose("Received request function %d (BDOS %02xh): ", m_func, m_func + 14); 
 	if (m_rq->NeedsData()) {
 		verbose("getting request data\n");
 		m_state = SPY_RXDATA;
