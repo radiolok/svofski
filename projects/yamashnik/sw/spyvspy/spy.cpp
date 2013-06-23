@@ -52,7 +52,11 @@ int Spy::loadFile(const char* filename, uint8_t** buf, int expectedSize)
 {
 	char path[strlen(m_ExePath) + strlen(filename) + 2];
 	
-	sprintf(path, "%s/%s", m_ExePath, filename);
+	if (filename[0] == '/' || filename[0] == '.') {
+		sprintf(path, "%s", filename);	
+	} else {
+		sprintf(path, "%s/%s", m_ExePath, filename);
+	}
 
 	if (expectedSize == -1) {
 		struct stat pe;		
@@ -87,9 +91,11 @@ int Spy::initData()
 	int result = loadFile(RAMIMAGE, &m_MSXRAM, 0200000);
 	morbose("result=%d BDOS starts at %02x%02x\n", result, m_MSXRAM[7], m_MSXRAM[6]);
 
-	result = result && loadFile(BDOS, &m_BDOS, 1018);
-	morbose("result=%d NetBDOS starts with %02x\n", result, m_BDOS[0]);
-
+	if (result) {
+		m_BDOSSize = loadFile(BDOS, &m_BDOS, -1);
+		morbose("result=%d NetBDOS starts with %02x size=%d\n", result, m_BDOS[0], m_BDOSSize);
+		result = result && m_BDOSSize;
+	}
 	return result;
 }
 
@@ -101,6 +107,8 @@ int Spy::Bootstrap()
     }
 
     info("Sending bootstrap code to workstation %d\n", m_studentNo);
+
+    uint16_t bootStart, bootEnd;
 
 	// Phase 1: send and run bootstrap code
 	{
@@ -127,7 +135,7 @@ int Spy::Bootstrap()
 
 		sleep(2);
 
-		if (!basicSender.sendBIN(file)) {
+		if (!basicSender.sendBIN(file, &bootStart, &bootEnd, 0)) {
 			info("Bootstrap code upload error\n");
 			return 0;
 		}
@@ -145,18 +153,20 @@ int Spy::Bootstrap()
 
 		// MSX-DOS BDOS area .. 0xED00
 		uint16_t start = m_MSXRAM[6] | (m_MSXRAM[7] << 8);
-		int length = 0xed00 - start;
+		int length = bootStart - start;
 
 		// patch the stupid loaded flag in MSXDOS+1A
 		m_MSXRAM[(start & 0xff00) + 0x1A] = 0;
 
-		info("Uploading memory area %04x-%04x\n", start, start + length);
-		transport.SendMemory(m_MSXRAM + start, start, length);
+		if (length > 0) {
+			info("Uploading memory area %04x-%04x\n", start, start + length);
+			transport.SendMemory(m_MSXRAM + start, start, length);
 
-		usleep(20000);
+			usleep(20000);
 
-		// 0xED00 + sizeof(Bootstrap) .. EndOfWorkArea
-		start = 0xed00 + 483;
+			// 0xED00 + sizeof(Bootstrap) .. EndOfWorkArea
+			start = bootEnd;
+		} 
 		length = 0xf380 - start;
 
 		info("Uploading memory area %04x-%04x\n", start, start + length);
@@ -165,8 +175,8 @@ int Spy::Bootstrap()
 		usleep(20000);
 
 		// Net BDOS
-		info("Uploading NetBDOS area %04x-%04x\n", 0xe900, 1018);
-		transport.SendMemory(m_BDOS, 0xe900, 1018);
+		info("Uploading NetBDOS area %04x-%04x\n", 0xe900, 0xe900 + m_BDOSSize);
+		transport.SendMemory(m_BDOS, 0xe900, m_BDOSSize);
 	}
 
 	// Phase 3: upload file to TPA if specified
@@ -183,7 +193,7 @@ int Spy::Bootstrap()
 	// Phase 3: Launch remote station
 	transport.SendCommand(2);
 
-	sleep(5);
+	sleep(1);
 
 	info("\nServing workstation %d", m_studentNo);
 
@@ -200,8 +210,6 @@ int Spy::Bootstrap()
 			info("Workstation did not send request, fall back to poll mode.\n");
 			continue;
 		}
-
-		info("Request received, handling\n");
 
 		{
 			SpyResponse response;
@@ -220,7 +228,7 @@ void SpyTransport::SendByte(uint8_t b, printfunc p) const
 {
 	if (p) p("%02x ", b);
 	m_serial->SendByte(b);
-	//usleep(1000);
+	usleep(300);
 }
 
 
@@ -356,7 +364,7 @@ int SpyTransport::ReceiveRequest(SpyRequest* request)
 		break;
 
 	case F21_RANDOM_READ:		// Rx: FCB<>, 		Tx: DMA<>, FCB<>, byte<result>
-		{m_rq->expect((uint8_t[]){REQ_FCB, 0});}
+		{m_rq->expect((uint8_t[]){REQ_WORD, REQ_WORD, REQ_WORD, REQ_WORD, REQ_WORD, REQ_WORD, REQ_FCB, 0});}
 		break;
 	case F22_RANDOM_WRITE:		// Rx: FCB<>, DMA<>	Tx: byte<result>
 		{m_rq->expect((uint8_t[]){REQ_FCB, REQ_DMA, 0});}
@@ -375,7 +383,7 @@ int SpyTransport::ReceiveRequest(SpyRequest* request)
 
 	case F27_RANDOM_BLOCK_READ:	// Rx: word<size>, FCB<>
 								// Tx: word<bytesread>, DMA<>, FCB<>, byte<result>
-		{m_rq->expect((uint8_t[]){REQ_WORD, REQ_FCB, 0});}
+		{m_rq->expect((uint8_t[]){/**/REQ_WORD, REQ_WORD, REQ_WORD, REQ_WORD, REQ_WORD, REQ_WORD, /**/ REQ_WORD, REQ_FCB, 0});}
 		break;
 	case F28_RANDOM_WRITE_ZERO:	// Rx: FCB<>, DMA<>	Tx: FCB<>, byte<result>
 		{m_rq->expect((uint8_t[]){REQ_DMA, REQ_FCB, 0});}
@@ -397,7 +405,7 @@ int SpyTransport::ReceiveRequest(SpyRequest* request)
 		break;
 	}
 
-	verbose("Request function %d: ", m_func); 
+	verbose("Request function %d (BDOS %02xh): ", m_func, m_func + 14); 
 	if (m_rq->NeedsData()) {
 		verbose("getting request data\n");
 		m_state = SPY_RXDATA;

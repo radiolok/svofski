@@ -1,7 +1,8 @@
-; ---------------------------------------------------------------------------
 				include 'msx-bios.asm'
 
 TPA_EntryPoint:	equ 100h
+
+ORIGIN:         equ 08D80h
 
 rbdos_EntryPoint:	equ 0E900h
 BDOS:				equ 00005h
@@ -16,11 +17,11 @@ SLTSL:			equ 0FFFFh		; slut select
 
 
 BINSIG:			db 0FEh
-BINSTART:		dw 0ed00h
+BINSTART:		dw ORIGIN
 BINEND:			dw _end
-BINRUN:			dw 0ed00h
+BINRUN:			dw ORIGIN
 
-				org 0ed00h
+				org ORIGIN
 RemoteCodeEntryPoint:
                 ld      a, 8Fh
                 ld      hl, 4040h
@@ -46,10 +47,11 @@ RemoteCodeEntryPoint:
 skipintro:
                 di
 
-                ld      a, 0AAh ; 'к'
-                ld      (SLTSL), a      ; Secondary slot select register
+                ld      a, 0AAh         ; Secondary slot select register
+                ld      (SLTSL), a      ; Select expansion slot 2 in all 4 pages
                 ld      a, 0FFh
                 out     (0A8h), a       ; Primary slot register
+                                        ; select basic slot 3 (RAM) for every page
 
 rmtInitialCommandLoop:                  
                 call    rmtReadByteFromFIFO_Rx
@@ -70,7 +72,7 @@ rmtReceiveStuff:
                 call    rmtReadByteFromFIFO_Rx
                 ld      c, a
 
-rmtReceiveDataLoop:                     ; CODE XREF: ED4F
+rmtReceiveDataLoop:                     
 
                 call    rmtReadByteFromFIFO_Rx
                 ld      (hl), a
@@ -86,7 +88,8 @@ rmtReceiveDataLoop:                     ; CODE XREF: ED4F
                 jr      rmtInitialCommandLoop
 ; ---------------------------------------------------------------------------
 
-rmtLaunchMSXDOS:                        ; CODE XREF: ED31
+rmtLaunchMSXDOS:                        
+
                 ld      a, 0C3h ; '├'   ; jmp
                 ld      (BDOS), a
                 ld      ix, (BDOS_VECTOR) ; get the first instruction of BDOS (which is jmp ...)
@@ -106,19 +109,26 @@ rmtLaunchMSXDOS:                        ; CODE XREF: ED31
 ;				ld 		de, MSG_Loaded
 ;				call	5
 
+                ld      hl, $D5D3
+                ld      sp, hl
 
-RemoteOSLoop:                           ; CODE XREF: ED7C
-                call    TPA_EntryPoint
-                jr      RemoteOSLoop
+                ld      c, 0Dh          ; Disk Reset 
+                call    5
 
-; =============== S U B R O U T I N E =======================================
+;
+;RemoteOSLoop:                           
+;                call    TPA_EntryPoint
+;                jr      RemoteOSLoop
+                jp TPA_EntryPoint
 
+; ****************************************
+; * rmtZeroSystemArea 
+; **************************************** 
+rmtZeroSystemArea:                      
+                ld      hl, 5Ch 
+                ld      bc, 0A4h 
 
-rmtZeroSystemArea:                      ; CODE XREF: ED6B
-                ld      hl, 5Ch ; '\'
-                ld      bc, 0A4h ; 'д'
-
-zsa_zerolup:                              ; CODE XREF: rmtZeroSystemArea+D
+zsa_zerolup:                              
                 ld      (hl), 0
                 inc     hl
                 dec     bc
@@ -126,27 +136,24 @@ zsa_zerolup:                              ; CODE XREF: rmtZeroSystemArea+D
                 or      c
                 ret     z
                 jr      zsa_zerolup
-; End of function rmtZeroSystemArea
 
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtPuts:                                ; CODE XREF: ED14
-                                        ; rmtPuts+7
+; ****************************************
+; * rmtPuts 
+; **************************************** 
+rmtPuts:                                
                 ld      a, (hl)
                 or      a
                 ret     z
                 call    CHPUT
                 inc     hl
                 jr      rmtPuts
-; End of function rmtPuts
 
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtInitAndGetStudentNumber:             ; CODE XREF: ED1B
+; ****************************************
+; * rmtInitAndGetStudentNumber 
+; **************************************** 
+rmtInitAndGetStudentNumber:             
                 di
                 call    rmtGetStudentNumber
                 and     0Fh
@@ -159,13 +166,12 @@ rmtInitAndGetStudentNumber:             ; CODE XREF: ED1B
                 call    rmtFunc_16_BREAK ; Write E to YM3802 R55 (FIFO-Tx Control)
                 call    rmtGetStudentNumber
 
-iigs_ret:                                  ; CODE XREF: rmtInitAndGetStudentNumber+11
+iigs_ret:                                  
                 ret
-; End of function rmtInitAndGetStudentNumber
 
 ; ---------------------------------------------------------------------------
 
-rmtInit_YM3802:                         ; CODE XREF: rmtInitAndGetStudentNumber+D
+rmtInit_YM3802:                         
                 push    af
                 push    de
                 push    bc
@@ -179,7 +185,7 @@ rmtInit_YM3802:                         ; CODE XREF: rmtInitAndGetStudentNumber+
                 xor     a
                 out     (9), a
 
-loc_0_EDBF:                             ; CODE XREF: BASBOOT+22
+loc_0_EDBF:                             
                 ld      e, 1
                 ld      a, 66h ; 'f'
                 call    rmtWrite_E_To_YM3802_Register
@@ -201,16 +207,16 @@ loc_0_EDBF:                             ; CODE XREF: BASBOOT+22
                 call    rmtMoreYM3802Config
                 ret
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtMoreYM3802Config:                    ; CODE XREF: EDE2
+; ****************************************
+; * rmtMoreYM3802Config 
+; **************************************** 
+rmtMoreYM3802Config:                    
                 push    de
                 push    bc
                 ld      e, 84h ; 'Д'
                 call    rmtWrite_E_to_YM3802_TCRx
 
-mym_eded:                                 ; CODE XREF: rmtMoreYM3802Config+E
+mym_eded:                                 
                 ld      a, 54h ; 'T'
                 call    rmtRead_from_YM3802_Register
                 and     1
@@ -229,7 +235,7 @@ mym_eded:                                 ; CODE XREF: rmtMoreYM3802Config+E
                 ld      e, a
                 call    rmtSet_YM3802_RCR
 
-ymc_ee13:                                 ; CODE XREF: rmtMoreYM3802Config+34
+ymc_ee13:                                 
                 ld      a, 34h ; '4'
                 call    rmtRead_from_YM3802_Register
                 and     1
@@ -242,22 +248,20 @@ ymc_ee13:                                 ; CODE XREF: rmtMoreYM3802Config+34
                 call    rmtWrite_E_To_YM3802_Register
                 ld      a, (rmtREG35_SAV) ; MCS Register 35 save area
                 ld      e, a
-; End of function rmtMoreYM3802Config
 
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtSet_YM3802_RCR:                      ; CODE XREF: rmtMoreYM3802Config+2A
+; ****************************************
+; * rmtSet_YM3802_RCR 
+; **************************************** 
+rmtSet_YM3802_RCR:                      
                 ld      a, 35h ; '5'    ; RCR
                 jr      rmtWrite_E_To_YM3802_Register
-; End of function rmtSet_YM3802_RCR
 
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtGetStudentNumber:                    ; CODE XREF: rmtInitAndGetStudentNumber+1
+; ****************************************
+; * rmtGetStudentNumber 
+; **************************************** 
+rmtGetStudentNumber:                    
                                         ; rmtInitAndGetStudentNumber+16
                 ld      e, 80h ; 'А'
                 ld      a, 94h ; 'Ф'
@@ -270,18 +274,17 @@ rmtGetStudentNumber:                    ; CODE XREF: rmtInitAndGetStudentNumber+
                 jr      nz, gsn_snusnu
                 ld      e, 0
 
-gsn_snusnu:                               ; CODE XREF: rmtGetStudentNumber+11
+gsn_snusnu:                               
                 ld      a, 95h ; 'Х'
                 call    rmtWrite_E_To_YM3802_Register
                 pop     af
                 ret
-; End of function rmtGetStudentNumber
 
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtRead_from_YM3802_Register:           ; CODE XREF: rmtMoreYM3802Config+9
+; ****************************************
+; * rmtRead_from_YM3802_Register 
+; **************************************** 
+rmtRead_from_YM3802_Register:           
                                         ; rmtMoreYM3802Config+2F ...
                 push    bc
                 ld      c, a
@@ -297,13 +300,12 @@ rmtRead_from_YM3802_Register:           ; CODE XREF: rmtMoreYM3802Config+9
                 in      a, (c)
                 pop     bc
                 ret
-; End of function rmtRead_from_YM3802_Register
 
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtWrite_E_To_YM3802_Register:          ; CODE XREF: EDC3
+; ****************************************
+; * rmtWrite_E_To_YM3802_Register 
+; **************************************** 
+rmtWrite_E_To_YM3802_Register:          
                                         ; EDCC ...
                 push    bc
                 ld      c, a
@@ -319,62 +321,57 @@ rmtWrite_E_To_YM3802_Register:          ; CODE XREF: EDC3
                 out     (c), e
                 pop     bc
                 ret
-; End of function rmtWrite_E_To_YM3802_Register
 
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtWrite_E_to_YM3802_TCRx:              ; CODE XREF: rmtMoreYM3802Config+4
+; ****************************************
+; * rmtWrite_E_to_YM3802_TCRx 
+; **************************************** 
+rmtWrite_E_to_YM3802_TCRx:              
                                         ; rmtMoreYM3802Config+1F
                 ld      a, 55h ; 'U'
                 jr      rmtWrite_E_To_YM3802_Register
-; End of function rmtWrite_E_to_YM3802_TCRx
 
 ; ---------------------------------------------------------------------------
 
-rmtFunc_16_BREAK:                       ; CODE XREF: rmtInitAndGetStudentNumber+13
+rmtFunc_16_BREAK:                       
                 ld      e, 8Dh ; 'Н'    ; Write E to YM3802 R55 (FIFO-Tx Control)
                 call    rmtWrite_E_to_YM3802_TCR
                 ld      e, 1
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtWrite_E_to_YM3802_TCR:               ; CODE XREF: EE77
+; ****************************************
+; * rmtWrite_E_to_YM3802_TCR 
+; **************************************** 
+rmtWrite_E_to_YM3802_TCR:               
                 ld      a, 55h ; 'U'
                 jp      rmtWrite_E_To_YM3802_Register
-; End of function rmtWrite_E_to_YM3802_TCR
 
 
-; =============== S U B R O U T I N E =======================================
-
-
-rmtRecvByte0:                           ; CODE XREF: rmtInitialCommandLoop
+; ****************************************
+; * rmtRecvByte0 
+; **************************************** 
+rmtRecvByte0:                           
                                         ; ED37 ...
                 in      a, (1)
                 and     2
                 jr      z, rmtRecvByte0
                 in      a, (0)
                 ret
-; End of function rmtRecvByte0
 
 
-; =============== S U B R O U T I N E =======================================
-
-
+; ****************************************
+; * rmtReadByteFromFIFO_Rx 
+; **************************************** 
 rmtReadByteFromFIFO_Rx:                 ; DATA XREF: PatchUARTtoFIFO
                 ld      a, 3
                 out     (9), a
 
-rbff_wait:                                 ; CODE XREF: rmtReadByteFromFIFO_Rx+A
+rbff_wait:                                 
                 in      a, (0Ch)
                 and     83h ; 'Г'
                 cp      80h ; 'А'
                 jr      nz, rbff_wait
                 in      a, (0Eh)
                 ret
-; End of function rmtReadByteFromFIFO_Rx
 
 ; ---------------------------------------------------------------------------
 rmtREG35_SAV:   db    0                 ; DATA XREF: rmtMoreYM3802Config+24

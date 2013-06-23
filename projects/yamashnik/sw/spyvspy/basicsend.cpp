@@ -233,7 +233,7 @@ int BasicSender::sendROM(FILE* file)
     return result;
 }
 
-int BasicSender::sendBIN(FILE* file)
+int BasicSender::sendBIN(FILE* file, uint16_t* out_start, uint16_t* out_end, uint16_t* out_run)
 {
 	uint16_t start;
 	uint16_t end;
@@ -254,6 +254,10 @@ int BasicSender::sendBIN(FILE* file)
 	    runROM(run);
 	    usleep(500000);	
 	    result = 1;
+
+        if (out_start) *out_start = start;
+        if (out_end) *out_end = end;
+        if (out_run) *out_run = run;
 	} else {
 		info("unable to initiate SHEX transfer\n");
 		result = 0;
@@ -333,7 +337,7 @@ int BasicSender::netSend(int nfiles, char* file[])
             case 0xfe:
                 // Binary file
             	info("Sending BIN %s\n", file[fileIdx]);
-                sendBIN(infile);
+                sendBIN(infile, 0, 0, 0);
                 break;
             case 0xff:
                 // tokenized BASIC
