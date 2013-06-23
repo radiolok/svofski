@@ -3,8 +3,43 @@ BDOSVEC_HI:	equ 7
     org 100h
 
     ld c, 9
+    ld de, msg_5
+    call 5
+
+    ld c, 9
+    ld de, msg_sp
+    call 5
+    ld h, 0
+    ld l, h
+    add hl, sp
+    call DispHLhex
+
+    ld c, 9
+    ld de, msg_bdos_vector
+    call 5
+    ld hl, (6)
+    call DispHLhex
+
+
+    ld c, 9
+    ld de, msg_nowalteringsp
+    call 5
+
+    ld sp, $1307
+
+    ld c, 9
+    ld de, msg_5
+    call 5
+
+    ld c, 9
     ld de, msg
     call 5
+
+    ld a, ($ffff)
+    ld c, a
+    call OutHex8
+
+    rst 0
 
     jp TestMovingToHiMem
 
@@ -64,6 +99,8 @@ nl:
 
 checkkey:
 	push hl
+	jr checkkeyret
+
 	rst 30h
 	db 70h
 	dw 9ch
@@ -122,8 +159,15 @@ Conv:
    ret
 
 
-msg:    db $0d,$0a,'TPA program launched', $0d, $0a, '$'
+msg:    db $0d,$0a,'TPA program launched SLUTSEL=$'
 
+msg_sp:		db $0d,$0a,'SP=$'
+msg_bdos_vector:
+			db $0d,$0a,'BDOS VECTOR=$'
+msg_d831:	db $0d,$0a,'Test message printed via CALL #D831',$0d,$0a,'$'
+msg_5:		db $0d,$0a,'Test message printed via CALL #5',$0d,$0a,'$'
+msg_5_standardsp:		db $0d,$0a,'Test message printed via CALL #5 with unchanged SP',$0d,$0a,'$'
+msg_nowalteringsp:		db $0d,$0a,'Now changing SP to 1300',$0d,$0a,'$'
 msg_HiAddr:
 		db 'Moving test code to $'
 
@@ -180,6 +224,8 @@ ResidentPartSrc:
 	ld de, ResidentEvil
 	call 5
 	jp ReturnToDump
+
+	ds 20024
 
 ResidentEvil: 	db 'Soy la parte temerosa que vive en la alta memoria huhuhuhuu$'
 

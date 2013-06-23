@@ -7,6 +7,7 @@
 #include "diags.h"
 
 
+#define DEBUGBLOCKSIZE 6
 
 enum {
 	REQ_BYTE = 1, REQ_WORD, REQ_FCB, REQ_DMA, REQ_END = 0,
@@ -29,6 +30,7 @@ private:
 
 	uint8_t* m_MSXRAM;
 	uint8_t* m_BDOS;
+	int m_BDOSSize;
 	uint8_t* m_COMFile;
 
 	void extractExePath();
@@ -94,9 +96,10 @@ enum SpyRequestCode {
 struct FCB {
 /*  0 */	uint8_t		Drive;
 /*  1 */	uint8_t		NameExt[11];
-/* 12 */	uint16_t	CurrentBlock;
-/* 14 */	uint16_t 	RecordSize;
-
+/* 12 */	uint8_t		ExtentNumberLo;
+/* 14 */	uint8_t 	ExtentNumberHi;
+			uint8_t		RecordSizeLo;
+			uint8_t		RecordSizeHi;
 /* 16 */	uint32_t	FileSize;
 
 /* 20 */	uint16_t	Date;
@@ -108,13 +111,26 @@ struct FCB {
 /* 28 */	uint16_t	LastClusterAccessed;
 /* 30 */	uint16_t 	RelativeLocation;
 
-/* 32 */	uint8_t		CurrentRecord;		// for seq access
+/* 32 */	uint8_t		CurrentRecord;		// Curent Record within Extent
 /* 33 */	uint32_t	RandomRecord;
 /* 36 */	uint32_t	Padding;
 /* 40 */	uint8_t 	Padding2[3];
 
 	FCB() {
 		memset(this, 0, sizeof(FCB));
+	}
+
+	uint16_t RecordSize() const {
+		return (RecordSizeHi << 8) | RecordSizeLo;
+	}
+
+	uint16_t GetExtent() const {
+		return (ExtentNumberHi << 8) | ExtentNumberLo;
+	}
+
+	void SetExtent(const uint16_t extent) {
+		ExtentNumberLo = extent & 0xff;
+		ExtentNumberHi = (extent >> 8) & 0xff;
 	}
 
 	int SetNameExt(const char* fname) {
@@ -189,7 +205,7 @@ public:
 	FCB* GetFCB() { return &m_FCB; }
 	const uint8_t* getDMA() const { return m_DMA; }
 	int getDMASize() const { return m_dmasize; }
-	int getAuxData(int index) const { return m_data[index]; }
+	int GetAuxData(int index) const { return m_data[index]; }
 
 	void setFunc(const uint8_t func) {
 		m_func = func;
@@ -234,7 +250,7 @@ public:
 			break;
 
 		case REQ_WORD:
-			if (avail >= 2) {				
+			if (avail >= 2) {	
 				// get word: big endian
 				m_data[m_datacursor] = getWordBigEndian(cursor);
 				m_bufoffset += 2;				// advance by 2
@@ -261,8 +277,8 @@ public:
 				m_bufoffset += 2 + sizeof(FCB); // shift buffer offset
 				m_rxcursor++; 					// next token
 
-				verbose("Received NetFCB, next state=%d\n", m_rxpattern[m_rxcursor]);
-				dump(verbose, (uint8_t*) &m_FCB, sizeof(FCB));
+				morbose("Received NetFCB, next state=%d\n", m_rxpattern[m_rxcursor]);
+				dump(morbose, (uint8_t*) &m_FCB, sizeof(FCB));
 			}
 			break;
 
@@ -383,6 +399,8 @@ public:
 		m_data[idx] = value;
 	}
 
+	// The larger the pace, the better the speed 
+
 	void emit(SpyTransport* transport) {
 		morbose("SpyResponse::emit: ");
 		for(int done = 0, txcursor = 0, datacursor = 0; !done;) {
@@ -395,26 +413,26 @@ public:
 				transport->SendByte(m_data[datacursor], morbose);
 				datacursor++;
 				txcursor++;
-				usleep(10000);
+				usleep(4000);
 				break;
 			case REQ_WORD:
 				transport->SendWord(m_data[datacursor], morbose);
 				datacursor++;
 				txcursor++;
-				usleep(10000);
+				usleep(4000);
 				break;
 			case REQ_FCB:
-				transport->SendWord(sizeof(FCB), morbose);
-				usleep(10000);
-				transport->SendChunk((uint8_t*)m_FCB, sizeof(FCB), morbose);
+				transport->SendWord(sizeof(FCB) - 8, morbose);
+				usleep(4000);
+				transport->SendChunk((uint8_t*)m_FCB, sizeof(FCB) - 8, morbose);
 				txcursor++;
-				usleep(10000);
+				usleep(4000);
 				break;
 			case REQ_DMA:
 				transport->SendWord(m_dmasize, morbose);
-				usleep(10000);
+				usleep(4000);
 				transport->SendChunk(m_DMA, m_dmasize, morbose);
-				usleep(10000);
+				usleep(4000);
 				txcursor++;
 				break;
 			}
@@ -432,6 +450,10 @@ private:
 	SpyRequest* m_req;
 	SpyResponse* m_res;
 
+	void announce(const char* functionName) {
+		info("\033[1mNetBDOS %02X\033[0m: %s", GetBDOSFunc(), functionName);
+	}
+
 	int internalGetFileSize(const char* filename) {
 		FILE* f = fopen(filename, "rb");
 		if (f == 0) return -1;
@@ -446,10 +468,10 @@ private:
 	}
 
 	void selectDisk() {
-		int d = m_req->getAuxData(0);
-		info("NetBDOS: select disk");
+		int d = m_req->GetAuxData(0);
+		announce("select disk");
 		if (d >= 0 && d <= 8) {
-		 	info("%c:\n", 'A' + m_disk);
+		 	info(" %c:\n", 'A' + m_disk);
 		} else {
 			info(" <probing drives>\n");
 		}
@@ -460,7 +482,10 @@ private:
 	void openFile() {
 		char filename[13];
 		m_req->GetFCB()->GetFileName(filename);
-		info("NetBDOS: openFile '%s' ", filename);
+
+		announce("open file");
+		info(" '%s' ", filename);
+
 		m_res->AssignFCB(m_req->GetFCB());
 
 		FILE* f = fopen(filename, "rb");
@@ -479,15 +504,13 @@ private:
 				pos = 737820;
 			}
 
-			info(" pos=%d %d ", pos, (int)pos);
-
 			m_res->GetFCB()->FileSize = pos;
 			m_res->GetFCB()->DeviceId = 0x40 + m_disk;
 			m_res->GetFCB()->RandomRecord = 0;
 
 			m_res->SetAuxData(0, 0x0);
 
-			info("found: size=%d", m_res->GetFCB()->FileSize);
+			info(" size=%d", m_res->GetFCB()->FileSize);
 		} while(0);
 
 		fclose(f);
@@ -500,13 +523,15 @@ private:
 	void closeFile() {
 		char filename[13];
 		m_req->GetFCB()->GetFileName(filename);
-		info("NetBDOS: closeFile '%s'\n", filename);
+		announce("close file");
+		info(" '%s'\n", filename);
 		m_res->SetAuxData(0, 0x00);
 		m_res->respond((uint8_t[]){REQ_BYTE, 0});
 	}
 
 	void getCurrentDrive() {
-		info("NetBDOS: getCurrentDrive, Result: %02x\n", m_disk);
+		announce("get current drive");
+		info(" Result: %02x\n", m_disk);
 		m_res->SetAuxData(0, m_disk);
 		m_res->respond((uint8_t[]){REQ_BYTE, 0});
 	}
@@ -514,7 +539,8 @@ private:
 	void searchFirst() {
 		char filename[13];
 		m_req->GetFCB()->GetFileName(filename);
-		info("Search first: '%s'\n", filename);
+		announce("search first");
+		info(" '%s'\n", filename);
 
 		if (m_globbuf.gl_pathc > 0) {
 			globfree(&m_globbuf);
@@ -532,6 +558,8 @@ private:
 	void searchNext() {
 		DIRENT dirent;
 		int result = 0xff;
+
+		announce("search next-");
 
 		if (m_globbor < m_globbuf.gl_pathc) {
 			morbose("glob() first match=%s\n", m_globbuf.gl_pathv[m_globbor]);
@@ -555,17 +583,29 @@ private:
 
 	void randomBlockRead() {
 		char filename[13];
+
+		announce("random block read");
+
 		m_req->GetFCB()->GetFileName(filename);
 
-		int nrecords = m_req->getAuxData(0);
-		int recordsize = m_req->GetFCB()->RecordSize;
+		int nrecords = m_req->GetAuxData(0 + DEBUGBLOCKSIZE);
+		int recordsize = m_req->GetFCB()->RecordSize();
 		if (recordsize != 1) {
 			info("ERROR: records of sizes other than 1 not supported\n");
 		}
-
-		dump(morbose, (uint8_t *) m_req->GetFCB(), sizeof(FCB));
-
 		uint32_t recordno = m_req->GetFCB()->RandomRecord;
+
+		info(" '%s' NRecs=%d RecordSize=%d Cur=%d\n", filename, nrecords, recordsize, recordno*recordsize);
+		morbose("*** DEBUG DATA ***\n DMA= %04x SP=%04x USER SP=%04x [%04x %04x %04x]\n",
+			m_req->GetAuxData(0),
+			m_req->GetAuxData(1),
+			m_req->GetAuxData(2),
+			m_req->GetAuxData(3),
+			m_req->GetAuxData(4),
+			m_req->GetAuxData(5)
+			);
+
+		//dump(morbose, (uint8_t *) m_req->GetFCB(), sizeof(FCB));
 
 		m_res->AssignFCB(m_req->GetFCB());
 
@@ -598,12 +638,26 @@ private:
 		int nrecords = 1;
 		int recordsize = 128;
 
-		dump(morbose, (uint8_t *) m_req->GetFCB(), sizeof(FCB));
+		//dump(morbose, (uint8_t *) m_req->GetFCB(), sizeof(FCB));
 
 		uint32_t recordno = m_req->GetFCB()->RandomRecord;
 		recordno = recordno & 0x00ffffff;
+		//recordno = recordno & 0xff;
 
 		m_res->AssignFCB(m_req->GetFCB());
+
+		announce("random read");
+		info(" '%s' Rec=%d Ofs=%d\n", filename, recordno, recordno*recordsize);
+
+		morbose("*** DEBUG DATA ***\n DMA= %04x SP=%04x USER SP=%04x [%04x %04x %04x]\n",
+			m_req->GetAuxData(0),
+			m_req->GetAuxData(1),
+			m_req->GetAuxData(2),
+			m_req->GetAuxData(3),
+			m_req->GetAuxData(4),
+			m_req->GetAuxData(5)
+			);
+
 
 		FILE* f = fopen(filename, "rb");
 		do {
@@ -618,7 +672,9 @@ private:
 			int recordsread = fread(m_res->getDMA(), recordsize, nrecords, f);
 			m_res->SetDMASize(recordsread * recordsize);
 			m_res->SetAuxData(1, 0); 		   // no error
-			m_res->GetFCB()->RandomRecord += recordsread;
+			m_res->GetFCB()->CurrentRecord = recordno; // Current Record within Extent for sequential read
+			m_res->GetFCB()->RecordSizeLo = 0;
+			m_res->GetFCB()->RecordSizeHi = recordsize;
 		} while(0);
 
 
@@ -626,14 +682,30 @@ private:
 		m_res->respond((uint8_t[]){REQ_DMA, REQ_FCB, REQ_BYTE, 0});
 	}
 
+	void sequentialRead() {
+		announce("sequential read");
+
+		randomRead();
+		m_res->GetFCB()->CurrentRecord = m_res->GetFCB()->CurrentRecord + 1;
+		if (m_res->GetFCB()->CurrentRecord == 0x80) {
+			m_res->GetFCB()->CurrentRecord = 0;
+			m_res->GetFCB()->SetExtent(m_res->GetFCB()->GetExtent() + 1);
+		}
+		info(" advance: record no=%d\n", m_res->GetFCB()->CurrentRecord);
+	}
+
 	void getLoginVector() {
-		info("NetBDOS: get login vector\n");
+		announce("get login vector");
+		info("\n");
 		m_res->SetAuxData(0, 0x0001); // LSB corresponds to drive A
 		m_res->respond((uint8_t[]){REQ_WORD, 0});
 	}
 
 	void getFileSize() {
 		char filename[13];
+
+		announce("get file size");
+
 		m_req->GetFCB()->GetFileName(filename);
 		int size = internalGetFileSize(filename);
 		m_res->AssignFCB(m_req->GetFCB());
@@ -736,6 +808,8 @@ public:
 
 	}
 
+	int GetBDOSFunc() const { return m_req->getFunc() + 14; }
+
 	void ExecFunc(SpyRequest* request, SpyResponse* response) {
 		m_req = request;
 		m_res = response;
@@ -759,6 +833,7 @@ public:
 		case F13_DELETE:
 			break;
 		case F14_SEQ_READ:
+			sequentialRead();
 			break;
 		case F15_SEQ_WRITE:
 			break;

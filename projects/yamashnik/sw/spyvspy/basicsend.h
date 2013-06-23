@@ -39,7 +39,7 @@ public:
 
 	int sendBASIC(FILE* file);
 	int sendPoke(uint16_t addr, uint8_t value);
-	int sendBIN(FILE* file);
+	int sendBIN(FILE* file, uint16_t* out_start, uint16_t* out_end, uint16_t* out_run);
 	int sendROM(FILE* file);
 	int SendCommand(const char* cmd);
 

@@ -85,11 +85,11 @@ int SerialPort::waitRx()
 		usleep(10000);
 
 		if (count == 10) {
-			morbose("\nwaitRx: failed after %d select()s\n", count);
+			//morbose("\nwaitRx: failed after %d select()s\n", count);
 			return 0;
 		}
 	}
-	morbose("\nwaitRx: got reply after %d select()s\n", count);
+	//morbose("\nwaitRx: got reply after %d select()s\n", count);
 	return 1;
 }
 
