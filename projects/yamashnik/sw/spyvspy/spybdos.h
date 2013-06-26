@@ -319,6 +319,12 @@ private:
         m_res->respond((uint8_t[]) {REQ_FCB, REQ_BYTE, 0});
     }
 
+/*
+http://www.kameli.net/lt/bdos1var.txt 
+
+F195H-F1A9H     Driver Parameter Block (DPB) A:
+F1AAH-F1BEH     DPB B:
+*/
     void getAllocInfo() {
         announce("get allocation information");
 
