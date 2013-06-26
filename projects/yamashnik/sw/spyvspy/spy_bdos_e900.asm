@@ -20,6 +20,9 @@ EntryPoint_:
                 ld		(STORESP), sp
                 ;ld		(SaveSP), sp
                 ld 		sp, $DC00 
+				push ix
+                push iy
+
 
 ;                di
 ;                push af
@@ -67,6 +70,8 @@ EntryPoint_:
 
 ; ---------------------------------------------------------------------------
 ExitPoint:
+				pop iy
+				pop ix
 				;ld 		sp, (SaveSP)
 				ld 		sp,(STORESP)
 				ret
@@ -242,7 +247,7 @@ Func2_ConsoleOutput:
                 cp      3
                 jr      z, Func0_ProgramTerminate
 
-CHGET_waiting_bufferfull:         
+CHGET_waiting_bufferfull: 
                 ld      a, e
                 rst     30h             ; CHPUT
                 db 70h
@@ -949,12 +954,9 @@ PatchBIOSCalls:
 				ret
 
 PatchJumpTable:	;jp WARMBOOT
-				jp CONST 
-				jp CONIN
-				jp CONOUT
-				jp CONOUT ; LIST
-				jp CONOUT ; PUNCH 
-				jp CONIN ; READER				
+				jp CONST 				; DC0F
+				jp CONIN 				; DC2C
+				jp CONOUT 				; DC43
 				;
 PatchJumpTable_End:
 
@@ -963,21 +965,89 @@ WARMBOOT:		jp $
 CONST:			
                 ld		(STORESP), sp
                 ld 		sp, $DC00 
-				call 	FuncB_ConsoleStatus
+                push ix
+                push iy
+
+                rst 	30h   			; BREAKX check Ctrl+STOP 
+                db 		70h				; CY when Ctrl+STOP pressed
+                dw 		00B7h
+
+                jr 		nc, CONST_1
+
+                ld a, 3
+                ld ($f336), a
+                ld ($f337), a
+                and a
+                jr CONST_EXIT
+
+CONST_1:		ld a, ($f336)
+				and a
+				ld a, ($f337)
+				jr nz, CONST_EXIT
+
+				rst 	30h  			; CHSNS 
+				db 		70h 			; Tests the status of the keyboard buffer
+				dw 		009Ch 			; Z-flag set if buffer is filled
+				jr z, CONST_EXIT
+
+				ld a, $ff
+				ld ($f336), a
+
+				rst 	30h 			; CHGET (Waiting)
+				db 		70h 
+				dw 		009Fh
+				ld ($f337), a
+
+				; ¿¿¿ ???
+				push bc
+				ld b, 0
+				inc b
+				pop bc
+
+CONST_EXIT:
+				pop iy
+				pop ix
 				ld 		sp, (STORESP)
 				ret
+
 CONIN:			
                 ld		(STORESP), sp
                 ld 		sp, $DC00 
-				call 	Func8_ConsoleInputNoEcho
+                push ix
+                push iy
+
+				push hl
+				ld hl, $f336 	; keyboard status
+				xor a
+				cp (hl)
+				ld (hl), a
+				inc hl
+				ld a, (hl)
+				pop hl
+				jr nz, CONIN_EXIT
+
+                rst     30h             ; CHGET (Waiting)
+                db 		70h
+                dw 		9Fh
+CONIN_EXIT:
+				pop iy
+				pop ix
 				ld 		sp, (STORESP)
 				ret
 
 CONOUT:			
                 ld		(STORESP), sp
                 ld 		sp, $DC00 
-				ld 		e, c
-				call 	Func2_ConsoleOutput
+                push ix
+                push iy
+
+				ld 		a, c
+                rst     30h             ; CHPUT
+                db 		70h
+                dw 		0A2h
+
+				pop iy
+				pop ix
 				ld 		sp, (STORESP)
 				ret
 
