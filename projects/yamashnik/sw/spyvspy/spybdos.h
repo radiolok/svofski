@@ -224,11 +224,13 @@ private:
         memset(m_res->GetDMA(), 0, recordsize);
         m_res->SetAuxData(0,1);
 
+        off_t fileoffset = recordno*recordsize;
+
         FILE* f = fopen(filename, "rb");
         do {
-            if ((recordno*recordsize >= m_req->GetFCB()->FileSize) ||
-                (fseek(f, recordno*recordsize, SEEK_SET) != 0) ||
-                (ftell(f) != recordno*recordsize)) {
+            if ((fileoffset >= m_req->GetFCB()->FileSize) ||
+                (fseek(f, fileoffset, SEEK_SET) != 0) ||
+                (ftell(f) != fileoffset)) {
                 info("<eof>");
                 break;
             }
@@ -238,10 +240,14 @@ private:
             // Set result
             m_res->SetAuxData(0, bytesread > 0 ? 0 : 1); 
 
-            // Update Current Record within Extent for sequential read
-            m_res->GetFCB()->CurrentRecord = recordno; 
+            // Update Current Record and Extent for sequential read
+            uint16_t extentsize = 128*128; // 128 records of 128 bytes each == 1 extent
+
+            m_res->GetFCB()->CurrentRecord = fileoffset % extentsize; 
             m_res->GetFCB()->RecordSizeLo = 0;
             m_res->GetFCB()->RecordSizeHi = recordsize;
+            
+            m_res->GetFCB()->SetExtent(fileoffset / extentsize);
         } while(0);
         fclose(f);
         info("\n");
@@ -257,11 +263,14 @@ private:
         
 
         uint32_t recordno = m_req->GetFCB()->CurrentRecord;
-        recordno = recordno & 0x00ffffff;
+        uint32_t extent = m_req->GetFCB()->GetExtent();
+
+                           /* extent base */           /* record */
+        off_t fileoffset = 128 * recordsize * extent + recordno * recordsize;
 
         m_res->AssignFCB(m_req->GetFCB());
 
-        info(" '%s' Rec=%d Ofs=%d\n", filename, recordno, recordno*recordsize);
+        info(" '%s' Rec=%d Ofs=%zd\n", filename, recordno, fileoffset);
 
         // Always return a full record, padded with zeroes if EOF
         m_res->AllocDMA(recordsize);
@@ -271,9 +280,9 @@ private:
 
         FILE* f = fopen(filename, "rb");
         do {
-            if ((recordno*recordsize >= m_req->GetFCB()->FileSize) ||
-                (fseek(f, recordno*recordsize, SEEK_SET) != 0) ||
-                (ftell(f) != recordno*recordsize)) {
+            if ((fileoffset >= m_req->GetFCB()->FileSize) ||
+                (fseek(f, fileoffset, SEEK_SET) != 0) ||
+                (ftell(f) != fileoffset)) {
                 info("<eof>");
                 break;
             }

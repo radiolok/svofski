@@ -129,7 +129,7 @@ int Spy::Bootstrap()
 
 		BasicSender basicSender(&m_serial, m_studentNo);
 
-		if (!basicSender.SendCommand("    WIDTH 80")) {
+		if (!basicSender.SendCommand("    WIDTH 80:COLOR9,1")) {
 			info("Could not set command\n");
 			return 0;
 		}
@@ -403,18 +403,19 @@ int SpyTransport::ReceiveRequest(SpyRequest* request)
 		{m_rq->expect((uint8_t[]){REQ_WORD, REQ_BYTE, REQ_BYTE, REQ_DMA, 0});}
 		break;
 	default:
+		{m_rq->expect((uint8_t[]){0});}
 		break;
 	}
 
 	verbose("Received request function %d (BDOS %02xh): ", m_func, m_func + 14); 
 	if (m_rq->NeedsData()) {
-		verbose("getting request data\n");
+		verbose("getting request data: ");
 		m_state = SPY_RXDATA;
 		m_rxpos = 0;
 
 		while (!m_serial->waitRx());
 
-		verbose("Request data received\n");
+		verbose("ok\n");
 	} else {
 		verbose("no data expected\n");
 	}
