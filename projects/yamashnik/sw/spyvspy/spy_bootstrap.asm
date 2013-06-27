@@ -113,6 +113,9 @@ rmtLaunchMSXDOS:
 
                 ld      c, 0Dh          ; Disk Reset 
                 call    5
+                ld      c, 09h          ; Print string
+                ld      de, MSG_Loaded  ; newline
+                call    5
 
 ;
 ;RemoteOSLoop:                           
@@ -402,16 +405,10 @@ Conv:
    call CHPUT
    ret
 
-MSG_Loaded:		db 'Loaded$'
+MSG_Loaded:		db 1bh,'e',0dh,0ah,'$'
 
 rmtHelloJpg:
 				db 0F3h,0C5h,0D4h,0C5h,0D7h,0C1h,0D1h,020h,0C6h,0C1h,0CAh,0CCh,0CFh,0D7h,0C1h,0D1h,020h,0D3h,0D4h,0C1h,0CEh,0C3h,0C9h,0D1h,020h,0D7h,0C5h,0D2h,0D3h,0C9h,0D1h,020h,031h,02Eh,030h,00Dh,00Ah,020h,020h,020h,020h,020h,020h,020h,020h,020h,028h,043h,029h,020h,022h,0E9h,0EEh,0E6h,0E9h,0E4h,022h,020h,031h,039h,038h,039h,00Dh,00Ah,00Dh,00Ah,0F6h,0C4h,0C9h,0D4h,0C5h,020h,000h
 
 _end:
 				end
-;rmtHelloJpg:    db 'є┼╘┼╫┴╤ ╞┴╩╠╧╫┴╤ ╙╘┴╬├╔╤ ╫┼╥╙╔╤ 1.0\r\n'
-;                                        ; DATA XREF: ED11
-;                db '         (C) "щюцщф" 1989\r\n' ; Сетевая файловая станция версия 1.0
-;                db '\r\n'           ;          (C) "ИНФИД" 1989
-;                db 'Ў─╔╘┼ ',0       ;
-;                                        ; Ждите

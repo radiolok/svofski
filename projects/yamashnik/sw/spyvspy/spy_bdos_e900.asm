@@ -15,23 +15,49 @@ DEBUG:			equ 0
 EntryPoint:     jp EntryPoint_
 				jp Init
 EntryPoint_:               
-                ld      (SaveDE), de
-
                 ld		(STORESP), sp
-                ;ld		(SaveSP), sp
                 ld 		sp, $DC00 
 				push ix
                 push iy
 
+                ld      (SaveDE), de
 
-;                di
-;                push af
-;                ld      a, 0AAh         ; Secondary slot select register
-;                ld      (SLTSL), a      ; Select expansion slot 2 in all 4 pages
-;                ld      a, 0FFh
-;                out     (0A8h), a       ; Primary slot register
-;                pop af
 
+;--
+				jr nodebug 
+                ld      (SaveHL), hl
+                ld 		(SaveBC), bc
+
+                ld a, '['
+                call DispCharInA
+
+				ld hl, (STORESP)
+				ld b, 4
+stackloop:
+                push bc
+				ld e, (hl)
+				inc hl
+				ld d, (hl)
+				inc hl
+				push hl
+				ex de, hl
+				dec hl 
+				dec hl
+				dec hl
+				call DispHLhex
+				call DispSpace
+				pop hl
+				pop bc
+				djnz stackloop
+
+                ld a, ']'
+                call DispCharInA
+
+                ld hl, (SaveHL)
+                ld de, (SaveDE)
+                ld bc, (SaveBC)
+nodebug:
+;--
 
                 ; put local return address on stack
                 ld		de, ExitPoint
@@ -72,7 +98,6 @@ EntryPoint_:
 ExitPoint:
 				pop iy
 				pop ix
-				;ld 		sp, (SaveSP)
 				ld 		sp,(STORESP)
 				ret
 ; ---------------------------------------------------------------------------
@@ -238,21 +263,18 @@ Func1_ConsoleInput:
                 ld      e, a
 
 Func2_ConsoleOutput:              
-                rst 	30h
-				db 70h
-				dw 9ch
+                ;rst 	30h
+				;db 70h
+				;dw 9ch
 
-                jr      z, CHGET_waiting_bufferfull
-                call    Func7_ConsoleInput
-                cp      3
-                jr      z, Func0_ProgramTerminate
+                ;jr      z, CHGET_waiting_bufferfull
+                ;call    Func7_ConsoleInput
+                ;cp      3
+                ;jr      z, Func0_ProgramTerminate
 
 CHGET_waiting_bufferfull: 
-                ld      a, e
-                rst     30h             ; CHPUT
-                db 70h
-                dw 0A2h
-                ret
+                ld      c, e
+                jp CONOUT_unsafe
 ; ---------------------------------------------------------------------------
 
 Func3_AUXin:                      
@@ -264,7 +286,6 @@ Func4_AUXout:
                 rst     30h             ; Output to current output channel (printer, diskfile, etc.)
                 db 70h
                 dw 18h
-locret_0_EA05:
                 ret
 ; ---------------------------------------------------------------------------
 
@@ -275,54 +296,53 @@ Func5_PrinterOutput:
                 dw 0A5h
                 ret
 
-Func6_ConsoleIO:                  
+Func6_ConsoleIO:     
                 ld      a, 0FFh
                 cp      e
                 ld      a, e
-                jr      z, Func8_ConsoleInputNoEcho
-                jr      Func2_ConsoleOutput ; CHSNS Tests the status of the keyboard buffer
-                                        ; Z-flag set if buffer is filled
+                jr      nz, Func2_ConsoleOutput ; CHSNS Tests the status of the keyboard buffer
+                                        		; Z-flag set if buffer is filled
+				call CONST_unsafe
+				ret z
+				jp CONIN_unsafe
 
 ; ****************************************
 ; * Func7_ConsoleInput 
 ; **************************************** 
 Func7_ConsoleInput:               
-                                        
-                rst     30h
-                db 70h
-                dw 9Fh
-                ret
+                jp CONIN_unsafe
 ; End of function Func7_ConsoleInput
 
 ; ---------------------------------------------------------------------------
 
 Func8_ConsoleInputNoEcho:         
                                         
-                rst     30h
-                db 70h
-                dw 9Ch
-                jr      z, loc_0_EA27
-                call    Func7_ConsoleInput
-                cp      3
-                jp      z, Func0_ProgramTerminate
+;                rst     30h
+;                db 70h
+;                dw 9Ch
+;                jr      z, loc_0_EA27
+;                call    Func7_ConsoleInput
+;                cp      3
+;                jp      z, Func0_ProgramTerminate
+;
+;loc_0_EA27:                             
+;                rst     30h
+;                db 70h
+;                dw 009Fh
+;                ret
+				call CONST_unsafe
+				ret z
+				jp CONIN_unsafe 
 
-loc_0_EA27:                             
-                rst     30h
-                ld      (hl), b
-                sbc     a, a
-                nop
-                ret
 ; ---------------------------------------------------------------------------
 
-Func9_StringOutput:               
-                                        
+Func9_StringOutput:                                                       
                 ld      a, (de)
                 cp      24h ; '$'
                 ret     z
                 push    de
                 ld      e, a
-                call    Func2_ConsoleOutput ; CHSNS Tests the status of the keyboard buffer
-                                        ; Z-flag set if buffer is filled
+                call    Func2_ConsoleOutput 
                 pop     de
                 inc     de
                 jr      Func9_StringOutput
@@ -421,7 +441,7 @@ Func16_CreateFile:
 Func17_RenameFile:                
                 ld      h, d
                 ld      l, e
-                ld      bc, 20h ; ' '
+                ld      bc, 20h 
                 call    bdos_SendDataChunk ; Send data chunk &HL, BC = Length
                 jp      FIFO_ReceiveByteWait
 ; ---------------------------------------------------------------------------
@@ -638,6 +658,10 @@ Func30_AbsoluteSectorWrite:
 ;                ld      hl, (CurrentDMAAddr)
 ;                call    bdos_SendDataChunk ; Send data chunk &HL, BC = Length
                 ret
+
+FuncXX_NoOperation:
+				ret
+
 SendWord:
 				ld 		d, h
 				call    FIFO_SendByte
@@ -883,7 +907,10 @@ ADR1_SendersNumber:db 0
                                         
 SaveDE:   		dw 0                    
                         
-SaveSP:			dw 0                 
+SaveHL:			dw 0                 
+SaveBC:			dw 0
+Ret1:			dw 0
+Ret2:			dw 0
 ;CAPST:    db 0                    
                                         ; UpdateCAPS:capslock_off ...
 DispatchTable:dw Func0_ProgramTerminate
@@ -916,20 +943,20 @@ DispatchTable:dw Func0_ProgramTerminate
                 dw Func19_GetCurrentDrive
                 dw Func1A_SetDMA
                 dw Func1B_GetAllocInfo
-                dw 0
-                dw 0
-                dw 0
-                dw 0
-                dw 0
+                dw FuncXX_NoOperation
+                dw FuncXX_NoOperation
+                dw FuncXX_NoOperation
+                dw FuncXX_NoOperation
+                dw FuncXX_NoOperation
                 dw Func21_RandomRead
                 dw Func22_RandomWrite
                 dw Func23_GetFileSize
                 dw Func24_SetRandomRecord
-                dw 0
+                dw FuncXX_NoOperation
                 dw Func26_RandomBlockWrite
                 dw Func27_RandomBlockRead
                 dw Func28_RandomWriteWithZeroFill
-                dw 0
+                dw FuncXX_NoOperation
                 dw Func2A_GetDate ; Always return 0
                 dw Func2B_SetDate ; nop
                 dw Func2C_GetTime ; Always return 0
@@ -967,47 +994,44 @@ CONST:
                 ld 		sp, $DC00 
                 push ix
                 push iy
+                call CONST_unsafe
+				pop iy
+				pop ix
+				ld 		sp, (STORESP)
+				ret
 
+CONST_unsafe:
                 rst 	30h   			; BREAKX check Ctrl+STOP 
                 db 		70h				; CY when Ctrl+STOP pressed
                 dw 		00B7h
 
-                jr 		nc, CONST_1
+                jr 		nc, CONST_1 	; STOP was not pressed
 
-                ld a, 3
-                ld ($f336), a
-                ld ($f337), a
-                and a
-                jr CONST_EXIT
+                ld a, 3 				; STOP was pressed
+                ld ($f336), a 			; Set F336 and F337 to 3
+                ld ($f337), a 			; which is a STOP trait
+                and a 					; clear zero flag
+                jr CONST_EXIT 			; return
 
-CONST_1:		ld a, ($f336)
-				and a
-				ld a, ($f337)
-				jr nz, CONST_EXIT
-
+CONST_1:		ld a, ($f336) 			; F336 != 0 ==> F337 is valid
+				and a 					; check validity
+				ld a, ($f337)  			; preload value in a
+				jr nz, CONST_EXIT 		; yes, valid, exit using value in a
+										; no value in f336/f337:
 				rst 	30h  			; CHSNS 
 				db 		70h 			; Tests the status of the keyboard buffer
-				dw 		009Ch 			; Z-flag set if buffer is filled
-				jr z, CONST_EXIT
-
-				ld a, $ff
-				ld ($f336), a
+				dw 		009Ch 			; Z-flag set if buffer is empty
+				jr z, CONST_EXIT 		; zero set, return 
+ 										; else
+				ld a, $ff 				; set validity flag in F336
+				ld ($f336), a 
 
 				rst 	30h 			; CHGET (Waiting)
-				db 		70h 
-				dw 		009Fh
-				ld ($f337), a
+				db 		70h  			; Retrieve character from buffer
+				dw 		009Fh 			; 
+				ld ($f337), a 			; store the char in F337
 
-				; ¿¿¿ ???
-				push bc
-				ld b, 0
-				inc b
-				pop bc
-
-CONST_EXIT:
-				pop iy
-				pop ix
-				ld 		sp, (STORESP)
+CONST_EXIT: 							; and return 
 				ret
 
 CONIN:			
@@ -1015,24 +1039,29 @@ CONIN:
                 ld 		sp, $DC00 
                 push ix
                 push iy
+                call CONIN_unsafe
+				pop iy
+				pop ix
+				ld 		sp, (STORESP)
+				ret  
 
+CONIN_unsafe:
 				push hl
-				ld hl, $f336 	; keyboard status
-				xor a
-				cp (hl)
-				ld (hl), a
-				inc hl
-				ld a, (hl)
-				pop hl
-				jr nz, CONIN_EXIT
+				ld hl, $F336 			; keyboard status addr
+				xor a 
+				cp (hl) 				; check if (F336) is 0
+				ld (hl), a 				; clear (F336) for the next time
+				inc hl 					; F337
+				ld a, (hl) 				; load stored char value 
+				pop hl 	
+				jr nz, CONIN_EXIT 		; (F336) not zero, a has valid value
+										; return
 
+										; otherwise get the value from buf
                 rst     30h             ; CHGET (Waiting)
                 db 		70h
                 dw 		9Fh
 CONIN_EXIT:
-				pop iy
-				pop ix
-				ld 		sp, (STORESP)
 				ret
 
 CONOUT:			
@@ -1041,15 +1070,19 @@ CONOUT:
                 push ix
                 push iy
 
-				ld 		a, c
-                rst     30h             ; CHPUT
-                db 		70h
-                dw 		0A2h
+                call CONOUT_unsafe
 
 				pop iy
 				pop ix
 				ld 		sp, (STORESP)
 				ret
+
+CONOUT_unsafe:
+				ld 		a, c
+                rst     30h             ; CHPUT
+                db 		70h
+                dw 		0A2h
+                ret
 
 
 ;Display a 16- or 8-bit number in hex.
@@ -1080,6 +1113,7 @@ Conv:
 
 DispSpace:
 	ld a, ' '
+DispCharInA:
 	out (98h), a
 	ret
 

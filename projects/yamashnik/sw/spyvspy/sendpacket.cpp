@@ -45,7 +45,7 @@ void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8
     uint8_t Header[] = { 0xf0, 0x00, 0x00, 0x01, 0x00 };
     int l;
 
-    verbose("\nSendPacket: from %d to %d, cmd: 0x%.2x, %d bytes ",
+    morbose("\nSendPacket: from %d to %d, cmd: 0x%.2x, %d bytes ",
         srcAddr, dstAddr, cmdType, len);
 
     // Header fields, common for all packets
@@ -137,18 +137,8 @@ void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8
         eggog(" unsupported packet type %02x\n", cmdType);
     }
 
-    // Debug
-    verbose("\n");
+    morbose("\n");
 }
-
-//void PacketSender::SendPacket(GenericPacket* packet) 
-//{
-//    SendPacket(packet->GetSrcAddr(), packet->GetDstAddr(), packet->GetCmd(),
-//        packet->GetData(), packet->GetLength(), 
-//        packet->GetAddr1(), packet->GetAddr2(),
-//        packet->GetIsLast());
-//}
-
 
 void PacketSender::SendPacketVal(GenericPacket& packet) 
 {
