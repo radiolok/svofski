@@ -21,8 +21,6 @@ EntryPoint_:
                 push iy
 
                 ld      (SaveDE), de
-
-
 ;--
 				jr nodebug 
                 ld      (SaveHL), hl
@@ -293,7 +291,7 @@ Func5_PrinterOutput:
                 ld      a, e
                 rst     30h
                 db 70h
-                dw 0A5h
+                dw 0A5h	
                 ret
 
 Func6_ConsoleIO:     
@@ -349,7 +347,8 @@ Func9_StringOutput:
 ; ---------------------------------------------------------------------------
 
 FuncA_BufferedLineInput:          
-                ret
+				jp BufferedInputEntry
+                ;ret
 
 ; CHSNS Tests the status of the keyboard buffer
 FuncB_ConsoleStatus: 
@@ -992,15 +991,13 @@ WARMBOOT:		jp $
 CONST:			
                 ld		(STORESP), sp
                 ld 		sp, $DC00 
-                push ix
-                push iy
                 call CONST_unsafe
-				pop iy
-				pop ix
 				ld 		sp, (STORESP)
 				ret
 
 CONST_unsafe:
+                push ix
+                push iy
                 rst 	30h   			; BREAKX check Ctrl+STOP 
                 db 		70h				; CY when Ctrl+STOP pressed
                 dw 		00B7h
@@ -1032,20 +1029,20 @@ CONST_1:		ld a, ($f336) 			; F336 != 0 ==> F337 is valid
 				ld ($f337), a 			; store the char in F337
 
 CONST_EXIT: 							; and return 
+				pop iy
+				pop ix
 				ret
 
 CONIN:			
                 ld		(STORESP), sp
                 ld 		sp, $DC00 
-                push ix
-                push iy
                 call CONIN_unsafe
-				pop iy
-				pop ix
 				ld 		sp, (STORESP)
 				ret  
 
 CONIN_unsafe:
+                push ix
+                push iy
 				push hl
 				ld hl, $F336 			; keyboard status addr
 				xor a 
@@ -1062,26 +1059,26 @@ CONIN_unsafe:
                 db 		70h
                 dw 		9Fh
 CONIN_EXIT:
+				pop iy
+				pop ix
 				ret
 
 CONOUT:			
                 ld		(STORESP), sp
                 ld 		sp, $DC00 
-                push ix
-                push iy
-
                 call CONOUT_unsafe
-
-				pop iy
-				pop ix
 				ld 		sp, (STORESP)
 				ret
 
 CONOUT_unsafe:
+                push ix
+                push iy
 				ld 		a, c
                 rst     30h             ; CHPUT
                 db 		70h
                 dw 		0A2h
+				pop iy
+				pop ix
                 ret
 
 
@@ -1159,4 +1156,6 @@ ddloop:
 
 	jr $
 
+
+	include 'inputline.inc'
 
