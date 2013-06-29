@@ -816,6 +816,10 @@ ReceiveDataChunk:
                 call    FIFO_ReceiveByteWait
                 ld      c, a
 
+                ; check for zero sized chunks
+                or b
+                ret z
+                ;
 if DEBUG
                 push hl
                 push bc
@@ -832,6 +836,8 @@ if DEBUG
 endif
 
 ReceiveDataChunk_recvloop:
+
+				
 
                 call    FIFO_ReceiveByteWait
                 ld      (hl), a
