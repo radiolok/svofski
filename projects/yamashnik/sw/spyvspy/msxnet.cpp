@@ -68,6 +68,8 @@ void halp()
     info("      --cpm               issue _CPM command at workstation\n");
     info("      --ncopy             copy files to CP/M ramdisk\n");
     info("      --send              send BIN, ROM or BASIC files\n");
+    info("      --spy <file>        bootstrap and run network MSX-DOS on the target\n");
+    info("      --serve             serve already bootstrapped target\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -94,6 +96,7 @@ int main(int argc, char *argv[]) {
            {"send",     no_argument,            0, 7},
            {"spy",      no_argument,            0, 8},
            {"test",     no_argument,            0, 9},
+           {"serve",     no_argument,           0, 10},
            {0, 0, 0, 0}
          };
 
@@ -170,13 +173,20 @@ int main(int argc, char *argv[]) {
                 break;
 
             case 8:
-                {
+                {   // spy bootstrap & serve
                     nfiles = argc - optind;
                     Spy spy(port, argv[0], studentNo, nfiles, &argv[optind]);
                     spy.initData() &&
                         spy.Bootstrap();
                 }
                 break;
+
+            case 10:
+                {   // spy serve only
+                    Spy spy(port, argv[0], studentNo, nfiles, &argv[optind]);
+                    spy.initData() &&
+                        spy.Serve();
+                }
 
             case 9:
                 {

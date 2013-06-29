@@ -16,7 +16,7 @@ serial.o:	serial.h
 
 sendpacket.o:	sendpacket.h
 
-spy.o:	spy*.h
+spy.o:	spy*.h spybdos.h dosglob.h
 
 tpa.com:	tpa.asm
 	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/ tpa.asm -o tpa.com
