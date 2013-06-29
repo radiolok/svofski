@@ -54,6 +54,7 @@ public:
     int initData();
 
     int Bootstrap();
+    int Serve();
 };
 
 enum SpyState { SPY_BOOTSTRAP = 0, SPY_POLL = 1, SPY_GETFUNC = 2, SPY_RXDATA = 3};
@@ -96,10 +97,6 @@ public:
     }
 
     uint16_t getWordBigEndian(uint8_t *cursor) {
-        //morbose("\n getWordBigEndian: %x,%x = %x\n",
-        //  cursor[0], cursor[1],
-        //  (uint16_t)(cursor[1] | ((uint16_t)cursor[0] << 8)));
-            
         return cursor[1] | ((uint16_t)cursor[0] << 8);
     }
 

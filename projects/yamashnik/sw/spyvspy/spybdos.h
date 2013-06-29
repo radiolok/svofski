@@ -5,13 +5,15 @@
 #include "diags.h"
 #include "spydata.h"
 #include "spy.h"
+#include "dosglob.h"
 
 class NetBDOS
 {
 private:
     int m_disk;
     glob_t m_globbuf;
-    unsigned int m_globbor;
+    //unsigned int m_globbor;
+    Globor m_globor;
 
     SpyRequest* m_req;
     SpyResponse* m_res;
@@ -108,6 +110,7 @@ private:
         announce("search first");
         info(" '%s'\n", filename);
 
+#if 0
         if (m_globbuf.gl_pathc > 0) {
             globfree(&m_globbuf);
         }
@@ -117,16 +120,25 @@ private:
         morbose("glob() pathc=%d\n", m_globbuf.gl_pathc);
 
         m_globbor = 0;
+#endif  
+        const char* first = m_globor.SearchFirst((const char*) m_req->GetFCB()->NameExt);
 
-        searchNext();
+        DIRENT dirent;
+        FCB fcb;
+        fcb.SetNameExt(first);
+        fcb.FileSize = internalGetFileSize(first);
+        dirent.InitFromFCB(&fcb);
+
+        m_res->AssignDMA((uint8_t *)&dirent, sizeof(DIRENT));
+        m_res->SetAuxData(0, first ? 0 : 0xff);
+        m_res->respond((uint8_t[]){REQ_DMA, REQ_BYTE, 0});
     }
 
     void searchNext() {
-        DIRENT dirent;
         int result = 0xff;
 
         announce("search next-");
-
+#if 0
         if (m_globbor < m_globbuf.gl_pathc) {
             morbose("glob() first match=%s\n", m_globbuf.gl_pathv[m_globbor]);
 
@@ -140,6 +152,17 @@ private:
             result = 0;
         } 
         m_globbor++;
+#endif
+
+        const char* next = m_globor.SearchNext();
+
+
+        DIRENT dirent;
+        FCB fcb;
+        fcb.SetNameExt(next);
+        fcb.FileSize = internalGetFileSize(next);
+        dirent.InitFromFCB(&fcb);
+        result = next ? 0 : 0xff;
 
         m_res->AssignDMA((uint8_t *)&dirent, sizeof(DIRENT));
         m_res->SetAuxData(0, result);
@@ -429,6 +452,7 @@ private:
 
     int test_searchFirst() {
         m_req = new SpyRequest();
+        m_res = new SpyResponse();
         m_req->GetFCB()->SetNameExt("AUTOEXEC.???");
         searchFirst();
 
@@ -437,24 +461,78 @@ private:
         searchFirst();
 
         delete m_req;
+        delete m_res;
+
+        return 1;
+    }
+
+    int test_dosglob() {
+        char dosname[12];
+        const char *in;
+        dosname[11] = 0;
+
+        Globor g(".");
+
+        g.SetPattern("???????????");
+
+        in = "a.b";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+
+        in = "autoexec.com";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+            
+        in = "turbo.com";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+
+        in = "noext.";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+
+        in = ".ext";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+
+        in = "";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+
+        g.SetPattern("????????COM");
+
+        in = "a.b";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+
+        in = "autoexec.com";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+            
+        in = "turbo.com";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+
+        in = "noext.";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+
+        in = ".ext";
+        info("test_dosglob: match %s %d\n", in, g.match(in));
+
+        for (const char *fu = g.SearchFirst("????????????");
+             fu != 0; fu = g.SearchNext()) {
+            info("DIR: %s\n", fu);
+        }
+
 
         return 1;
     }
 
 public:
-    NetBDOS() : m_disk(0) {}
+    NetBDOS() : m_disk(0), m_globor(".") {
+        //m_globbuf.gl_pathc = 0;
+    }
 
     ~NetBDOS() {
-        if (m_globbuf.gl_pathc > 0) {
-            globfree(&m_globbuf);
-        }
     }
 
     int test() {
         
         return test_fileNameFromPCB() 
             && test_FCBFromFileName()
-            && test_searchFirst();
+            && test_searchFirst()
+            && test_dosglob();
 
     }
 

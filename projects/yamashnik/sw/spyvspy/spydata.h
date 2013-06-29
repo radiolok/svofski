@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ctype.h>
+
 enum SpyRequestCode {
     F0E_SELECT_DISK         = 0,                    
     F0F_OPEN_FILE,          
@@ -30,6 +32,33 @@ enum SpyRequestCode {
 
 enum {
     REQ_BYTE = 1, REQ_WORD, REQ_FCB, REQ_DMA, REQ_END = 0,
+};
+
+class Util {
+public:
+    static int dosname(const char* fname, char* buf83) {
+        if (fname == 0 || buf83 == 0) return 0;
+        
+        char* shrt = (shrt = strrchr(fname, '/')) ? (shrt + 1) : (char *)fname;
+
+        char* dot = strchr(shrt, '.');
+        int namelen = dot == 0 ? strlen(shrt) : dot - shrt;
+        int extlen = strlen(shrt) - namelen - 1;
+        if (namelen > 8 || extlen > 3) {
+            return 0;
+        }
+
+        memset(buf83, ' ', 11);
+
+        for (int i = 0; i < namelen; i++) {
+            buf83[i] = (char) toupper(shrt[i]);
+        }
+        for (int i = 0; i < extlen; i++) {
+            buf83[8+i] = (char) toupper(shrt[namelen + i + 1]);
+        }
+
+        return 1;
+    }
 };
 
 struct FCB {
@@ -73,23 +102,7 @@ struct FCB {
     }
 
     int SetNameExt(const char* fname) {
-        char* shrt = (shrt = strrchr(fname, '/')) ? (shrt + 1) : (char *)fname;
-
-        char* dot = strchr(shrt, '.');
-        int namelen = dot == 0 ? strlen(shrt) : dot - shrt;
-        int extlen = strlen(shrt) - namelen - 1;
-        if (namelen > 8 || extlen > 3) {
-            info("ERROR: filenames must be 8.3\n");
-            return 0;
-        }
-
-        memset(NameExt, ' ', sizeof(NameExt));
-        memcpy(NameExt, shrt, namelen);
-        if (extlen > 0) {
-            memcpy(NameExt + 8, shrt + namelen + 1, extlen);
-        }       
-
-        return 1;
+        return Util::dosname(fname, (char *)NameExt);
     }
 
     void GetFileName(char* normalname) {

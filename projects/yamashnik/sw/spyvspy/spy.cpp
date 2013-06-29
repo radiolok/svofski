@@ -196,6 +196,14 @@ int Spy::Bootstrap()
 
 	sleep(1);
 
+	Serve();
+
+	return 1;
+}
+
+int Spy::Serve() {
+	SpyTransport transport(&m_serial);
+
 	info("\nServing workstation %d\n", m_studentNo);
 
 	NetBDOS bdos;

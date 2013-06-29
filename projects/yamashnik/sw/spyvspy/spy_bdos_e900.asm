@@ -23,6 +23,7 @@ EntryPoint_:
                 ld      (SaveDE), de
 ;--
 				jr nodebug 
+
                 ld      (SaveHL), hl
                 ld 		(SaveBC), bc
 
@@ -53,7 +54,7 @@ stackloop:
 
                 ld hl, (SaveHL)
                 ld de, (SaveDE)
-                ld bc, (SaveBC)
+                ld bc, (SaveBC)                
 nodebug:
 ;--
 
@@ -458,12 +459,11 @@ Func19_GetCurrentDrive:
 ; ---------------------------------------------------------------------------
 
 Func1A_SetDMA:                    
-                                        
                 ld      (CurrentDMAAddr), de
                 ret
 ; ---------------------------------------------------------------------------
 
-Func1B_GetAllocInfo:              
+Func1B_GetAllocInfo:       
                 ld      d, e
                 call    FIFO_SendByte
                 call    FIFO_ReceiveByteWait
