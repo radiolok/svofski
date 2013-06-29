@@ -8,7 +8,7 @@ LINK=g++
 all:	msxnet spy_bootstrap.bin tpa.com spy_bdos_e900.ram
 
 clean:	
-	rm -f msxnet *.o
+	rm -f msxnet *.o spy_bootstrap.bin tpa.com spy_bdos_e900.ram
 
 msxnet: msxnet.o serial.o ncopy.o sendpacket.o commands.h diags.o basicsend.o spy.o
 
@@ -24,7 +24,7 @@ tpa.com:	tpa.asm
 spy_bootstrap.bin:	spy_bootstrap.asm
 	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/ spy_bootstrap.asm -o spy_bootstrap.bin
 
-spy_bdos_e900.ram:	spy_bdos_e900.asm
+spy_bdos_e900.ram:	spy_bdos_e900.asm inputline.inc
 	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/  spy_bdos_e900.asm -o spy_bdos_e900.ram 
 
 spy_bdos_e900.lst:	spy_bdos_e900.asm
