@@ -472,14 +472,14 @@ Func1B_GetAllocInfo:
                 ld      l, a
                 push    hl
                 pop     ix
-                call    ReceiveDataChunk ; Receive data chunk to &HL, size not returned
+                call    ReceiveDataChunk 
                 call    FIFO_ReceiveByteWait
                 ld      h, a
                 call    FIFO_ReceiveByteWait
                 ld      l, a
                 push    hl
                 pop     iy
-                call    ReceiveDataChunk ; Receive data chunk to &HL, size not returned
+                call    ReceiveDataChunk 
                 call    FIFO_ReceiveByteWait
                 ld      b, a
                 call    FIFO_ReceiveByteWait
