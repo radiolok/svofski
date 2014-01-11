@@ -1,0 +1,347 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "src/Lib/DataRam.h",
+			"settings":
+			{
+				"buffer_size": 4003,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/Lib/DataRam.c",
+			"settings":
+			{
+				"buffer_size": 9685,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/Lib/fatutil.h",
+			"settings":
+			{
+				"buffer_size": 5574,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/Lib/fatutil.c",
+			"settings":
+			{
+				"buffer_size": 10662,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "src/Lib/SCSI.c",
+			"settings":
+			{
+				"buffer_size": 14864,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "externals/LPCUSBLib/Drivers/USB/Core/DCD/LPC17XX/Endpoint_LPC17xx.c",
+			"settings":
+			{
+				"buffer_size": 15927,
+				"line_ending": "Windows"
+			}
+		}
+	],
+	"build_system": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/D/users/svo/projects/cartuchnik/firmware/externals/LPCUSBLib/Drivers/USB/Core/EndpointStream.c"
+	],
+	"find":
+	{
+		"height": 34.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"writebl",
+			"readblock",
+			"MassStorage_GetAddressInImage"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 4,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "src/Lib/DataRam.h",
+					"settings":
+					{
+						"buffer_size": 4003,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3841,
+								3870
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 765.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "src/Lib/DataRam.c",
+					"settings":
+					{
+						"buffer_size": 9685,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								8748,
+								8777
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1923.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "src/Lib/fatutil.h",
+					"settings":
+					{
+						"buffer_size": 5574,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "src/Lib/fatutil.c",
+					"settings":
+					{
+						"buffer_size": 10662,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "src/Lib/SCSI.c",
+					"settings":
+					{
+						"buffer_size": 14864,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1658,
+								1658
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "externals/LPCUSBLib/Drivers/USB/Core/DCD/LPC17XX/Endpoint_LPC17xx.c",
+					"settings":
+					{
+						"buffer_size": 15927,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								9282,
+								9299
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 3888.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"replace":
+	{
+		"height": 0.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 150.0,
+	"status_bar_visible": true
+}
