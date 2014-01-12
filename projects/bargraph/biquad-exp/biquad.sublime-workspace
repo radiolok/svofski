@@ -1,0 +1,419 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"dra",
+				"drawblinds_fill"
+			],
+			[
+				"terrain_next_",
+				"terrain_next_left"
+			],
+			[
+				"Animate",
+				"AnimateSprites"
+			],
+			[
+				"CLEAR",
+				"CLEARANCE_BLOCK"
+			],
+			[
+				"CLEARA",
+				"CLEARANCE_BLOCK"
+			],
+			[
+				"produ",
+				"produce_line_e2"
+			],
+			[
+				"pf_",
+				"pf_blockline"
+			],
+			[
+				"B",
+				"BLOCKS_IN_LEVEL"
+			],
+			[
+				"pf",
+				"pf_blockcount"
+			],
+			[
+				"updateblock_makeis",
+				"updateblock_makeisland_ok"
+			],
+			[
+				"update",
+				"updateblock_skipterminateisland"
+			],
+			[
+				"terrain_n",
+				"terrain_next_islandwidth"
+			],
+			[
+				"foePrope",
+				"foePropeller_RTL"
+			],
+			[
+				"foeBlock_",
+				"foeBlock_RTL"
+			],
+			[
+				"foeBlock",
+				"foeBlock_LTR"
+			],
+			[
+				"ship_ltr",
+				"ship_ltr_rtl_dispatchjump"
+			],
+			[
+				"foe_0",
+				"foe_0_move_L1"
+			],
+			[
+				"foe_0_",
+				"foe_0_move_L3"
+			],
+			[
+				"shi",
+				"ship_at_x_noempty"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "calcbiquad.cpp",
+			"settings":
+			{
+				"buffer_size": 0,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "Packages/Makefile/Make.sublime-build",
+	"command_palette":
+	{
+		"height": 392.0,
+		"selected_items":
+		[
+		],
+		"width": 392.0
+	},
+	"console":
+	{
+		"height": 0.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/Users/svo/projects/incursiondelrio/incursion.asm",
+		"/Users/svo/projects/incursiondelrio/ship.inc",
+		"/Users/svo/projects/incursiondelrio/sound.inc",
+		"/Users/svo/projects/incursiondelrio/palette.inc",
+		"/Users/svo/projects/incursiondelrio/random.inc",
+		"/Users/svo/projects/incursiondelrio/pasm.js",
+		"/Users/svo/projects/incursiondelrio/navigate.js",
+		"/Users/svo/projects/incursiondelrio/listn.css",
+		"/Users/svo/Library/Application Support/Sublime Text 2/Packages/User/asm8080.sublime-settings",
+		"/Users/svo/projects/incursiondelrio/ship.exp",
+		"/Users/svo/projects/incursiondelrio/makesprites.py",
+		"/Users/svo/Library/Application Support/Sublime Text 2/Packages/User/Preferences.sublime-settings",
+		"/Users/svo/Library/Application Support/Sublime Text 2/Packages/Default/Preferences.sublime-settings",
+		"/Users/svo/projects/incursiondelrio/incursion2.asm",
+		"/Users/svo/Library/Application Support/Sublime Text 2/Packages/User/Plain text.sublime-settings",
+		"/Users/svo/projects/incursiondelrio/Makefile",
+		"/Users/svo/Library/Application Support/Sublime Text 2/Packages/User/JSON.sublime-settings",
+		"/Users/svo/Library/Application Support/Sublime Text 2/Packages/User/JavaScript.sublime-settings",
+		"/Users/svo/projects/incursiondelrio/c/asm8080/src/doc/asm8080_um.txt"
+	],
+	"find":
+	{
+		"height": 35.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": true,
+		"find_history":
+		[
+			"PlayerSprite",
+			"push",
+			"fuel_frame",
+			"fuel_fra",
+			"pop psw",
+			"push psw",
+			"bridgeflag",
+			"road",
+			"PlayerSprite_C",
+			"Sound",
+			"+8",
+			"frame_scroll",
+			"roadflag",
+			"bridge",
+			"fuel",
+			".nolist",
+			"player_bank_ltr0",
+			"forceA",
+			"player_up_ltr3",
+			"frame_scroll",
+			"include",
+			"CreateNewFoe",
+			"terrain_",
+			"bridgeflag",
+			"pf_roadflag",
+			"pf_bridgeflag",
+			"pf_roadflag",
+			"bridge",
+			"pf_bridgeflag",
+			"terrain_next",
+			"terrain_prev_water",
+			"random",
+			"foe_byId",
+			"produce_line",
+			"produce_line	",
+			"produce_line",
+			"ProduceLineMain",
+			"produce_line",
+			"uss4",
+			"produce_line",
+			"produce_line_main",
+			"uss4",
+			"UpdateOneStep",
+			"update_step",
+			"13",
+			"32",
+			"Clear th",
+			"drawblinds_bottom",
+			"clearblinds",
+			"cnf_return",
+			"foe_animaAni",
+			"foe_animate",
+			"UL_2",
+			"UpdateLine",
+			"update_lineU",
+			"update_line",
+			"pf_tableft",
+			"ustep_out",
+			"produce_line_main",
+			"update_step",
+			"create_new_foe",
+			"ustep_out",
+			"updateblock_out",
+			"updateblock_noisland",
+			"updateblock_makeisland",
+			"unp_A",
+			"UpdateNewBlock",
+			"update_next_block",
+			"update_line",
+			"terrain_islandcould",
+			"terrain_next",
+			"terrain_changing",
+			"clearance",
+			"foe_cleara",
+			"sta foe_clea",
+			"create_new_",
+			"create",
+			"foe_clearan",
+			"foeY",
+			"ain_cha",
+			"lda terr",
+			"changin",
+			"block",
+			"FUEL",
+			"CLEARANCE_F",
+			"fuel",
+			"foe_clear",
+			"foe_clearance",
+			"pf_road",
+			"create_new_",
+			"create",
+			"foe_clearance",
+			"updl_2",
+			"create_new_foe",
+			"create_new",
+			"foe_in_de",
+			"clearblinds",
+			"db",
+			"100000",
+			"mnemonic",
+			"trim",
+			"turned off",
+			".org",
+			".include",
+			"';",
+			"result",
+			"startsWith",
+			"listing",
+			"fuel_frame",
+			"FOEID",
+			"BLOCK_HEIGHT",
+			"frame_scroll",
+			"ubb_dou",
+			"cnf_leftandwaterskip",
+			"5",
+			"bridge_frame",
+			"FOEID_BRIDGE",
+			"bridgeBottom",
+			"BridgeBott",
+			"bridge",
+			"aci",
+			"regU",
+			"dad",
+			"xchg",
+			"regUsage",
+			"regUsa",
+			"rgsp",
+			"regUsage"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"CreateNewFoe_Exit",
+			"lineResult",
+			"6",
+			"unb_island_morewater",
+			"terrain_water",
+			"terrain_left",
+			"foeBlock_move_nobounce",
+			"foe_Move",
+			"foe_frame",
+			"sprite_ltr",
+			"sprite_rtl",
+			"sprite_ltr",
+			"foeBlock"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "calcbiquad.cpp",
+					"settings":
+					{
+						"buffer_size": 0,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		},
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			],
+			[
+				1,
+				0,
+				2,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			0.594159613715,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 100.0
+	},
+	"replace":
+	{
+		"height": 64.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 150.0,
+	"status_bar_visible": true
+}
