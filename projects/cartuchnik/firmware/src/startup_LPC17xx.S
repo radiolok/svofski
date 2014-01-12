@@ -22,6 +22,10 @@ __cs3_stack_mem:
     .size   __cs3_stack_mem,  . - __cs3_stack_mem
     .set    __cs3_stack_size, . - __cs3_stack_mem
 
+
+    .section ".iapvars"
+__iap_mem:
+
     .equ    Heap_Size,  0x00001000
     .section ".heap", "w"
     .align  3

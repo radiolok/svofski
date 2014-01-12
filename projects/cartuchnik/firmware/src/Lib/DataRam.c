@@ -56,10 +56,8 @@
  ****************************************************************************/
 
 
-static uint8_t FlashDummy __BSS(FLASH_DISK_SECTION);
-
-//uint8_t DiskImageF[FLASH_DISK_SIZE] __BSS(FLASH_DISK_SECTION);
-uint8_t* DiskImageF = &FlashDummy;
+extern uint8_t __flash_disk[];
+uint8_t* DiskImageF = &__flash_disk[0];
 
 static uint8_t DiskImageA[UTILITY_AREA_RAM_SIZE] __BSS(USBRAM_SECTION); 		//<! disk utility area: boot, fat, directory
 
