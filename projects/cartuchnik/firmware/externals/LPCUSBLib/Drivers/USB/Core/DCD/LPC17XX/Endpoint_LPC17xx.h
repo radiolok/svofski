@@ -101,10 +101,10 @@ void DcdDataTransfer(uint8_t PhyEP, uint8_t *pData, uint32_t cnt);
 void Endpoint_Streaming(uint8_t corenum, uint8_t *buffer, uint16_t packetsize,
 						uint16_t totalpackets, uint16_t dummypackets);
 
-typedef uint8_t* (*EndpointBufferCallback)(const int BlockAddr);
+typedef uint8_t* (*EndpointBufferCallback)(const int BlockNum);
 
-void Endpoint_Streaming_CB(uint8_t corenum, EndpointBufferCallback callback, uint16_t packetsize,
-						uint16_t totalpackets);
+void Endpoint_Streaming_CB(uint8_t corenum, EndpointBufferCallback callback_pre, 
+	EndpointBufferCallback callback_post, uint16_t packetsize, uint16_t totalpackets);
 
 void Endpoint_ClearEndpoints(uint8_t corenum);
 

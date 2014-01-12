@@ -23,7 +23,8 @@ SEARCH_DIR(.)
 
 MEMORY
 {
-  rom (rx)  : ORIGIN = 0x00000000, LENGTH = 512K
+  rom (rx)  : ORIGIN = 0x00000000, LENGTH = 128K
+  rom2(r)   : ORIGIN = 0x00020000, LENGTH = 384K
   ram (rwx) : ORIGIN = 0x10000000, LENGTH =  32K
   
   ram1(rwx) : ORIGIN = 0x2007C000, LENGTH = 32k
@@ -158,6 +159,13 @@ SECTIONS
     _end = .;
     __end = .;
   } >ram AT>rom
+
+  /* flash disk area */
+  .flashdisk /* (NOLOAD)*/:
+  {
+    *(.flashdisk) 
+  } > rom2 /* = 0xffffffff */
+
   /* This used for USB RAM section */
   /* originally 
 	.usb_ram (NOLOAD):

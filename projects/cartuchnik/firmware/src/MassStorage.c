@@ -71,10 +71,14 @@ static void SetupHardware(void)
     UART0_Init(230400);
     NVIC_EnableIRQ(UART0_IRQn);
 	xprintf("\n\n\nVectrexador\n");
+	xprintf("\n\n\nVectrexador2\n");
+
+#ifndef SERIALDEBUG	
+	dflihdfgkjl
     NVIC_DisableIRQ(UART0_IRQn);
 	UART0_UnInit();
-
 	VectrexBusInit();
+#endif	
 
 	USB_Init(Disk_MS_Interface.Config.PortNumber, USB_MODE_Device);
 }
@@ -95,7 +99,7 @@ extern const uint8_t demo184_bin[];
 
 void copyrom() {
 	//ROMBase = (uint8_t *) &BNZ17_BIN[0];
-	ROMBase = (uint8_t *) &demo184_bin[0];
+	//ROMBase = (uint8_t *) &demo184_bin[0];
 	//ROMBase = DataRam_GetDataPtr();
 	//memcpy(DataRam_GetDataPtr(), Berzerk_vec, Berzerk_size);
 	//memcpy(DataRam_GetDataPtr(), BNZ17_BIN, BNZ17_BIN_size);
@@ -103,7 +107,7 @@ void copyrom() {
 	//memcpy(DataRam_GetDataPtr(), cubedemo_vec, cubedemo_vec_size);
 }
 
-#define NOT_WITH_USB
+#define WITH_USB
 
 /**
  *  @brief  Main program entry point
@@ -116,6 +120,8 @@ int main(void)
 	SetupHardware();
 
 #ifdef WITH_USB	
+
+	xprintf("\nLet's see some usb stuff");
 
 	for(;;) {
 		// initially expect USB connection

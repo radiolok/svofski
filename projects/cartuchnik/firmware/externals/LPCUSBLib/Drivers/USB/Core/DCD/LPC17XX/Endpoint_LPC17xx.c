@@ -315,7 +315,7 @@ void Endpoint_Streaming(uint8_t corenum, uint8_t *buffer, uint16_t packetsize,
 	}
 }
 
-void Endpoint_Streaming_CB(uint8_t corenum, EndpointBufferCallback callback, uint16_t packetsize,
+void Endpoint_Streaming_CB(uint8_t corenum, EndpointBufferCallback callback_pre, EndpointBufferCallback callback_post, uint16_t packetsize,
 						uint16_t totalpackets)
 {
 	uint8_t PhyEP = endpointhandle(corenum)[endpointselected[corenum]];
@@ -323,10 +323,10 @@ void Endpoint_Streaming_CB(uint8_t corenum, EndpointBufferCallback callback, uin
 	if (PhyEP & 1) {
 		//xprintf("\nR");
 		for (i = 0; i < totalpackets; i++) {
-				uint8_t *buffer = callback(i);
-				while (!Endpoint_IsReadWriteAllowed(corenum)) ;
-				//xprintf("%d ", i);
+				uint8_t *buffer = callback_pre(i);
+				while (!Endpoint_IsReadWriteAllowed(corenum));
 				Endpoint_Write_Stream_LE(corenum, (void *) buffer, packetsize, NULL);
+				if (callback_post) callback_post(i);
 				Endpoint_ClearIN(corenum);
 			}
 		}
@@ -334,11 +334,12 @@ void Endpoint_Streaming_CB(uint8_t corenum, EndpointBufferCallback callback, uin
 		//xprintf("\nW");
 		for (i = 0; i < totalpackets; i++) {
 			//xprintf("%d ", i);
-			uint8_t *buffer = callback(i);
+			uint8_t *buffer = callback_pre(i);
 			DcdDataTransfer(PhyEP, usb_data_buffer_OUT[corenum], packetsize);
 			Endpoint_ClearOUT(corenum);
-			while (!Endpoint_IsReadWriteAllowed(corenum)) ;
+			while (!Endpoint_IsReadWriteAllowed(corenum));
 			Endpoint_Read_Stream_LE(corenum, (void *) buffer, packetsize, NULL);
+			if (callback_post) callback_post(i);
 		}
 	}
 }

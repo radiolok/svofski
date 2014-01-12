@@ -37,6 +37,7 @@
 
 #include "DataRam.h"
 #include "fatutil.h"
+#include "iap_driver.h"
 
 #include "xprintf.h"
 
@@ -55,13 +56,64 @@
  ****************************************************************************/
 
 
+static uint8_t FlashDummy __BSS(FLASH_DISK_SECTION);
+
+//uint8_t DiskImageF[FLASH_DISK_SIZE] __BSS(FLASH_DISK_SECTION);
+uint8_t* DiskImageF = &FlashDummy;
+
 static uint8_t DiskImageA[UTILITY_AREA_RAM_SIZE] __BSS(USBRAM_SECTION); 		//<! disk utility area: boot, fat, directory
 
 static uint8_t DiskImageB[DATA_RAM_USER_SIZE] __BSS(DISKIMAGE_SECTION); 		//<! main disk data area
 
+
+/*
+	DiskImagePtr->BootSector.BPB_FATSz16    = SectorsPerFAT;
+	DiskImagePtr->BootSector.BPB_NumFATs    = NumFATs;
+	DiskImagePtr->BootSector.BPB_RootEntCnt = RootEntries;
+	DiskImagePtr->BootSector.BPB_BytsPerSec = BytesPerSector;
+	DiskImagePtr->BootSector.BPB_SecPerClus = SECTORSPERCLUSTER;
+	DiskImagePtr->BootSector.BPB_Media      = 0xf8;
+	DiskImagePtr->BootSector.BPB_RsvdSecCnt = RESERVEDSECTORCNT;
+
+	DiskImagePtr->BootSector.BPB_TotSec16   = VolumeSize / BytesPerSector;
+*/
+// typedef struct {
+// 	uint8_t     BS_jmpBoot[3];	/* Jump instruction to the boot code */
+// 	uint8_t     BS_OEMName[8];	/* Name of system that formatted the volume */
+// 	uint16_t    BPB_BytsPerSec;	/* Bytes per sector (should be 512) */
+// 	uint8_t     BPB_SecPerClus;	/* Sectors per cluster (FAT-12 = 1) */
+// 	uint16_t    BPB_RsvdSecCnt;	/* Reserved sectors (FAT-12 = 1) */
+// 	uint8_t     BPB_NumFATs;	/* FAT tables on the disk (should be 2) */
+// 	uint16_t    BPB_RootEntCnt;	/* Max directory entries in root directory */
+// 	uint16_t    BPB_TotSec16;	/* Total number of sectors on the disk (FAT-12 and FAT-16) */
+// 	uint8_t     BPB_Media;		/* Media type {fixed, removable, etc.} */
+// 	uint16_t    BPB_FATSz16;	/* Sector size of FAT table (FAT-12 = 9) */
+// 	uint16_t    BPB_SecPerTrk;	/* # of sectors per cylindrical track */
+// 	uint16_t    BPB_NumHeads;	/* # of heads per volume (1.4Mb 3.5" = 2) */
+// 	uint32_t    BPB_HiddSec;	/* # of preceding hidden sectors (0) */
+// 	uint32_t    BPB_TotSec32;	/* # of FAT-32 sectors (0 for FAT-12) */
+// 	uint8_t     BS_DrvNum;		/* A drive number for the media (OS specific) */
+// 	uint8_t     BS_Reserved1;	/* Reserved space for Windows NT (set to 0) */
+// 	uint8_t     BS_BootSig;		/* (0x29) Indicates following: */
+// 	uint32_t    BS_VolID;		/* Volume serial # (for tracking this disk) */
+// 	uint8_t     BS_VolLab[11];	/* Volume label (RDL or "NO NAME    ") */
+// 	uint8_t     BS_FilSysType[8];	/* Deceptive FAT type Label */
+// } ATTR_PACKED BSStruct;
+
+
 const uint8_t BootSector[512] = {
-	0xEB, 0x3C, 0x90, 0x4D, 0x53, 0x44, 0x4F, 0x53, 0x35, 0x2E, 0x30, 0x00, 0x02, 0x01, 0x01, 0x00,
-	0x01, 0x10, 0x00, 0x10, 0x00, 0xF8, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0xEB, 0x3C, 0x90, 0x4D, 0x53, 0x44, 0x4F, 0x53, 0x35, 0x2E, 0x30, 
+	BYTESPERSECTOR & 0xff, (BYTESPERSECTOR>>8) & 0xff, // BytsPerSec = 0x200
+	SECTORSPERCLUSTER,   	// SecPerClus
+	RESERVEDSECTORCNT, 		// RsvdSecCnt
+	0x00,
+	NUMFATS,				// NumFATs
+	ROOTENTRIES & 0xff, (ROOTENTRIES>>8) & 0xff,   //0x10, 0x00, 			// BPB_RootEntCnt
+	TOTALSECTORS & 0xff, (TOTALSECTORS>>8) & 0xff, //0x10, 0x00, 			// Total sectors
+	0xF8, // Media
+	SECTORSPERFAT & 0xff, (SECTORSPERFAT>>8) & 0xff, //0x01, 0x00, // FATSz16
+	0x01, 0x00, 
+	0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x29, 0x74, 0x19, 0x02, 0x27, 0x4C, 0x50, 0x43, 0x31, 0x31,
 	0x78, 0x78, 0x20, 0x55, 0x53, 0x42, 0x46, 0x41, 0x54, 0x31, 0x32, 0x20, 0x20, 0x20, 0x33, 0xC9,
 	0x8E, 0xD1, 0xBC, 0xF0, 0x7B, 0x8E, 0xD9, 0xB8, 0x00, 0x20, 0x8E, 0xC0, 0xFC, 0xBD, 0x00, 0x7C,
@@ -195,7 +247,9 @@ uint32_t MassStorage_GetAddressInImage(uint32_t startblock, uint16_t requestbloc
 		if (startblock >= DATA_RAM_USER_SIZE / DATA_RAM_BLOCK_SIZE) {
 			*availableblocks = 0;
 		}
-		else {*availableblocks = DATA_RAM_USER_SIZE / DATA_RAM_BLOCK_SIZE - startblock; }
+		else {
+			*availableblocks = DATA_RAM_USER_SIZE / DATA_RAM_BLOCK_SIZE - startblock; 
+		}
 	}
 
 	if (*availableblocks != 0) {
@@ -206,14 +260,52 @@ uint32_t MassStorage_GetAddressInImage(uint32_t startblock, uint16_t requestbloc
 	}
 }
 
+uint32_t MassStorage_GetAddressInFlash(uint32_t startblock, uint16_t requestblocks, uint16_t *availableblocks)
+{
+	if (startblock == 0) {
+		*availableblocks = 1;
+		return (uint32_t) &BootSector[0];
+	}
+
+	startblock--;
+	if ((startblock + requestblocks) <= FLASH_DISK_SIZE / DATA_RAM_BLOCK_SIZE) {
+		*availableblocks = requestblocks;
+	}
+	else {
+		if (startblock >= FLASH_DISK_SIZE / DATA_RAM_BLOCK_SIZE) {
+			*availableblocks = 0;
+		}
+		else {
+			*availableblocks = FLASH_DISK_SIZE / DATA_RAM_BLOCK_SIZE - startblock; 
+		}
+	}
+
+	if (*availableblocks != 0) {
+		return (uint32_t) &DiskImageF[startblock * DATA_RAM_BLOCK_SIZE];
+	}
+	else {
+		return (uint32_t) &DiskImageF[(FLASH_DISK_SIZE / DATA_RAM_BLOCK_SIZE - 1) * DATA_RAM_BLOCK_SIZE];
+	}
+}
+
+uint32_t MassStorage_WriteBlocks(uint32_t startblock, uint8_t* buffer, uint8_t block_count)
+{
+	// find flash sector 
+	//iap_prepare_sector(startblock*);
+	return 0;
+}
+
+
 void DataRam_Initialize(void)
 {
 	if (!InitializedFlag) {
 		InitializedFlag = 1;
+#ifndef PROGMEMDISK		
 		memset(DiskImageA, 0, sizeof(DiskImageA));
 		memset(DiskImageB, 0, sizeof(DiskImageB));
 		memcpy(DiskImageA, BootSector, sizeof(BootSector));
 		CreateDiskImage((DISKIMAGE *) DiskImageA);
+#endif
 	}
 }
 

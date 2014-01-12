@@ -273,6 +273,9 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 	uint32_t BlockAddress;
 	uint16_t TotalBlocks;
 
+	xprintf("\nSCSI bob");
+
+
 	/* Check if the disk is write protected or not */
 	if ((IsDataRead == DATA_WRITE) && DISK_READ_ONLY) {
 		/* Block address is invalid, update SENSE key and return command fail */
@@ -342,16 +345,54 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 	uint32_t startaddr;
 	uint16_t blocks, dummyblocks;
 
-	//typedef uint8_t* (*EndpointBufferCallback)(const int packet_no, const uint16_t packetsize);
-	uint8_t* RWCallback(const int LBA) {
+#ifndef PROGMEMDISK
+	uint8_t* CallbackPreRead(const int LBA) {
 		uint16_t bollocks;
 		uint8_t *blockaddr = (uint8_t *)MassStorage_GetAddressInImage(BlockAddress + LBA, 1, &bollocks);
 		return blockaddr;
 	}
-	Endpoint_Streaming_CB(MSInterfaceInfo->Config.PortNumber, RWCallback, VIRTUAL_MEMORY_BLOCK_SIZE, TotalBlocks);
+
+	Endpoint_Streaming_CB(MSInterfaceInfo->Config.PortNumber, CallbackPreRead, 0, VIRTUAL_MEMORY_BLOCK_SIZE, TotalBlocks);
 
 	while (!Endpoint_IsReadWriteAllowed(MSInterfaceInfo->Config.PortNumber)) {}
+#else
+	uint8_t* disk_cache = DataRam_GetDataPtr();
+	// disk in program flash
+	int cache_firstblock = -1;
+	uint8_t* CallbackPreWrite(const int LBA) {
+		if (cache_firstblock == -1) {
+			cache_firstblock = BlockAddress + LBA;
+		}
+		return (uint8_t *)disk_cache + VIRTUAL_MEMORY_BLOCK_SIZE * (LBA - cache_firstblock);
+	}
+
+	// drop the block to flash
+	uint8_t* CallbackPostWrite(const int LBA) {
+		//MassStorage_Write(LBA, disk_cache);
+		return 0;
+	}
+
+	uint8_t* CallbackPreRead(const int LBA) {
+		uint16_t bollocks;
+		uint8_t* result = (uint8_t *)MassStorage_GetAddressInFlash(BlockAddress + LBA, 1, &bollocks);
+		xprintf("\n=%x", (int32_t)result);
+		return result;
+	}
+
+
+	bool reading = IsDataRead == DATA_READ;
+	Endpoint_Streaming_CB(MSInterfaceInfo->Config.PortNumber, 
+		reading ? CallbackPreRead : CallbackPreWrite, 
+		reading ? 0 : CallbackPostWrite, 
+		VIRTUAL_MEMORY_BLOCK_SIZE, TotalBlocks);
+
+	if (!reading) {
+		MassStorage_WriteBlocks(BlockAddress, disk_cache, TotalBlocks);
+	}
 #endif
+
+
+#endif 
 	/* Update the bytes transferred counter and succeed the command */
 	MSInterfaceInfo->State.CommandBlock.DataTransferLength -= ((uint32_t) TotalBlocks * VIRTUAL_MEMORY_BLOCK_SIZE);
 

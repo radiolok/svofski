@@ -58,6 +58,7 @@
     #undef USBRAM_SECTION
     #define USBRAM_SECTION ".bss"
     #define DISKIMAGE_SECTION ".usbram"
+    #define FLASH_DISK_SECTION ".flashdisk"
     #define __BSS(x)  __attribute__((section(x)))
 #endif
 #endif

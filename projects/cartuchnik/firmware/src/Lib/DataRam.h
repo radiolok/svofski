@@ -43,36 +43,24 @@
 #define DATA_RAM_BLOCK_SIZE             0x200
 
 /** Start address and size of RAM area which used for disk image */
-#if defined(CHIP_LPC18XX) || defined(CHIP_LPC43XX)
-	#define DATA_RAM_START_ADDRESS          0x20000000
-	#define DATA_RAM_PHYSICAL_SIZE          0x2000
-	#define DATA_RAM_VIRTUAL_SIZE           0x2000
-#endif
 #if defined(CHIP_LPC175X_6X)
-//	#define DATA_RAM_START_ADDRESS          0x20080000
 	#define UTILITY_AREA_SECTORS 			4
  	#define UTILITY_AREA_RAM_SIZE			((DATA_RAM_BLOCK_SIZE)*(UTILITY_AREA_SECTORS))
  	#define DATA_RAM_USER_SIZE				0x8000
 	#define DATA_RAM_PHYSICAL_SIZE          (DATA_RAM_USER_SIZE + UTILITY_AREA_RAM_SIZE)
 	#define DATA_RAM_VIRTUAL_SIZE           DATA_RAM_PHYSICAL_SIZE
-#endif
-#if defined(CHIP_LPC177X_8X) || defined(CHIP_LPC407X_8X)
-	#define DATA_RAM_START_ADDRESS          0x20040000
-	#define DATA_RAM_PHYSICAL_SIZE          0x4000
-	#define DATA_RAM_VIRTUAL_SIZE           0x4000
-#endif
-#if defined(CHIP_LPC1347)
-	#define DATA_RAM_START_ADDRESS          0x20080000
-	#define DATA_RAM_PHYSICAL_SIZE          0xa00
-	#define DATA_RAM_VIRTUAL_SIZE           0x4000	/* fake capacity to trick windows */
-#endif
-#if defined(CHIP_LPC11UXX)
-	#define DATA_RAM_START_ADDRESS          0x20080000
-	#define DATA_RAM_PHYSICAL_SIZE          0xa00
-	#define DATA_RAM_VIRTUAL_SIZE           0x4000	/* fake capacity to trick windows */
+
+#ifdef PROGMEMDISK
+ 	#define FLASH_DISK_SIZE 				(384*1024)
+ #endif
 #endif
 
 /** Total number of bytes of the storage medium, comprised of one or more Dataflash ICs. */
+#ifdef PROGMEMDISK
+#define VIRTUAL_MEMORY_BYTES                (FLASH_DISK_SIZE+DATA_RAM_BLOCK_SIZE)
+#define VIRTUAL_MEMORY_BLOCK_SIZE           DATA_RAM_BLOCK_SIZE
+#define VIRTUAL_MEMORY_BLOCKS               (VIRTUAL_MEMORY_BYTES / VIRTUAL_MEMORY_BLOCK_SIZE)
+#else
 #define VIRTUAL_MEMORY_BYTES                DATA_RAM_VIRTUAL_SIZE
 
 /** Block size of the device. This is kept at 512 to remain compatible with the OS despite the underlying
@@ -84,7 +72,9 @@
  *  change this value; change VIRTUAL_MEMORY_BYTES instead to alter the media size.
  */
 #define VIRTUAL_MEMORY_BLOCKS               (VIRTUAL_MEMORY_BYTES / VIRTUAL_MEMORY_BLOCK_SIZE)
+#endif
 
+#if 0
 void DataRam_WriteBlocks(USB_ClassInfo_MS_Device_t *const MSInterfaceInfo,
 						 const uint32_t BlockAddress,
 						 uint16_t TotalBlocks);
@@ -92,8 +82,11 @@ void DataRam_WriteBlocks(USB_ClassInfo_MS_Device_t *const MSInterfaceInfo,
 void DataRam_ReadBlocks(USB_ClassInfo_MS_Device_t *const MSInterfaceInfo,
 						const uint32_t BlockAddress,
 						uint16_t TotalBlocks);
+#endif
 
 uint32_t MassStorage_GetAddressInImage(uint32_t startblock, uint16_t requestblocks, uint16_t *availableblocks);
+uint32_t MassStorage_GetAddressInFlash(uint32_t startblock, uint16_t requestblocks, uint16_t *availableblocks);
+uint32_t MassStorage_WriteBlocks(uint32_t startblock, uint8_t* buffer, uint8_t block_count);
 
 void DataRam_Initialize(void);
 uint8_t* DataRam_GetDataPtr(void);
