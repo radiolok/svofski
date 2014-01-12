@@ -81,6 +81,13 @@ static SCSI_Request_Sense_Response_t SenseData = {
 	.AdditionalLength    = 0x0A,
 };
 
+
+// Disk cache in main RAM
+#define DISK_BUFFER_SIZE	8192
+uint8_t disk_buffer[8192];
+
+
+
 /** Under development, not working yet. */
 #ifdef CFG_SDCARD
 uint8_t *disk_cache = (uint8_t *) 0x20000000;
@@ -107,6 +114,7 @@ bool SCSI_DecodeSCSICommand(USB_ClassInfo_MS_Device_t *const MSInterfaceInfo)
 {
 	bool CommandSuccess = false;
 
+	xprintf("\nSCSI%d", MSInterfaceInfo->State.CommandBlock.SCSICommandData[0]);
 	/* Run the appropriate SCSI command hander function based on the passed command */
 	switch (MSInterfaceInfo->State.CommandBlock.SCSICommandData[0]) {
 	case SCSI_CMD_INQUIRY:
@@ -273,8 +281,6 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 	uint32_t BlockAddress;
 	uint16_t TotalBlocks;
 
-	xprintf("\nSCSI bob");
-
 
 	/* Check if the disk is write protected or not */
 	if ((IsDataRead == DATA_WRITE) && DISK_READ_ONLY) {
@@ -298,6 +304,9 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 		(MSInterfaceInfo->State.CommandBlock.SCSICommandData[7] <<
 		 8) + MSInterfaceInfo->State.CommandBlock.SCSICommandData[8];
 
+
+	xprintf("\nSCSI %c: ba=%d total=%d", IsDataRead ? 'R':'W', BlockAddress, TotalBlocks);
+
 	/* Check if the block address is outside the maximum allowable value for the LUN */
 
 	/** Under development, not working yet. */
@@ -312,6 +321,15 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 					   SCSI_ASENSE_LOGICAL_BLOCK_ADDRESS_OUT_OF_RANGE,
 					   SCSI_ASENSEQ_NO_QUALIFIER);
 
+		return false;
+	}
+
+	if (TotalBlocks * VIRTUAL_MEMORY_BLOCK_SIZE > DISK_BUFFER_SIZE) 
+	{
+		/* Block address is invalid, update SENSE key and return command fail */
+		SCSI_SET_SENSE(SCSI_SENSE_KEY_ILLEGAL_REQUEST,
+					   SCSI_ASENSE_LOGICAL_BLOCK_ADDRESS_OUT_OF_RANGE,
+					   SCSI_ASENSEQ_NO_QUALIFIER);
 		return false;
 	}
 
@@ -356,19 +374,23 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 
 	while (!Endpoint_IsReadWriteAllowed(MSInterfaceInfo->Config.PortNumber)) {}
 #else
-	uint8_t* disk_cache = DataRam_GetDataPtr();
+	//uint8_t* disk_cache = DataRam_GetDataPtr();
 	// disk in program flash
 	int cache_firstblock = -1;
 	uint8_t* CallbackPreWrite(const int LBA) {
 		if (cache_firstblock == -1) {
 			cache_firstblock = BlockAddress + LBA;
 		}
-		return (uint8_t *)disk_cache + VIRTUAL_MEMORY_BLOCK_SIZE * (LBA - cache_firstblock);
+		uint8_t* result = (uint8_t *)disk_buffer + VIRTUAL_MEMORY_BLOCK_SIZE * (LBA - cache_firstblock);
+		//xprintf("\nwpre: b=%d buf=%x", LBA, result);
 	}
 
 	// drop the block to flash
 	uint8_t* CallbackPostWrite(const int LBA) {
 		//MassStorage_Write(LBA, disk_cache);
+		cache_firstblock = -1;
+		if (LBA > 125)
+			xprintf("\nwpost%d", LBA);
 		return 0;
 	}
 
@@ -387,7 +409,7 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 		VIRTUAL_MEMORY_BLOCK_SIZE, TotalBlocks);
 
 	if (!reading) {
-		MassStorage_WriteBlocks(BlockAddress, disk_cache, TotalBlocks);
+		MassStorage_WriteBlocks(BlockAddress, disk_buffer, TotalBlocks);
 	}
 #endif
 

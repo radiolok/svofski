@@ -52,6 +52,9 @@
 
 #ifdef PROGMEMDISK
  	#define FLASH_DISK_SIZE 				(384*1024)
+ 	#define FLASH_SECTOR_BASE				18
+ 	#define FLASH_SECTOR_COUNT				(29-18)
+ 	#define FLASH_SECTOR_SIZE				32768
  #endif
 #endif
 
