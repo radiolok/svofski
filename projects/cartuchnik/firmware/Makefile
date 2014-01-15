@@ -10,8 +10,8 @@ SERIAL=/dev/tty.SLAB_USBtoUART
 BITRATE=230400
 
 ARCH=-mthumb -mcpu=cortex-m3
-#OPTIMIZATION = -O0 -g -save-temps 
-OPTIMIZATION = -O0 -g
+OPTIMIZATION = -O0 -g 
+#OPTIMIZATION = -Os -g 
 #OPTIMIZATION = -O3 -g -save-temps -fverbose-asm
 #OPTIMIZATION = -save-temps -fverbose-asm -Os -g -funroll-all-loops -fprefetch-loop-arrays
 #OPTIMIZATION = -Os -g -funroll-all-loops

@@ -106,7 +106,7 @@ uint8_t Endpoint_Read_Stream_LE(uint8_t corenum,
 
 	for (i = 0; i < Length; i++) {
 		#if defined(__LPC175X_6X__) || defined(__LPC177X_8X__) || defined(__LPC407X_8X__)
-		// svo: what the fuck is this shit? blocking loop in a callback, very good idea
+		// svo: not sure what it fixes, we die here pretty often
 		if (endpointselected[corenum] != ENDPOINT_CONTROLEP) {
 		 	while (usb_data_buffer_OUT_size[corenum] == 0) ;	/* Current Fix for LPC17xx, havent checked for others */
 		 }
