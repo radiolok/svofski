@@ -111,7 +111,6 @@ static uint8_t DiskImageA[UTILITY_AREA_RAM_SIZE] __BSS(USBRAM_SECTION); 		//<! d
 
 static uint8_t DiskImageB[DATA_RAM_USER_SIZE] __BSS(DISKIMAGE_SECTION); 		//<! main disk data area
 
-
 const uint8_t BootSector[512] = {
 	0xEB, 0x3C, 0x90, 0x4D, 0x53, 0x44, 0x4F, 0x53, 0x35, 0x2E, 0x30, 
 	BYTESPERSECTOR & 0xff, (BYTESPERSECTOR>>8) & 0xff, // BytsPerSec = 0x200
@@ -156,6 +155,12 @@ const uint8_t BootSector[512] = {
 	0x61, 0x6E, 0x79, 0x20, 0x6B, 0x65, 0x79, 0x20, 0x74, 0x6F, 0x20, 0x72, 0x65, 0x73, 0x74, 0x61,
 	0x72, 0x74, 0x0D, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xAC, 0xCB, 0xD8, 0x55, 0xAA,
 };
+
+// Disk cache in main RAM
+#define DISK_BUFFER_SIZE	8192
+uint8_t disk_buffer[DISK_BUFFER_SIZE];
+
+
 
 /*****************************************************************************
  * Private functions
@@ -299,60 +304,79 @@ uint32_t MassStorage_GetAddressInFlash(uint32_t startblock, uint16_t requestbloc
 	}
 }
 
-uint32_t MassStorage_WriteBlocks(uint32_t startblock, uint8_t* buffer, uint8_t block_count)
-{
-	// find flash sector 
-	//iap_prepare_sector(startblock*);
 
-	// flash addresses used: 
-	//  DiskImageF = 0x00020000: 0x00020000 - 0x0x0007FFFF
-	//  32K sector numbers 18..29 inclusive
+#define scratch DiskImageB
 
-	struct {
-		int sector;
-		int sector_offset;
-		int source_offset;
-		int size;
-		uint8_t* ramptr;
-	} cur_sector;
+uint32_t flash_sector_number;
+size_t scratch_ofs;
+size_t scratch_written_bytes;
+size_t flash_sector_start_ofs;
+size_t flash_start_offset_in_sector;
 
-	cur_sector.sector = -1;
+void MassStorage_BeginWritingBlocks(int first_block) {
+	uint32_t byteoffset = first_block * VIRTUAL_MEMORY_BLOCK_SIZE;	
+	flash_sector_number = byteoffset / FLASH_SECTOR_SIZE;
+	flash_sector_start_ofs = flash_sector_number * FLASH_SECTOR_SIZE;
+	flash_start_offset_in_sector = byteoffset % FLASH_SECTOR_SIZE;
+	scratch_written_bytes = 0;
+	// cannot afford this
+	//memcpy(scratch, DiskImageF + sector_start, FLASH_SECTOR_SIZE);
+}
 
-	void flush_sector() {
-		if (cur_sector.sector == -1) return;
-		uint8_t* scratch = &DiskImageB[0];
+uint8_t* MassStorage_BeforeWritingBlock(int block) {
+	scratch_ofs = (block * VIRTUAL_MEMORY_BLOCK_SIZE) % FLASH_SECTOR_SIZE;
+	return scratch + scratch_ofs;
+}
 
-		// copy sector to ram
-		uint32_t sectorstart = cur_sector.sector*FLASH_SECTOR_SIZE;
-		memcpy(scratch, DiskImageF + sectorstart, FLASH_SECTOR_SIZE);
-		// copy disk buffer over the sector
-		memcpy(scratch + cur_sector.sector_offset, buffer + cur_sector.source_offset, cur_sector.size);
-		//...
+volatile int bob;
+
+volatile size_t dbg_dst, dbg_src, dbg_n;
+volatile int dbg_int1, dbg_int2, dbg_int3;
+
+void flush_sector() {
+	// copy before written sectors..
+	memcpy(scratch, DiskImageF + flash_sector_start_ofs, flash_start_offset_in_sector);
+	// .. and after
+	size_t after_ofs = flash_start_offset_in_sector + scratch_written_bytes;
+
+	dbg_dst = (uint32_t)scratch + after_ofs;
+	dbg_src = (uint32_t)DiskImageF + flash_sector_start_ofs + after_ofs;
+	dbg_n = FLASH_SECTOR_SIZE - after_ofs;
+
+	memcpy(scratch + after_ofs, DiskImageF + flash_sector_start_ofs + after_ofs, 
+		FLASH_SECTOR_SIZE - after_ofs);
+
+
+	// now fucking flush this shit
+	uint32_t abs_sector = FLASH_SECTOR_BASE + flash_sector_number;
+	dbg_int1 = abs_sector;
+
+	iap_prepare_sector(abs_sector, abs_sector);
+	dbg_int2 = iap_erase_sector(abs_sector, abs_sector);
+
+	uint32_t ofs;
+	for (int i = 0, ofs = 0; i < FLASH_SECTOR_SIZE/4096; i++, ofs += 4096) {
+		iap_prepare_sector(abs_sector, abs_sector);
+		dbg_int3 = iap_copy_ram_to_flash(scratch + ofs, DiskImageF + flash_sector_start_ofs + ofs, 4096);
 	}
 
-	xprintf("\nWriteBlocks: start=%d n=%d", startblock, block_count);
+}
 
-	for (int block = startblock; block < startblock + block_count; block++) {
-		uint32_t byteoffset = block * VIRTUAL_MEMORY_BLOCK_SIZE;	
-		int sector = byteoffset / FLASH_SECTOR_SIZE;
+void MassStorage_WriteBlock(int block) {
+	//uint32_t byteoffset = block * VIRTUAL_MEMORY_BLOCK_SIZE;	
+	//int sector_offset = byteoffset % FLASH_SECTOR_SIZE;
+	scratch_written_bytes += VIRTUAL_MEMORY_BLOCK_SIZE;
 
-		for(int i = 0; i < 512; i++) {
-			xprintf("%02x%c", *(buffer + byteoffset + i), ((i + 1) & 0xf) == 0 ? '\n':' ');
-		}
-
-
-		if (sector != cur_sector.sector) {
-			flush_sector();
-			cur_sector.size = 0;
-
-			cur_sector.sector = sector;
-			cur_sector.sector_offset = byteoffset % FLASH_SECTOR_SIZE;
-			cur_sector.source_offset = byteoffset;
-		}
-
-		cur_sector.size += VIRTUAL_MEMORY_BLOCK_SIZE;
+	xprintf("\nwb=%d", block);
+	// rolling over the edge of flash sector
+	if (flash_start_offset_in_sector + scratch_written_bytes >= FLASH_SECTOR_SIZE) {
+		flush_sector();
 	}
-	return 0;
+}
+
+void MassStorage_FinishWritingBlocks() {
+	xprintf("\nFinishWritingBlocks");
+	flush_sector();
 }
 
 

@@ -334,10 +334,10 @@ void Endpoint_Streaming_CB(uint8_t corenum, EndpointBufferCallback callback_pre,
 		//xprintf("\nW");
 		for (i = 0; i < totalpackets; i++) {
 			//xprintf("%d ", i);
-			uint8_t *buffer = callback_pre(i);
 			DcdDataTransfer(PhyEP, usb_data_buffer_OUT[corenum], packetsize);
 			Endpoint_ClearOUT(corenum);
-			while (!Endpoint_IsReadWriteAllowed(corenum));
+			while (!Endpoint_IsReadWriteAllowed(corenum)); // svo: we die here around sector 126
+			uint8_t *buffer = callback_pre(i);
 			Endpoint_Read_Stream_LE(corenum, (void *) buffer, packetsize, NULL);
 			if (callback_post) callback_post(i);
 		}
