@@ -42,7 +42,7 @@ EXTERN(__cs3_start_c main __cs3_stack __cs3_stack_size __cs3_heap_end)
 PROVIDE(__iap_size = 32);
 PROVIDE(__iap_start = __cs3_region_start_ram + __cs3_region_size_ram - __iap_size);
 
-PROVIDE(__cs3_stack = __iap_start); /* __cs3_region_start_ram + __cs3_region_size_ram); */
+PROVIDE(__cs3_stack = __cs3_region_start_ram + __cs3_region_size_ram - __iap_size); 
 PROVIDE(__cs3_stack_size = __iap_start - _end);
 PROVIDE(__cs3_heap_start = _end);
 PROVIDE(__cs3_heap_end = __iap_start);
@@ -193,6 +193,7 @@ SECTIONS
     _estack = .;
     PROVIDE(estack = .);
   } >ram
+  
   .iapvars __iap_start (NOLOAD):
   {
   } >ram

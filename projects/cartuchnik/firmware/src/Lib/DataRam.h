@@ -60,7 +60,7 @@
 
 /** Total number of bytes of the storage medium, comprised of one or more Dataflash ICs. */
 #ifdef PROGMEMDISK
-#define VIRTUAL_MEMORY_BYTES                (FLASH_DISK_SIZE+DATA_RAM_BLOCK_SIZE)
+#define VIRTUAL_MEMORY_BYTES                FLASH_DISK_SIZE
 #define VIRTUAL_MEMORY_BLOCK_SIZE           DATA_RAM_BLOCK_SIZE
 #define VIRTUAL_MEMORY_BLOCKS               (VIRTUAL_MEMORY_BYTES / VIRTUAL_MEMORY_BLOCK_SIZE)
 #else
@@ -89,7 +89,12 @@ void DataRam_ReadBlocks(USB_ClassInfo_MS_Device_t *const MSInterfaceInfo,
 
 uint32_t MassStorage_GetAddressInImage(uint32_t startblock, uint16_t requestblocks, uint16_t *availableblocks);
 uint32_t MassStorage_GetAddressInFlash(uint32_t startblock, uint16_t requestblocks, uint16_t *availableblocks);
-uint32_t MassStorage_WriteBlocks(uint32_t startblock, uint8_t* buffer, uint8_t block_count);
+
+
+void MassStorage_BeginWritingBlocks(int first_block);
+uint8_t* MassStorage_BeforeWritingBlock(int block);
+void MassStorage_WriteBlock(int block);
+void MassStorage_FinishWritingBlocks();
 
 void DataRam_Initialize(void);
 uint8_t* DataRam_GetDataPtr(void);

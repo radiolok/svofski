@@ -118,6 +118,7 @@ void copyrom() {
 int main(void)
 {
 	SetupHardware();
+	iap_init();
 
 #ifdef WITH_USB	
 
