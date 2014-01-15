@@ -34,14 +34,6 @@
 #include "SCSI.h"
 #include "xprintf.h"
 
-/*****************************************************************************
- * Private types/enumerations/variables
- ****************************************************************************/
-
-/*****************************************************************************
- * Public types/enumerations/variables
- ****************************************************************************/
-
 /** Structure to hold the SCSI response data to a SCSI INQUIRY command. This gives information about the device's
  *  features and capabilities.
  */
@@ -68,9 +60,9 @@ static const SCSI_Inquiry_Response_t InquiryData = {
 	.WideBus32Bit        = false,
 	.RelAddr             = false,
 
-	.VendorID            = "NXP",
-	.ProductID           = "Dataflash Disk",
-	.RevisionID          = {'0', '.', '0', '0'},
+	.VendorID            = "svo's",
+	.ProductID           = "Vectrexador",
+	.RevisionID          = {'0', '.', '0', '1'},
 };
 
 /** Structure to hold the sense data for the last issued SCSI command, which is returned to the host after a SCSI REQUEST SENSE
@@ -81,24 +73,6 @@ static SCSI_Request_Sense_Response_t SenseData = {
 	.AdditionalLength    = 0x0A,
 };
 
-
-/** Under development, not working yet. */
-#ifdef CFG_SDCARD
-uint8_t *disk_cache = (uint8_t *) 0x20000000;
-static uint32_t MSC_Get_Block_Count(void)
-{
-	return (uint32_t) Chip_SDMMC_GetDeviceBlocks(LPC_SDMMC);
-}
-
-#endif
-
-/*****************************************************************************
- * Private functions
- ****************************************************************************/
-
-/*****************************************************************************
- * Public functions
- ****************************************************************************/
 
 /** Main routine to process the SCSI command located in the Command Block Wrapper read from the host. This dispatches
  *  to the appropriate SCSI command handling routine if the issued command is supported by the device, else it returns
@@ -223,12 +197,7 @@ static bool SCSI_Command_Request_Sense(USB_ClassInfo_MS_Device_t *const MSInterf
  */
 static bool SCSI_Command_Read_Capacity_10(USB_ClassInfo_MS_Device_t *const MSInterfaceInfo)
 {
-	/** Under development, not working yet. */
-#ifdef CFG_SDCARD
-	uint32_t LastBlockAddressInLUN = MSC_Get_Block_Count() - 1;
-#else
 	uint32_t LastBlockAddressInLUN = (LUN_MEDIA_BLOCKS - 1);
-#endif
 	uint32_t MediaBlockSize        = VIRTUAL_MEMORY_BLOCK_SIZE;
 
 	Endpoint_Write_Stream_BE(MSInterfaceInfo->Config.PortNumber,
@@ -265,11 +234,6 @@ static bool SCSI_Command_Send_Diagnostic(USB_ClassInfo_MS_Device_t *const MSInte
 	return true;
 }
 
-volatile uint32_t fuck1;
-volatile uint32_t fuck2;
-volatile uint32_t fuck3;
-
-
 /** Command processing for an issued SCSI READ (10) or WRITE (10) command. This command reads in the block start address
  *  and total number of blocks to process, then calls the appropriate low-level Dataflash routine to handle the actual
  *  reading and writing of the data.
@@ -279,7 +243,6 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 {
 	uint32_t BlockAddress;
 	uint16_t TotalBlocks;
-
 
 	/* Check if the disk is write protected or not */
 	if ((IsDataRead == DATA_WRITE) && DISK_READ_ONLY) {
@@ -308,12 +271,7 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 
 	/* Check if the block address is outside the maximum allowable value for the LUN */
 
-	/** Under development, not working yet. */
-#ifdef CFG_SDCARD
-	if (BlockAddress >= MSC_Get_Block_Count())
-#else
 	if (BlockAddress >= LUN_MEDIA_BLOCKS)
-#endif
 	{
 		/* Block address is invalid, update SENSE key and return command fail */
 		SCSI_SET_SENSE(SCSI_SENSE_KEY_ILLEGAL_REQUEST,
@@ -323,51 +281,24 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 		return false;
 	}
 
-	fuck1 = BlockAddress;
-	fuck2 = TotalBlocks;
-
 	#if (TOTAL_LUNS > 1)
 	/* Adjust the given block address to the real media address based on the selected LUN */
 	BlockAddress += ((uint32_t) MSInterfaceInfo->State.CommandBlock.LUN * LUN_MEDIA_BLOCKS);
 	#endif
 
-	/** Under development, not working yet. */
-#ifdef CFG_SDCARD
-	/* Determine if the packet is a READ (10) or WRITE (10) command, call appropriate function */
-	if (IsDataRead == DATA_READ) {
-		Chip_SDMMC_ReadBlocks(LPC_SDMMC, (void *) disk_cache, BlockAddress, TotalBlocks);
-		while (!Endpoint_IsINReady(MSInterfaceInfo->Config.PortNumber)) {}
-		Endpoint_Streaming(MSInterfaceInfo->Config.PortNumber,
-						   (uint8_t *) disk_cache,
-						   VIRTUAL_MEMORY_BLOCK_SIZE,
-						   TotalBlocks,
-						   0);
-	}
-	else {
-		Endpoint_Streaming(MSInterfaceInfo->Config.PortNumber,
-						   (uint8_t *) disk_cache,
-						   VIRTUAL_MEMORY_BLOCK_SIZE,
-						   TotalBlocks,
-						   0);
-		while (!Endpoint_IsOUTReceived(MSInterfaceInfo->Config.PortNumber)) {}
-		Chip_SDMMC_WriteBlocks(LPC_SDMMC, (void *) disk_cache, BlockAddress, TotalBlocks);
-	}
-#else
-	uint32_t startaddr;
-	uint16_t blocks, dummyblocks;
-
-#ifndef PROGMEMDISK
 	uint8_t* CallbackPreRead(const int LBA) {
 		uint16_t bollocks;
 		uint8_t *blockaddr = (uint8_t *)MassStorage_GetAddressInImage(BlockAddress + LBA, 1, &bollocks);
 		return blockaddr;
 	}
 
+#ifndef PROGMEMDISK
+
 	Endpoint_Streaming_CB(MSInterfaceInfo->Config.PortNumber, CallbackPreRead, 0, VIRTUAL_MEMORY_BLOCK_SIZE, TotalBlocks);
 
-	while (!Endpoint_IsReadWriteAllowed(MSInterfaceInfo->Config.PortNumber)) {}
+	while (!Endpoint_IsReadWriteAllowed(MSInterfaceInfo->Config.PortNumber));
+	
 #else
-	//uint8_t* disk_cache = DataRam_GetDataPtr();
 	// disk in program flash
 	int cache_firstblock = -1;
 	uint8_t* CallbackPreWrite(const int LBA) {
@@ -380,15 +311,8 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 	// drop the block to flash
 	uint8_t* CallbackPostWrite(const int LBA) {
 		MassStorage_WriteBlock(cache_firstblock + LBA);
+		return 0;
 	}
-
-	uint8_t* CallbackPreRead(const int LBA) {
-		uint16_t bollocks;
-		uint8_t* result = (uint8_t *)MassStorage_GetAddressInFlash(BlockAddress + LBA, 1, &bollocks);
-		xprintf("\n=%x", (int32_t)result);
-		return result;
-	}
-
 
 	bool reading = IsDataRead == DATA_READ;
 
@@ -406,8 +330,6 @@ static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t *const MSInterfa
 	}
 #endif
 
-
-#endif 
 	/* Update the bytes transferred counter and succeed the command */
 	MSInterfaceInfo->State.CommandBlock.DataTransferLength -= ((uint32_t) TotalBlocks * VIRTUAL_MEMORY_BLOCK_SIZE);
 
