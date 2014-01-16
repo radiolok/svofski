@@ -36,6 +36,7 @@
 #include "xprintf.h"
 #include "cartucho.h"
 #include "DataRam.h"
+#include "pff.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -84,8 +85,8 @@ static void SetupHardware(void)
 }
 
 volatile int USBUnplugged = 0;
+volatile int USBConnected = 0;
 
-volatile uint8_t* ROMBase;
 extern const uint8_t Berzerk_vec[];
 extern const int Berzerk_size;
 extern const uint8_t BNZ17_BIN[];
@@ -107,6 +108,21 @@ void copyrom() {
 	//memcpy(DataRam_GetDataPtr(), cubedemo_vec, cubedemo_vec_size);
 }
 
+void getfirstrom() {
+	FATFS fs;
+	DIR root;
+
+	uint16_t dummy;
+	int result;
+
+	result = pf_mount(&fs);
+	result = pf_open("LOADER.BIN");
+
+	// trick pff into calculating the sector number for us
+	// disk_readp() will call DataRam_SetROMBase()
+	result = pf_read(&dummy, 1, &dummy);
+}
+
 #define WITH_USB
 
 /**
@@ -124,33 +140,36 @@ int main(void)
 
 	xprintf("\nLet's see some usb stuff");
 
-	for(;;) {
-		// initially expect USB connection
-		for (; !USBUnplugged; ) {
-			#if !defined(USB_DEVICE_ROM_DRIVER)
-			MS_Device_USBTask(&Disk_MS_Interface);
-			USB_USBTask(Disk_MS_Interface.Config.PortNumber, USB_MODE_Device);
-			#endif
-		}
-
-		// after USB is unplugged, serve the vectrex bus
-		VectrexBusSlave();
-
-		// forever, but who knows?
+	int i;
+	// initially expect USB connection
+	for (i = 0; ; i++) {
+		#if !defined(USB_DEVICE_ROM_DRIVER)
+		MS_Device_USBTask(&Disk_MS_Interface);
+		USB_USBTask(Disk_MS_Interface.Config.PortNumber, USB_MODE_Device);
+		#endif
+		//if (i > 350000 && !USBConnected) break;
+		if (i > 600000 && !USBConnected) break;
 	}
 #endif
+	// if USB is unplugged, serve the vectrex bus
+	getfirstrom();
+
+    NVIC_DisableIRQ(UART0_IRQn);
+	UART0_UnInit();		
 	VectrexBusInit();
-	copyrom();
-	//for(;;);
-	VectrexBusSlave();	
+	VectrexBusSlave();
 }
+
+
+// Connect/Disconnect events are bullshit
 
 /**
  * @brief  Event handler for the library USB Connection event
  * @return Nothing
  */
 void EVENT_USB_Device_Connect(void)
-{}
+{
+}
 
 /**
  * @brief Event handler for the library USB Disconnection event
@@ -158,7 +177,6 @@ void EVENT_USB_Device_Connect(void)
  */
 void EVENT_USB_Device_Disconnect(void)
 {
-	USBUnplugged = 1;
 }
 
 /**
@@ -178,6 +196,8 @@ void EVENT_USB_Device_ConfigurationChanged(void)
  */
 void EVENT_USB_Device_ControlRequest(void)
 {
+	USBConnected = 1;
+
 	MS_Device_ProcessControlRequest(&Disk_MS_Interface);
 }
 

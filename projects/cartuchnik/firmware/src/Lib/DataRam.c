@@ -33,6 +33,8 @@
 
 #include "xprintf.h"
 
+volatile uint8_t* ROMBase;
+
 #ifdef PROGMEMDISK
 
 extern uint8_t __flash_disk[]; 													//<! the disk in program flash
@@ -170,7 +172,7 @@ uint8_t* MassStorage_BeforeWritingBlock(int block) {
 void flush_sector() {
 	if (scratch_written_bytes == 0) 
 		return;
-	
+
 	// copy data before written sectors..
 	memcpy(Scratch, DiskImageF + flash_sector_start_ofs, flash_start_offset_in_sector);
 	// .. and after
@@ -203,6 +205,10 @@ void MassStorage_WriteBlock(int block) {
 
 void MassStorage_FinishWritingBlocks() {
 	flush_sector();
+}
+
+void DataRam_SetROMBase(uint8_t* rom) {
+	ROMBase = rom;
 }
 
 void DataRam_Initialize(void)
