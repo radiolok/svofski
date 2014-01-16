@@ -97,6 +97,6 @@ void MassStorage_WriteBlock(int block);
 void MassStorage_FinishWritingBlocks();
 
 void DataRam_Initialize(void);
-uint8_t* DataRam_GetDataPtr(void);
+void DataRam_SetROMBase(uint8_t* rom);
 
 #endif /* __DATARAM_H_ */

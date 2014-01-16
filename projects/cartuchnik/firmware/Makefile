@@ -31,7 +31,8 @@ externals/LPCUSBLib/Drivers/USB/Core/HAL/LPC17XX \
 externals/LPCUSBLib/Drivers/USB/Core/DCD/LPC17XX \
 externals/lpc_core/lpc_board/boards_17xx_40xx/nxp_xpresso_1769 \
 externals/lpc_core/lpc_chip/chip_17xx_40xx \
-externals/lpc_core/lpc_ip
+externals/lpc_core/lpc_ip \
+externals/pff2a/src
 
 INCLUDEDIRS = include \
 src/Lib \
@@ -42,7 +43,8 @@ externals/lpc_core/lpc_chip/chip_common \
 externals/lpc_core/lpc_board/board_common \
 externals/lpc_core/lpc_board/boards_17xx_40xx/nxp_xpresso_1769 \
 externals/lpc_core/lpc_ip \
-externals/CMSIS/CMSIS/Include
+externals/CMSIS/CMSIS/Include \
+externals/pff2a/src
 
 BUILDDIR = build
 OUTDIR = bin
