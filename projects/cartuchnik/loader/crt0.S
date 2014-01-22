@@ -140,6 +140,19 @@ _pack1x:
 	jsr	0xf408
 	puls	a, b, x, dp, pc	; restore registers and PC (=return)
 
+	.globl _Draw_VLp_scale
+_Draw_VLp_scale:
+; input from C compiler:
+; - 1st 16-bit argument in register x: pointer to packet style list
+; - 2nd 8-bit argument in register b: zskip: 0 = skip zeroing integrator, 1 = zero integrators
+	pshs	a, b, x, dp	; save registers
+	lda	#0xd0		; required input values for the executive subroutine
+	tfr	a, dp		; DP = 0xd0
+	stb	0xc824		; ZSKIP
+	jsr	0xf40c
+	puls	a, b, x, dp, pc	; restore registers and PC (=return)
+
+
 	.globl _Print_Str_d
 _Print_Str_d:
 ; input:
