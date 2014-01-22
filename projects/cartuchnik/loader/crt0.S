@@ -37,11 +37,11 @@
 	;;;
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	.area	.text
-	.ascii "g GCE 2013"		; cartrige id and year
+	.ascii "g GCE FUCK"	; cartrige id and year
 	.byte 0x80			; string end
 	.word music
-	.byte 0xf8, 0x50, 0x20, -0x7e	; height, width, rel y, rel x
-	.ascii "HELLO RETROCHALLENGE"	; game title
+	.byte 0xf8, 0x50, 0x20, -0x40	; height, width, rel y, rel x
+	.ascii "VECTREXADOR"	; game title
 	.byte 0x80			; string end
 	.byte 0				; header end
 
@@ -72,10 +72,10 @@ __ctors_done:
 	jmp	_exit
 
 music:
-        .word   0xfee8
-        .word   0xfeb6
-        .byte   0x0, 0x80
-        .byte   0x0, 0x80
+    .word   0xfee8
+    .word   0xfeb6
+    .byte   0x0, 0x80
+    .byte   0x0, 0x80
 
 	.globl _zergnd
 _zergnd:
@@ -139,6 +139,28 @@ _pack1x:
 	stb	0xc824		; ZSKIP
 	jsr	0xf408
 	puls	a, b, x, dp, pc	; restore registers and PC (=return)
+
+	.globl _Print_Str_d
+_Print_Str_d:
+; input:
+;	byte x in register b
+;	byte y on stack
+;   string pointer in register x
+	pshs a, b, x, dp
+	lda #0xd0
+	tfr a, dp
+	exg x, u
+	lda 7, s
+	jsr 0xf37a
+	puls a, b, x, dp, pc
+
+_Print_Str_hwyx:
+; input:
+;   parameter block
+	pshs a, b, x, dp
+	exg x, u
+	jsr 0xf373
+	puls a, b, x, dp, pc
 
 	;Draws a big line from the middle of screen to right edge.
 demo:
