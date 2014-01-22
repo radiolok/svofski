@@ -175,7 +175,10 @@ int main()
 	uint8_t i = 0;
 	char boblor[32] = "BOB ##:##\200";
 	int8_t starspeed = 1;
-	int8_t star_y = 0;
+	
+
+	int16_t star_y = 0;
+	
 	uint8_t starframe = 0;
 
 	int selected = 0;
@@ -199,7 +202,7 @@ int main()
 
 		int8_t w = 0x50;
 		int8_t h = 0xf8;
-		int8_t sel_y;
+		int16_t sel_y;
 
 		for (int8_t i = 0, y = 120; i < 10; i++, y -= 256/10) {
 			if (i == selected) {
@@ -214,23 +217,15 @@ int main()
 			}
 		}
 
-		{	
-			int8_t error = sel_y - star_y;
-			if (error > 0 && error < 8)
-				error = 1;
-			else if (error < 0 && error > -8)
-				error = -1;
-			else
-				error = (sel_y - star_y)/8;
-			star_y += error;
-		}
+		int16_t star_y_error = ((sel_y * 128) - star_y) / 6;
+		star_y += star_y_error;
 
 		if (starspeed > 1) --starspeed;
 
 		intens(0x40);
 		//animate_star(starframe, 0x7f - ((sel_y-star_y)>>2));
-		animate_star(starframe, 0x7f - starspeed*2);
-		positd(-25 + anix, star_y - 5);
+		animate_star(starframe, 0x7f - (abs(star_y_error>>6)));
+		positd(-30 + anix, (star_y/128) - 5);
 		//positd(0, 0);
 		//pack1x(starrot, 0);
 		Draw_VLp_scale(starrot, 0);
