@@ -56,21 +56,24 @@ const uint8_t huj[] = {
 	1
 };
 
+const int8_t boxpath[] = {
+   0,   -10,-10,    
+   255,  10,-10,    
+   255,  10, 10,
+   255, -10, 10,
+   255, -10,-10, 
+   1};
+
 const int8_t starpath[] = {
-	0, 0, 5,
-	255, -5, 2,
-	255, 4, -5,
-	255, -4, -4,
-	255, 5, 1,
-	255, 3, -5,
-	255, 0, 6,
-	255, 6, 2,
-	255, -6, 2,
-	255, 0, 6,
-	255, -3, -5,
-	1
-};
-int8_t starrot[sizeof(starpath)];
+	0, 9, 3,
+	255, -6,-8,
+	255,  0,10,
+	255,  6,-8,
+	255,  -9, 3,
+	255,  9, 3,
+	1};
+
+int8_t starrot[sizeof(starpath) + 1];
 
 const uint8_t sinWave[] = {
 	0, 1, 3, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 17, 17, 18, 19, 19, 19, 19, 20, 19, 19, 19, 19,
@@ -82,6 +85,7 @@ const uint8_t sinWave[] = {
 extern void intens(uint8_t i);
 extern void positd(uint8_t x, uint8_t y);
 extern void pack1x(uint8_t* path, uint8_t zeroskip);
+extern void Draw_VLp_scale(uint8_t* path, uint8_t zeroskip);
 extern void Print_Str_d(int8_t x, int8_t y, const char *str);
 
 void SetCharSize(uint8_t w, uint8_t h) {
@@ -92,41 +96,6 @@ void SetCharSize(uint8_t w, uint8_t h) {
 void SetCharSizeHW(uint16_t hw) {
 	*(uint16_t *)0xc82a = hw;
 }
-
-//#define save_frame_u() asm("pshs \tu \t; save u register");
-//#define restore_frame_u() asm("puls \tu \t; save u register");
-#define save_frame_u() ;
-#define restore_frame_u() ;
-#define save_frame_x() ;
-#define restore_frame_x() ;
-#if 0
-#define print_str(x,y,string) {save_frame_u() \
-                              asm("leau \t,%02 \t; get string address to u\n\tjsr \t0HF37A \t; print_str_d"\
-                                  ::"A" ((unsigned char)(y)),\
-                                    "B" ((unsigned char)(x)),\
-                                    "x" ((unsigned char *)string)\
-                                   :"a","b","d","x"); \
-                              restore_frame_u()}
-
-
-#define print_str(x,y,string) {save_frame_x() \
-                              __asm__ volatile ("jsr \t0HF37A \t; print_str_d"\
-                                  ::"a" ((unsigned char)(y)),\
-                                    "b" ((unsigned char)(x)),\
-                                    "u" ((unsigned char *)string)\
-                                   :"a","b","d","x","u"); \
-                              restore_frame_x()}
-
-
-
-void bob(int8_t x, int8_t y, char *str) {
-	uint8_t k = x;
-	__asm__ volatile("jsr 0xf37a"
-		::"qa" (x), "qb" (y)
-		);
-		//: "a");
-}
-#endif
 
 const char hexchar[] = "0123456789ABCDEF";
 
@@ -165,16 +134,6 @@ const ZoomDesc selectzoom[] = {
 	{zoom:0xf558, xofs:-2, yofs:1, intensity:0x7f},
 };
 
-// const uint16_t selectzoom[] = {
-// 	0xf850,
-// 	0xf851,
-// 	0xf852,
-// 	0xf753,
-// 	0xf754,
-// 	0xf656,
-// 	0xf558,
-// };
-
 volatile int8_t aniframe, anix, aniy;
 
 void animate_selected_start() {
@@ -193,15 +152,21 @@ void animate_selected() {
 	intens(selectzoom[aniframe].intensity);
 }
 
-void animate_star(uint8_t frame) {
+void animate_star(uint8_t frame, uint8_t scale) {
+	int16_t last_x = 0, last_y = 0;
+
+	starrot[0] = scale;
+
 	for (int i = 0; i < sizeof(starpath)/sizeof(starpath[0]) - 3; i += 3) {
-		starrot[i] = starpath[i];
+		starrot[1 + i] = starpath[i];
 		int16_t x = starpath[i+1];
 		int16_t y = starpath[i+2];
 		irotate0(&x, &y, frame);
-		starrot[i+1] = x;
-		starrot[i+2] = y;
-	}
+        starrot[1 + i+1] = y - last_y;
+        starrot[1 + i+2] = x - last_x;
+        last_y = y;
+        last_x = x;	
+    }
 }
                              
 int main()
@@ -209,10 +174,13 @@ int main()
 	uint8_t c = 0;
 	uint8_t i = 0;
 	char boblor[32] = "BOB ##:##\200";
+	int8_t starspeed = 1;
+	int8_t star_y = 0;
+	uint8_t starframe = 0;
 
 	int selected = 0;
 
-	for (uint8_t frame = 0;; frame++) {
+	for (uint8_t frame = 0;; frame++, starframe += starspeed) {
 		// wait for frame boundary (one frame = 30,000 cyles = 50 Hz)
 		frwait();
 
@@ -222,6 +190,7 @@ int main()
 				selected = 0;
 			}
 			animate_selected_start();
+			starspeed = 16;
 		}
 
 		// set high intensity and beam position
@@ -232,7 +201,7 @@ int main()
 		int8_t h = 0xf8;
 		int8_t sel_y;
 
-		for (int8_t i = 0, y = -127; i < 10; i++, y += 256/10) {
+		for (int8_t i = 0, y = 120; i < 10; i++, y -= 256/10) {
 			if (i == selected) {
 				animate_selected();
 				Print_Str_d(-20 + anix, y + aniy, names[i]);
@@ -245,11 +214,26 @@ int main()
 			}
 		}
 
-		intens(0x38);
-		animate_star(frame<<2);
-		positd(-25 + anix, sel_y - 5);
+		{	
+			int8_t error = sel_y - star_y;
+			if (error > 0 && error < 8)
+				error = 1;
+			else if (error < 0 && error > -8)
+				error = -1;
+			else
+				error = (sel_y - star_y)/8;
+			star_y += error;
+		}
+
+		if (starspeed > 1) --starspeed;
+
+		intens(0x40);
+		//animate_star(starframe, 0x7f - ((sel_y-star_y)>>2));
+		animate_star(starframe, 0x7f - starspeed*2);
+		positd(-25 + anix, star_y - 5);
 		//positd(0, 0);
-		pack1x(starrot, 0);
+		//pack1x(starrot, 0);
+		Draw_VLp_scale(starrot, 0);
 
 		continue;
 
