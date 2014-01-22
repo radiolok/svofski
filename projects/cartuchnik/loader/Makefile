@@ -1,4 +1,4 @@
-PROJECT = test
+PROJECT = loader
 OUTDIR = build
 SOURCEDIRS = src
 
@@ -6,6 +6,9 @@ CROSS=/opt/local/gccvectrex/bin
 CC=$(CROSS)/m6809-unknown-none-gcc
 LD=$(CC)
 AS=$(CC)
+
+CFLAGS=-fomit-frame-pointer -save-temps -std=c99 -O0
+LDFLAGS=-L/opt/local/gccvectrex/m6809-unknown-none/lib -lc
 
 CRT0 = crt0
 
@@ -29,9 +32,7 @@ $(OUTDIR)/$(PROJECT).bin:	$(OUTDIR)/$(PROJECT).s19
 	srec_cat $? -Output $@ -Binary
 
 $(OUTDIR)/$(PROJECT).s19:	$(OUTDIR)/$(OFILES)
-	echo "SRCFILES are: $(SRCFILES)"
-	echo "OFILES are: $(OFILES)"
-	$(LD) $(LDFLAGS) $? -o $@ -Wl,--map
+	$(LD) $(LDFLAGS) $(OUTDIR)/$(OFILES) -o $@ -Wl,--map
 
 $(OUTDIR)/%.o:	%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
