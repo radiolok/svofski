@@ -1,60 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <inttypes.h>
 
+#include "vectrex.h"
 #include "pecado.h"
 
-//typedef unsigned char uint8_t;
-//typedef signed char int8_t;
-
-//#include "hello.c"
-//#include "retroch.c"
-//#include "allenge.c"
-
-const uint8_t helloPath[] = {
-	0, 38, -75,  // "0" means draw blank line
-	255, -25, 0,  // "255" means draw solid line
-	255, 0, 39,
-	255, 26, 1,
-	0, -26, -1,
-	255, -28, 1,
-	0, 28, -41,
-	255, -28, 1,
-	0, 20, 60,
-	1  // packet terminator
-};
-
-const uint8_t huj[] = {
-	0, 15, -110,
-	255, 41, 33,
-	0, 0, -32,
-	255, -42, 34,
-	0, 42, 12,
-	255, -26, 14,
-	0, -14, -11,
-	255, 38, 29,
-	0, 0, 8,
-	255, -38, 0,
-	255, 37, 26,
-	255, -35, 0,
-	0, 42, -17,
-	255, -3, 4,
-	255, 4, 5,
-	0, -90, -49,
-	255, -4, 0,
-	255, 4, -9,
-	255, 12, 9,
-	255, -12, 17,
-	255, -19, -17,
-	255, 19, -26,
-	255, 27, 26,
-	255, -27, 35,
-	255, -34, -36,
-	255, 35, -43,
-	255, 40, 44,
-	255, -41, 52,
-	1
-};
 
 const int8_t boxpath[] = {
    0,   -10,-10,    
@@ -73,7 +24,7 @@ const int8_t starpath[] = {
 	255,  9, 3,
 	1};
 
-int8_t starrot[sizeof(starpath) + 1];
+int8_t starrot[sizeof(starpath)];
 
 const uint8_t sinWave[] = {
 	0, 1, 3, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 17, 17, 18, 19, 19, 19, 19, 20, 19, 19, 19, 19,
@@ -81,12 +32,6 @@ const uint8_t sinWave[] = {
 	-12, -14, -15, -16, -17, -17, -18, -19, -19, -19, -19, -20, -19, -19, -19, -19, -18, -17,
 	-17, -16, -15, -14, -12, -11, -10, -9, -7, -6, -4, -3, -1
 };
-
-extern void intens(uint8_t i);
-extern void positd(uint8_t x, uint8_t y);
-extern void pack1x(uint8_t* path, uint8_t zeroskip);
-extern void Draw_VLp_scale(uint8_t* path, uint8_t zeroskip);
-extern void Print_Str_d(int8_t x, int8_t y, const char *str);
 
 void SetCharSize(uint8_t w, uint8_t h) {
 	*(uint8_t *)0xc82a = h;
@@ -149,21 +94,19 @@ void animate_selected() {
 	SetCharSizeHW(selectzoom[aniframe].zoom);
 	anix = selectzoom[aniframe].xofs;
 	aniy = selectzoom[aniframe].yofs;
-	intens(selectzoom[aniframe].intensity);
+	Intensity(selectzoom[aniframe].intensity);
 }
 
-void animate_star(uint8_t frame, uint8_t scale) {
+void animate_star(uint8_t frame) {
 	int16_t last_x = 0, last_y = 0;
 
-	starrot[0] = scale;
-
 	for (int i = 0; i < sizeof(starpath)/sizeof(starpath[0]) - 3; i += 3) {
-		starrot[1 + i] = starpath[i];
+		starrot[i] = starpath[i];
 		int16_t x = starpath[i+1];
 		int16_t y = starpath[i+2];
 		irotate0(&x, &y, frame);
-        starrot[1 + i+1] = y - last_y;
-        starrot[1 + i+2] = x - last_x;
+        starrot[i+1] = y - last_y;
+        starrot[i+2] = x - last_x;
         last_y = y;
         last_x = x;	
     }
@@ -185,7 +128,7 @@ int main()
 
 	for (uint8_t frame = 0;; frame++, starframe += starspeed) {
 		// wait for frame boundary (one frame = 30,000 cyles = 50 Hz)
-		frwait();
+		Wait_Recal();
 
 		if ((frame & 0x1f) == 0) {
 			selected++;
@@ -197,8 +140,7 @@ int main()
 		}
 
 		// set high intensity and beam position
-		uint8_t x = sinWave[c];
-		intens(0x7f);
+		Intensity(0x7f);
 
 		int8_t w = 0x50;
 		int8_t h = 0xf8;
@@ -211,7 +153,7 @@ int main()
 				Print_Str_d(-20 + anix, y + 1 + aniy, names[i]);
 				sel_y = y;
 			} else {
-				intens(0x60);
+				Intensity(0x60);
 				SetCharSizeHW(0xf850);
 				Print_Str_d(-20, y, names[i]);
 			}
@@ -222,29 +164,14 @@ int main()
 
 		if (starspeed > 1) --starspeed;
 
-		intens(0x40);
-		//animate_star(starframe, 0x7f - ((sel_y-star_y)>>2));
-		animate_star(starframe, 0x7f - (abs(star_y_error>>6)));
-		positd(-30 + anix, (star_y/128) - 5);
-		//positd(0, 0);
-		//pack1x(starrot, 0);
-		Draw_VLp_scale(starrot, 0);
-
-		continue;
+		Intensity(0x40);
+		animate_star(starframe);
+		Moveto(-30 + anix, (star_y/128) - 5);
+		//Draw_VLp_scale(starrot, 0);
+		Draw_VLp_b(starrot, 0x7f - (abs(star_y_error>>6)), 0);
 
 		// zero the integrators and set active ground
-		zergnd();
-
-		// 180° phase shift position
-		uint8_t c2 = c + sizeof(sinWave) / 2;
-		if (c2 >= sizeof(sinWave)) c2 -= sizeof(sinWave);
-		x = sinWave[c2];
-		// update position
-		if (++c == sizeof(sinWave)) c = 0;
+		Reset0Ref();
 	}
 	return 0;
-}
-
-void exit(int status) {
-    _exit(status);
 }
