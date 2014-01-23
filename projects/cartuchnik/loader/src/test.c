@@ -7,6 +7,10 @@
 #include "pecado.h"
 
 
+#define ITEMS_PER_PAGE	10
+
+typedef int (*FRAMEFUNC)(int);
+
 const int8_t boxpath[] = {
    0,   -10,-10,    
    255,  10,-10,    
@@ -26,13 +30,6 @@ const int8_t starpath[] = {
 
 int8_t starrot[sizeof(starpath)];
 
-const uint8_t sinWave[] = {
-	0, 1, 3, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 17, 17, 18, 19, 19, 19, 19, 20, 19, 19, 19, 19,
-	18, 17, 17, 16, 15, 14, 12, 11, 10, 9, 7, 6, 4, 3, 1, 0, -1, -3, -4, -6, -7, -9, -10, -11,
-	-12, -14, -15, -16, -17, -17, -18, -19, -19, -19, -19, -20, -19, -19, -19, -19, -18, -17,
-	-17, -16, -15, -14, -12, -11, -10, -9, -7, -6, -4, -3, -1
-};
-
 void SetCharSize(uint8_t w, uint8_t h) {
 	*(uint8_t *)0xc82a = h;
 	*(uint8_t *)0xc82b = w;
@@ -50,16 +47,26 @@ void itohex8(char* buf, uint8_t val) {
 }
 
 const char* names[] = {
-	"NAME1\200", 
-	"NAME2\200",
-	"NAME3\200",
-	"NAME4\200",
-	"NAME5\200",
-	"NAME6\200",
-	"NAME7\200",
-	"NAME8\200",
-	"NAME9\200",
-	"NAME10\200",
+	"TITLE1\200", 
+	"TITLE2\200",
+	"TITLE3\200",
+	"TITLE4\200",
+	"TITLE5\200",
+	"TITLE6\200",
+	"TITLE7\200",
+	"TITLE8\200",
+	"TITLE9\200",
+	"TITLE10\200",
+	"TITLE11\200", 
+	"TITLE12\200",
+	"TITLE13\200",
+	"TITLE14\200",
+	"TITLE15\200",
+	"TITLE16\200",
+	"TITLE17\200",
+	"TITLE18\200",
+	"TITLE19\200",
+	"TITLE20\200",
 };
 
 typedef struct zoomani_ {
@@ -70,9 +77,9 @@ typedef struct zoomani_ {
 } ZoomDesc;
 
 const ZoomDesc selectzoom[] = {
-	{zoom:0xf850, xofs:0, yofs:0, intensity:0x60},
-	{zoom:0xf851, xofs:0, yofs:0, intensity:0x62},
-	{zoom:0xf852, xofs:0, yofs:0, intensity:0x68},
+	{zoom:0xf850, xofs:0, yofs:0, intensity:0x20},
+	{zoom:0xf851, xofs:0, yofs:0, intensity:0x42},
+	{zoom:0xf852, xofs:0, yofs:0, intensity:0x58},
 	{zoom:0xf753, xofs:-1, yofs:0, intensity:0x6c},
 	{zoom:0xf754, xofs:-1, yofs:1, intensity:0x70},
 	{zoom:0xf656, xofs:-2, yofs:1, intensity:0x78},
@@ -110,65 +117,93 @@ void animate_star(uint8_t frame) {
         last_y = y;
         last_x = x;	
     }
+    starrot[sizeof(starrot)/sizeof(starrot[0]) - 1] = 1;
+}
+
+#define min(a,b) ((a)<(b)?(a):(b))
+
+int8_t starspeed;
+int16_t star_y;
+uint8_t starframe;
+uint8_t selected;
+uint8_t page_start;
+uint8_t total_items;
+uint8_t page_boundary;
+
+void MainFrame_Init() {
+	starspeed = 0;
+	total_items = sizeof(names)/sizeof(names[0]);
+	page_boundary = min(ITEMS_PER_PAGE, sizeof(names)/sizeof(names[0]));
+}
+
+int MainFrame(int frame) {
+	if ((frame & 0x1f) == 0) {
+		selected++;
+		if (page_start + selected == page_boundary) {
+			selected = 0;
+			
+			if (page_boundary < total_items) {
+				page_start = page_boundary;
+			} else {
+				page_start = 0;
+			}
+			page_boundary = min(page_start + ITEMS_PER_PAGE, total_items);
+		}
+
+		animate_selected_start();
+		starspeed = 16;
+	}
+
+	char debug[] = "##:##:##\200";
+	itohex8(debug, page_start);
+	itohex8(debug + 3, page_boundary);
+	//itohex8(debug + 6, buttfuck); //min(page_start + ITEMS_PER_PAGE, total_items));
+	SetCharSizeHW(0xfc30);
+	Print_Str_d(-120, 0, debug);
+
+	int16_t sel_y;
+
+	for (int8_t i = page_start, y = 120; i < page_boundary; i++, y -= 256/ITEMS_PER_PAGE) {
+		char *title = names[i];
+		if (i - page_start == selected) {
+			animate_selected();
+
+			Print_Str_d(-20 + anix, y + aniy, title);
+			Print_Str_d(-20 + anix, y + 1 + aniy, title);
+			sel_y = y;
+		} else {
+			Intensity(0x60);
+			SetCharSizeHW(0xf850);
+			Print_Str_d(-20, y, title);
+		}
+	}
+
+	int16_t star_y_error = ((sel_y * 128) - star_y) / 6;
+	star_y += star_y_error;
+
+	if (starspeed > 1) --starspeed;
+
+	starframe += starspeed;
+	animate_star(starframe);
+	Moveto(-30 + anix, (star_y/128) - 5);
+	Intensity(0x48);
+	Draw_VLp_b(starrot, 0x7f - (abs(star_y_error>>6)), 0);
+
+	return 0;
 }
                              
 int main()
 {
-	uint8_t c = 0;
 	uint8_t i = 0;
-	char boblor[32] = "BOB ##:##\200";
-	int8_t starspeed = 1;
-	
 
-	int16_t star_y = 0;
-	
-	uint8_t starframe = 0;
+	FRAMEFUNC frame_func = MainFrame;
+	MainFrame_Init();
 
-	int selected = 0;
-
-	for (uint8_t frame = 0;; frame++, starframe += starspeed) {
+	for (uint8_t frame = 0;; frame++) {
 		// wait for frame boundary (one frame = 30,000 cyles = 50 Hz)
 		Wait_Recal();
 
-		if ((frame & 0x1f) == 0) {
-			selected++;
-			if (selected >= sizeof(names)/sizeof(names[0])) {
-				selected = 0;
-			}
-			animate_selected_start();
-			starspeed = 16;
-		}
-
-		// set high intensity and beam position
-		Intensity(0x7f);
-
-		int8_t w = 0x50;
-		int8_t h = 0xf8;
-		int16_t sel_y;
-
-		for (int8_t i = 0, y = 120; i < 10; i++, y -= 256/10) {
-			if (i == selected) {
-				animate_selected();
-				Print_Str_d(-20 + anix, y + aniy, names[i]);
-				Print_Str_d(-20 + anix, y + 1 + aniy, names[i]);
-				sel_y = y;
-			} else {
-				Intensity(0x60);
-				SetCharSizeHW(0xf850);
-				Print_Str_d(-20, y, names[i]);
-			}
-		}
-
-		int16_t star_y_error = ((sel_y * 128) - star_y) / 6;
-		star_y += star_y_error;
-
-		if (starspeed > 1) --starspeed;
-
-		Intensity(0x40);
-		animate_star(starframe);
-		Moveto(-30 + anix, (star_y/128) - 5);
-		//Draw_VLp_scale(starrot, 0);
-		Draw_VLp_b(starrot, 0x7f - (abs(star_y_error>>6)), 0);
+		frame_func(frame);
 
 		// zero the integrators and set active ground
 		Reset0Ref();
