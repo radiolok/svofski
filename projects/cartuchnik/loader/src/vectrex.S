@@ -111,4 +111,12 @@ _Print_Str_hwyx:
 	jsr 0xf373
 	puls a, b, x, dp, pc
 
+	.globl _Joy_Digital
+_Joy_Digital:
+	pshs a, b, x, dp
+	lda #0xd0
+	tfr a, dp
+	jsr 0xf1f8
+	puls a, b, x, dp, pc
+
 	.end
