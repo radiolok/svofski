@@ -19,14 +19,29 @@ const int8_t boxpath[] = {
    255, -10,-10, 
    1};
 
+// const int8_t starpath[] = {
+// 	0, 9, 3,
+// 	255, -6,-8,
+// 	255,  0,10,
+// 	255,  6,-8,
+// 	255,  -9, 3,
+// 	255,  9, 3,
+// 	1};
+
 const int8_t starpath[] = {
-	0, 9, 3,
-	255, -6,-8,
-	255,  0,10,
-	255,  6,-8,
-	255,  -9, 3,
-	255,  9, 3,
-	1};
+	0,   18,	6,
+	255, 5, 6,
+	255, 0, 20,
+	255, -5, 6,
+	255, -18, 6,
+	255, -8, -4,
+	255, -12, -16,
+	255, 0, -8,
+	255, 12, -16,
+	255, 8, -4, 
+	255, 18, 6,
+	1
+};
 
 int8_t starrot[sizeof(starpath)];
 
@@ -150,7 +165,7 @@ int8_t drawPageItems()
 {
 	int8_t sel_y = 0;
 
-	for (int8_t i = page_start, y = 120; i < page_boundary; i++, y -= 256/ITEMS_PER_PAGE) {
+	for (int8_t i = page_start, y = 80; i < page_boundary; i++, y -= 220/ITEMS_PER_PAGE) {
 		const char *title = names[i];
 		if (i - page_start == selected) {
 			animate_selected();
@@ -197,16 +212,16 @@ int MainFrame(int frame) {
 			advance = 1;
 			funprohibited = 10;
 		} 
-		if (joystick1_y > 0) {
+		else if (joystick1_y > 0) {
 			--selected;
 			advance = -1;
 			funprohibited = 10;
 		}
-		if (joystick1_x > 0) {
+		else if (joystick1_x > 0) {
 			advance = 2;
 			funprohibited = 16;
 		}
-		if (joystick1_x < 0) {
+		else if (joystick1_x < 0) {
 			advance = -2;
 			funprohibited = 16;
 		}
@@ -248,14 +263,7 @@ int MainFrame(int frame) {
 			animate_selected_start();
 			starspeed = 16;
 		}
-
 	}
-
-	char debug[] = "##:##:##\200";
-	itohex8(debug, page_start);
-	itohex8(debug + 3, page_boundary);
-	SetCharSizeHW(0xfc30);
-	Print_Str_d(-120, 0, debug);
 
 	if (flipping) {
 		flipping = FlipPage(frame);
@@ -272,9 +280,45 @@ int MainFrame(int frame) {
 	animate_star(starframe);
 	Moveto(page_left - 10 + anix, (star_y/128) - 5);
 	Intensity(0x48);
-	Draw_VLp_b(starrot, 0x7f - (abs(star_y_error>>6)), 0);
+	Draw_VLp_b(starrot, 0x3f - (abs(star_y_error>>6)), 0);
+
+	char debug[] = "g SVO 2014\200";
+	//itohex8(debug, page_start);
+	//itohex8(debug + 3, page_boundary);
+	SetCharSizeHW(0xfc30);
+
+	Reset0Ref();
+	Print_Str_d(-36, -128, debug);
+
+	//Reset0Ref();
+	Intensity(0x7f);
+	SetCharSizeHW(0xf068);
+	Print_Str_d(-100, 120, "VECTREXADOR\200");
 
 	return 0;
+}
+
+const ZoomDesc titlezoom[] = {
+	{zoom:0xf850, xofs:-64, yofs:32, intensity:0x7F},
+	{zoom:0xf752, xofs:-68, yofs:52, intensity:0x7F},
+	{zoom:0xf654, xofs:-70, yofs:72, intensity:0x7F},
+	{zoom:0xf556, xofs:-75, yofs:98, intensity:0x7F},
+	{zoom:0xf458, xofs:-80, yofs:102, intensity:0x7F},
+	{zoom:0xf35c, xofs:-85, yofs:108, intensity:0x7F},
+	{zoom:0xf160, xofs:-90, yofs:112, intensity:0x7F},
+	{zoom:0xf164, xofs:-95, yofs:118, intensity:0x7F},
+	{zoom:0xf068, xofs:-100, yofs:120, intensity:0x7F},
+};
+
+int Start_Anim(uint8_t frame) {
+	frame = frame/2;
+	if (frame < sizeof(titlezoom)/sizeof(titlezoom[0])) {
+		Intensity(0x7f);
+		SetCharSizeHW(titlezoom[frame].zoom);
+		Print_Str_d(titlezoom[frame].xofs, titlezoom[frame].yofs, "VECTREXADOR\200");
+		return 0;
+	}
+	return 1;
 }
                              
 int main()
@@ -289,11 +333,16 @@ int main()
 	enable_joystick_1x();
 	enable_joystick_1y();
 
+	frame_func = Start_Anim;
+
 	for (uint8_t frame = 0;; frame++) {
 		// wait for frame boundary (one frame = 30,000 cyles = 50 Hz)
 		Wait_Recal();
 
 		state = frame_func(frame);
+		if (state) {
+			frame_func = MainFrame;
+		}
 
 		// zero the integrators and set active ground
 		Reset0Ref();
