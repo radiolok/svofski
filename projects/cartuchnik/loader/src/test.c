@@ -7,7 +7,7 @@
 #include "pecado.h"
 
 
-#define ITEMS_PER_PAGE	10
+#define ITEMS_PER_PAGE	5
 
 typedef int (*FRAMEFUNC)(int);
 
@@ -60,13 +60,13 @@ const char* names[] = {
 	"TITLE11\200", 
 	"TITLE12\200",
 	"TITLE13\200",
-	"TITLE14\200",
-	"TITLE15\200",
-	"TITLE16\200",
-	"TITLE17\200",
-	"TITLE18\200",
-	"TITLE19\200",
-	"TITLE20\200",
+	// "TITLE14\200",
+	// "TITLE15\200",
+	// "TITLE16\200",
+	// "TITLE17\200",
+	// "TITLE18\200",
+	// "TITLE19\200",
+	// "TITLE20\200",
 };
 
 typedef struct zoomani_ {
@@ -78,12 +78,12 @@ typedef struct zoomani_ {
 
 const ZoomDesc selectzoom[] = {
 	{zoom:0xf850, xofs:0, yofs:0, intensity:0x20},
-	{zoom:0xf851, xofs:0, yofs:0, intensity:0x42},
-	{zoom:0xf852, xofs:0, yofs:0, intensity:0x58},
-	{zoom:0xf753, xofs:-1, yofs:0, intensity:0x6c},
-	{zoom:0xf754, xofs:-1, yofs:1, intensity:0x70},
-	{zoom:0xf656, xofs:-2, yofs:1, intensity:0x78},
-	{zoom:0xf558, xofs:-2, yofs:1, intensity:0x7f},
+	{zoom:0xf854, xofs:0, yofs:0, intensity:0x42},
+	{zoom:0xf858, xofs:0, yofs:0, intensity:0x58},
+	{zoom:0xf75c, xofs:-2, yofs:0, intensity:0x6c},
+	{zoom:0xf760, xofs:-2, yofs:1, intensity:0x70},
+	{zoom:0xf664, xofs:-4, yofs:1, intensity:0x78},
+	{zoom:0xf568, xofs:-4, yofs:1, intensity:0x7f},
 };
 
 volatile int8_t aniframe, anix, aniy;
@@ -125,58 +125,143 @@ void animate_star(uint8_t frame) {
 int8_t starspeed;
 int16_t star_y;
 uint8_t starframe;
-uint8_t selected;
-uint8_t page_start;
+int8_t selected;
+int8_t page_start;
 uint8_t total_items;
-uint8_t page_boundary;
+int8_t page_boundary;
 
-void MainFrame_Init() {
-	starspeed = 0;
+int8_t page_left;
+int16_t page_left_current;
+int16_t page_left_goal;
+
+void MainFrameReset() {
 	total_items = sizeof(names)/sizeof(names[0]);
 	page_boundary = min(ITEMS_PER_PAGE, sizeof(names)/sizeof(names[0]));
 }
 
+#define PAGE_LEFT (-40)
+
+void MainFrameInit() {
+	starspeed = 0;
+	page_left = PAGE_LEFT;
+}
+
+int8_t drawPageItems() 
+{
+	int8_t sel_y = 0;
+
+	for (int8_t i = page_start, y = 120; i < page_boundary; i++, y -= 256/ITEMS_PER_PAGE) {
+		const char *title = names[i];
+		if (i - page_start == selected) {
+			animate_selected();
+
+			Print_Str_d(page_left + anix, y + aniy, title);
+			//Print_Str_d(page_left + anix, y + 1 + aniy, title);
+			sel_y = y;
+		} else {
+			Intensity(0x60);
+			SetCharSizeHW(0xf850);
+			Print_Str_d(page_left, y, title);
+		}
+	}
+
+	return sel_y;
+}
+
+int FlipPageInit(uint8_t forward) {
+	page_left_current = forward ? 128 * 128 : -128 * 128;
+	page_left_goal = PAGE_LEFT*128;
+
+	return 1;
+}
+
+int FlipPage(int frame) {
+	int16_t error = (page_left_goal - page_left_current) / 6;
+	page_left_current += error;
+
+	page_left = page_left_current/128;
+
+	return (abs(error) < 128) ? 0 : 1;
+}
+
 int MainFrame(int frame) {
-	if ((frame & 0x1f) == 0) {
-		selected++;
-		if (page_start + selected == page_boundary) {
-			selected = 0;
-			
-			if (page_boundary < total_items) {
-				page_start = page_boundary;
-			} else {
-				page_start = 0;
-			}
-			page_boundary = min(page_start + ITEMS_PER_PAGE, total_items);
+	static uint8_t flipping = 0;
+	static uint8_t funprohibited;
+	int8_t advance = 0;
+
+	if (funprohibited > 0) --funprohibited;
+
+	if (funprohibited == 0) {
+		if (joystick1_y < 0) {
+			selected++;
+			advance = 1;
+			funprohibited = 10;
+		} 
+		if (joystick1_y > 0) {
+			--selected;
+			advance = -1;
+			funprohibited = 10;
+		}
+		if (joystick1_x > 0) {
+			advance = 2;
+			funprohibited = 16;
+		}
+		if (joystick1_x < 0) {
+			advance = -2;
+			funprohibited = 16;
 		}
 
-		animate_selected_start();
-		starspeed = 16;
+		if (advance > 0) {
+			if (advance == 2 || page_start + selected == page_boundary) {
+				if (advance != 2) selected = 0;
+				
+				if (page_boundary < total_items) {
+					page_start = page_boundary;
+				} else {
+					page_start = 0;
+				}
+				page_boundary = min(page_start + ITEMS_PER_PAGE, total_items);
+
+				flipping = FlipPageInit(1);
+			}
+		}
+
+		if (advance < 0) {
+			if (advance == -2 || selected == -1) {
+				page_start -= ITEMS_PER_PAGE;
+				if (page_start < 0) {
+					page_start = ITEMS_PER_PAGE * (total_items/ITEMS_PER_PAGE);
+				}
+				page_boundary = min(page_start + ITEMS_PER_PAGE, total_items);
+
+				if (advance != -2) selected = page_boundary - page_start - 1;
+				
+				flipping = FlipPageInit(0);
+			} 
+		}
+
+		if (selected + page_start >= page_boundary) {
+			selected = page_boundary - page_start - 1;
+		}
+
+		if (advance != 0) {
+			animate_selected_start();
+			starspeed = 16;
+		}
+
 	}
 
 	char debug[] = "##:##:##\200";
 	itohex8(debug, page_start);
 	itohex8(debug + 3, page_boundary);
-	//itohex8(debug + 6, buttfuck); //min(page_start + ITEMS_PER_PAGE, total_items));
 	SetCharSizeHW(0xfc30);
 	Print_Str_d(-120, 0, debug);
 
-	int16_t sel_y;
-
-	for (int8_t i = page_start, y = 120; i < page_boundary; i++, y -= 256/ITEMS_PER_PAGE) {
-		char *title = names[i];
-		if (i - page_start == selected) {
-			animate_selected();
-
-			Print_Str_d(-20 + anix, y + aniy, title);
-			Print_Str_d(-20 + anix, y + 1 + aniy, title);
-			sel_y = y;
-		} else {
-			Intensity(0x60);
-			SetCharSizeHW(0xf850);
-			Print_Str_d(-20, y, title);
-		}
+	if (flipping) {
+		flipping = FlipPage(frame);
 	}
+
+	int16_t sel_y = drawPageItems();
 
 	int16_t star_y_error = ((sel_y * 128) - star_y) / 6;
 	star_y += star_y_error;
@@ -185,7 +270,7 @@ int MainFrame(int frame) {
 
 	starframe += starspeed;
 	animate_star(starframe);
-	Moveto(-30 + anix, (star_y/128) - 5);
+	Moveto(page_left - 10 + anix, (star_y/128) - 5);
 	Intensity(0x48);
 	Draw_VLp_b(starrot, 0x7f - (abs(star_y_error>>6)), 0);
 
@@ -195,18 +280,25 @@ int MainFrame(int frame) {
 int main()
 {
 	uint8_t i = 0;
+	uint8_t state = 0;
 
 	FRAMEFUNC frame_func = MainFrame;
-	MainFrame_Init();
+	MainFrameReset();
+	MainFrameInit();
+
+	enable_joystick_1x();
+	enable_joystick_1y();
 
 	for (uint8_t frame = 0;; frame++) {
 		// wait for frame boundary (one frame = 30,000 cyles = 50 Hz)
 		Wait_Recal();
 
-		frame_func(frame);
+		state = frame_func(frame);
 
 		// zero the integrators and set active ground
 		Reset0Ref();
+
+		Joy_Digital();
 	}
 	return 0;
 }
