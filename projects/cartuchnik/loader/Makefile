@@ -10,7 +10,7 @@ AS=$(CC)
 OPTIMIZE=
 #include optimizations.s.inc
 
-CFLAGS=-fomit-frame-pointer -save-temps -std=c99 $(OPTIMIZE)
+CFLAGS=-fomit-frame-pointer -std=c99 $(OPTIMIZE)
 LDFLAGS=-L/opt/local/gccvectrex/m6809-unknown-none/lib -lc
 
 CRT0 = crt0
