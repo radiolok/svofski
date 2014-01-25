@@ -8,6 +8,9 @@
 
 
 #define ITEMS_PER_PAGE	5
+#define XTHRESHOLD 		14
+#define YTHRESHOLD 		8
+#define PAGE_LEFT (-40)
 
 typedef int (*FRAMEFUNC)(int);
 
@@ -29,18 +32,30 @@ const int8_t boxpath[] = {
 // 	1};
 
 const int8_t starpath[] = {
-	0,   18,	6,
-	255, 5, 6,
-	255, 0, 20,
-	255, -5, 6,
-	255, -18, 6,
-	255, -8, -4,
-	255, -12, -16,
-	255, 0, -8,
-	255, 12, -16,
-	255, 8, -4, 
-	255, 18, 6,
+	0,   0,	120,
+	255, -32, 37,
+	255, -122, 32,
+	255, -53, -25,
+	255, -75, -112,
+	255, 0, -65,
+	255, 76, -112,
+	255, 55, -26,
+	255, 122, 31,
+	255, 34, 38, 
+	255, 0, 120,
 	1
+	// 0,   18,	6,
+	// 255, 5, 6,
+	// 255, 0, 20,
+	// 255, -5, 6,
+	// 255, -18, 6,
+	// 255, -8, -4,
+	// 255, -12, -16,
+	// 255, 0, -8,
+	// 255, 12, -16,
+	// 255, 8, -4, 
+	// 255, 18, 6,
+	// 1
 };
 
 int8_t starrot[sizeof(starpath)];
@@ -119,7 +134,24 @@ void animate_selected() {
 	Intensity(selectzoom[aniframe].intensity);
 }
 
-void animate_star(uint8_t frame) {
+
+#define min(a,b) ((a)<(b)?(a):(b))
+
+int8_t starspeed;
+int16_t star_y;
+uint8_t starframe;
+int8_t selected;
+int8_t page_start;
+uint8_t total_items;
+int8_t page_boundary;
+
+int8_t page_left;
+int16_t page_left_current;
+int16_t page_left_goal;
+uint8_t xthreshold;
+uint8_t ythreshold;
+
+void Star_Animate(uint8_t frame) {
 	int16_t last_x = 0, last_y = 0;
 
 	for (int i = 0; i < sizeof(starpath)/sizeof(starpath[0]) - 3; i += 3) {
@@ -135,30 +167,16 @@ void animate_star(uint8_t frame) {
     starrot[sizeof(starrot)/sizeof(starrot[0]) - 1] = 1;
 }
 
-#define min(a,b) ((a)<(b)?(a):(b))
-
-int8_t starspeed;
-int16_t star_y;
-uint8_t starframe;
-int8_t selected;
-int8_t page_start;
-uint8_t total_items;
-int8_t page_boundary;
-
-int8_t page_left;
-int16_t page_left_current;
-int16_t page_left_goal;
 
 void MainFrameReset() {
 	total_items = sizeof(names)/sizeof(names[0]);
 	page_boundary = min(ITEMS_PER_PAGE, sizeof(names)/sizeof(names[0]));
 }
 
-#define PAGE_LEFT (-40)
-
 void MainFrameInit() {
 	starspeed = 0;
 	page_left = PAGE_LEFT;
+	xthreshold = XTHRESHOLD;
 }
 
 int8_t drawPageItems() 
@@ -207,23 +225,55 @@ int MainFrame(int frame) {
 	if (funprohibited > 0) --funprohibited;
 
 	if (funprohibited == 0) {
-		if (joystick1_y < 0) {
-			selected++;
-			advance = 1;
-			funprohibited = 10;
+		if (joystick1_y < -32) {
+			if (ythreshold > 0) {
+				--ythreshold;
+				star_y -= 256;
+			}
+			if (ythreshold == 0 || joystick1_y <= -64) {
+				ythreshold = YTHRESHOLD;
+				selected++;
+				advance = 1;
+				funprohibited = 10;
+			}
 		} 
-		else if (joystick1_y > 0) {
-			--selected;
-			advance = -1;
-			funprohibited = 10;
+		else if (joystick1_y > 32) {
+			if (ythreshold > 0) {
+				--ythreshold;
+				star_y += 256;;
+			}
+			if (ythreshold == 0 || joystick1_y >= 64) {
+				ythreshold = YTHRESHOLD;
+				--selected;
+				advance = -1;
+				funprohibited = 10;
+			}
 		}
-		else if (joystick1_x > 0) {
-			advance = 2;
-			funprohibited = 16;
+		else if (joystick1_x > 32) {
+			if (xthreshold > 0) {
+				--xthreshold;
+				page_left -= (XTHRESHOLD - xthreshold);
+			}
+			if (xthreshold == 0 || joystick1_x > 96) {
+				advance = 2;
+				funprohibited = 16;
+				xthreshold = XTHRESHOLD;
+			} 
 		}
-		else if (joystick1_x < 0) {
-			advance = -2;
-			funprohibited = 16;
+		else if (joystick1_x < -32) {
+			if (xthreshold > 0) {
+				--xthreshold;
+				page_left += (XTHRESHOLD - xthreshold);
+			}
+			if (xthreshold == 0 || joystick1_x < -96) {
+				advance = -2;
+				funprohibited = 16;
+				xthreshold = XTHRESHOLD;
+			} 
+		} else {
+			xthreshold = XTHRESHOLD;
+			ythreshold = YTHRESHOLD;
+			page_left = PAGE_LEFT;
 		}
 
 		if (advance > 0) {
@@ -271,20 +321,21 @@ int MainFrame(int frame) {
 
 	int16_t sel_y = drawPageItems();
 
-	int16_t star_y_error = ((sel_y * 128) - star_y) / 6;
+	int16_t star_y_error = ((sel_y  * 128) - star_y) / 6;
 	star_y += star_y_error;
 
 	if (starspeed > 1) --starspeed;
 
 	starframe += starspeed;
-	animate_star(starframe);
+	Star_Animate(starframe);
 	Moveto(page_left - 10 + anix, (star_y/128) - 5);
-	Intensity(0x48);
-	Draw_VLp_b(starrot, 0x3f - (abs(star_y_error>>6)), 0);
+	Intensity(0x60);
+	//Draw_VLp_b(starrot, 0x3f - (abs(star_y_error>>6)), 0);
+	Draw_VLp_b(starrot, 0xa - (abs(star_y_error>>9)), 0);
 
 	char debug[] = "g SVO 2014\200";
-	//itohex8(debug, page_start);
-	//itohex8(debug + 3, page_boundary);
+	itohex8(debug, joystick1_x);
+	itohex8(debug + 3, joystick1_y);
 	SetCharSizeHW(0xfc30);
 
 	Reset0Ref();
@@ -310,7 +361,7 @@ const ZoomDesc titlezoom[] = {
 	{zoom:0xf068, xofs:-100, yofs:120, intensity:0x7F},
 };
 
-int Start_Anim(uint8_t frame) {
+int Start_Anim(int frame) {
 	frame = frame/2;
 	if (frame < sizeof(titlezoom)/sizeof(titlezoom[0])) {
 		Intensity(0x7f);
@@ -347,7 +398,7 @@ int main()
 		// zero the integrators and set active ground
 		Reset0Ref();
 
-		Joy_Digital();
+		Joy_Analog();
 	}
 	return 0;
 }
