@@ -122,9 +122,8 @@ _Joy_Digital:
 	.globl _Joy_Analog
 _Joy_Analog:
 	pshs a, b, x, dp
-	lda #0x08
-	//sta 0xc823 
-	sta 0xc81a
+	//lda #0x08
+	stb 0xc81a
 	lda #0xd0
 	tfr a, dp
 	jsr 0xf1f5

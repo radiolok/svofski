@@ -32,4 +32,7 @@ void Print_Str_d(int8_t x, int8_t y, const char *str);
 #define joystick2_y (* (int8_t *) 0xc81e)
 
 void Joy_Digital(void);
+void Joy_Analog(uint8_t precision);
+
+typedef int (*FRAMEFUNC)(int);
 

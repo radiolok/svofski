@@ -1,18 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
-
 #include <inttypes.h>
-
+#include <stdlib.h>
 #include "vectrex.h"
-#include "pecado.h"
-
 
 #define ITEMS_PER_PAGE	5
 #define XTHRESHOLD 		14
 #define YTHRESHOLD 		8
 #define PAGE_LEFT (-40)
 
-typedef int (*FRAMEFUNC)(int);
 
 const int8_t boxpath[] = {
    0,   -10,-10,    
@@ -21,15 +15,6 @@ const int8_t boxpath[] = {
    255, -10, 10,
    255, -10,-10, 
    1};
-
-// const int8_t starpath[] = {
-// 	0, 9, 3,
-// 	255, -6,-8,
-// 	255,  0,10,
-// 	255,  6,-8,
-// 	255,  -9, 3,
-// 	255,  9, 3,
-// 	1};
 
 const int8_t starpath[] = {
 	0,   0,	120,
@@ -44,18 +29,6 @@ const int8_t starpath[] = {
 	255, 34, 38, 
 	255, 0, 120,
 	1
-	// 0,   18,	6,
-	// 255, 5, 6,
-	// 255, 0, 20,
-	// 255, -5, 6,
-	// 255, -18, 6,
-	// 255, -8, -4,
-	// 255, -12, -16,
-	// 255, 0, -8,
-	// 255, 12, -16,
-	// 255, 8, -4, 
-	// 255, 18, 6,
-	// 1
 };
 
 int8_t starrot[sizeof(starpath)];
@@ -79,8 +52,8 @@ void itohex8(char* buf, uint8_t val) {
 const char* names[] = {
 	"TITLE1\200", 
 	"TITLE2\200",
-	"TITLE3\200",
-	"TITLE4\200",
+	"POLAR RESCUE\200",
+	"BUTT POSITION\200",
 	"TITLE5\200",
 	"TITLE6\200",
 	"TITLE7\200",
@@ -108,8 +81,8 @@ typedef struct zoomani_ {
 
 const ZoomDesc selectzoom[] = {
 	{zoom:0xf850, xofs:0, yofs:0, intensity:0x20},
-	{zoom:0xf854, xofs:0, yofs:0, intensity:0x42},
-	{zoom:0xf858, xofs:0, yofs:0, intensity:0x58},
+	{zoom:0xf854, xofs:-1, yofs:0, intensity:0x42},
+	{zoom:0xf858, xofs:-1, yofs:0, intensity:0x58},
 	{zoom:0xf75c, xofs:-2, yofs:0, intensity:0x6c},
 	{zoom:0xf760, xofs:-2, yofs:1, intensity:0x70},
 	{zoom:0xf664, xofs:-4, yofs:1, intensity:0x78},
@@ -150,8 +123,9 @@ int16_t page_left_current;
 int16_t page_left_goal;
 uint8_t xthreshold;
 uint8_t ythreshold;
+char debug[16];
 
-void Star_Animate(uint8_t frame) {
+static void Star_Animate(uint8_t frame) {
 	int16_t last_x = 0, last_y = 0;
 
 	for (int i = 0; i < sizeof(starpath)/sizeof(starpath[0]) - 3; i += 3) {
@@ -177,9 +151,10 @@ void MainFrameInit() {
 	starspeed = 0;
 	page_left = PAGE_LEFT;
 	xthreshold = XTHRESHOLD;
+	memcpy(debug, "g SVO 2014\200", sizeof(debug));
 }
 
-int8_t drawPageItems() 
+static int8_t drawPageItems() 
 {
 	int8_t sel_y = 0;
 
@@ -201,14 +176,14 @@ int8_t drawPageItems()
 	return sel_y;
 }
 
-int FlipPageInit(uint8_t forward) {
+static int FlipPageInit(uint8_t forward) {
 	page_left_current = forward ? 128 * 128 : -128 * 128;
 	page_left_goal = PAGE_LEFT*128;
 
 	return 1;
 }
 
-int FlipPage(int frame) {
+static int FlipPage(int frame) {
 	int16_t error = (page_left_goal - page_left_current) / 6;
 	page_left_current += error;
 
@@ -217,8 +192,7 @@ int FlipPage(int frame) {
 	return (abs(error) < 128) ? 0 : 1;
 }
 
-int MainFrame(int frame) {
-	static uint8_t flipping = 0;
+static int JoyInput(uint8_t flipping) {
 	static uint8_t funprohibited;
 	int8_t advance = 0;
 
@@ -315,6 +289,14 @@ int MainFrame(int frame) {
 		}
 	}
 
+	return flipping;
+}
+
+
+int MainFrame(int frame) {
+	static uint8_t flipping = 0;
+
+	flipping = JoyInput(flipping);
 	if (flipping) {
 		flipping = FlipPage(frame);
 	}
@@ -330,12 +312,10 @@ int MainFrame(int frame) {
 	Star_Animate(starframe);
 	Moveto(page_left - 10 + anix, (star_y/128) - 5);
 	Intensity(0x60);
-	//Draw_VLp_b(starrot, 0x3f - (abs(star_y_error>>6)), 0);
 	Draw_VLp_b(starrot, 0xa - (abs(star_y_error>>9)), 0);
 
-	char debug[] = "g SVO 2014\200";
-	itohex8(debug, joystick1_x);
-	itohex8(debug + 3, joystick1_y);
+	//itohex8(debug, joystick1_x);
+	//itohex8(debug + 3, joystick1_y);
 	SetCharSizeHW(0xfc30);
 
 	Reset0Ref();
@@ -361,6 +341,7 @@ const ZoomDesc titlezoom[] = {
 	{zoom:0xf068, xofs:-100, yofs:120, intensity:0x7F},
 };
 
+
 int Start_Anim(int frame) {
 	frame = frame/2;
 	if (frame < sizeof(titlezoom)/sizeof(titlezoom[0])) {
@@ -371,34 +352,4 @@ int Start_Anim(int frame) {
 	}
 	return 1;
 }
-                             
-int main()
-{
-	uint8_t i = 0;
-	uint8_t state = 0;
 
-	FRAMEFUNC frame_func = MainFrame;
-	MainFrameReset();
-	MainFrameInit();
-
-	enable_joystick_1x();
-	enable_joystick_1y();
-
-	frame_func = Start_Anim;
-
-	for (uint8_t frame = 0;; frame++) {
-		// wait for frame boundary (one frame = 30,000 cyles = 50 Hz)
-		Wait_Recal();
-
-		state = frame_func(frame);
-		if (state) {
-			frame_func = MainFrame;
-		}
-
-		// zero the integrators and set active ground
-		Reset0Ref();
-
-		Joy_Analog();
-	}
-	return 0;
-}
