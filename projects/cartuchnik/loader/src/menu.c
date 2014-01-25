@@ -1,5 +1,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
+#include <string.h>
+#include "pecado.h"
 #include "vectrex.h"
 
 #define ITEMS_PER_PAGE	5
@@ -127,8 +129,9 @@ char debug[16];
 
 static void Star_Animate(uint8_t frame) {
 	int16_t last_x = 0, last_y = 0;
+	uint8_t i;
 
-	for (int i = 0; i < sizeof(starpath)/sizeof(starpath[0]) - 3; i += 3) {
+	for (i = 0; i < sizeof(starpath)/sizeof(starpath[0]) - 3; i += 3) {
 		starrot[i] = starpath[i];
 		int16_t x = starpath[i+1];
 		int16_t y = starpath[i+2];
@@ -157,7 +160,6 @@ void MainFrameInit() {
 static int8_t drawPageItems() 
 {
 	int8_t sel_y = 0;
-
 	for (int8_t i = page_start, y = 80; i < page_boundary; i++, y -= 220/ITEMS_PER_PAGE) {
 		const char *title = names[i];
 		if (i - page_start == selected) {
@@ -175,6 +177,7 @@ static int8_t drawPageItems()
 
 	return sel_y;
 }
+
 
 static int FlipPageInit(uint8_t forward) {
 	page_left_current = forward ? 128 * 128 : -128 * 128;
@@ -292,7 +295,6 @@ static int JoyInput(uint8_t flipping) {
 	return flipping;
 }
 
-
 int MainFrame(int frame) {
 	static uint8_t flipping = 0;
 
@@ -353,3 +355,21 @@ int Start_Anim(int frame) {
 	return 1;
 }
 
+#if TEST
+int8_t drawPageItemsX() 
+{
+	int8_t sel_y = 0;
+
+	for (int8_t i = page_start, y = 80; i < page_boundary; i++, y -= 220/ITEMS_PER_PAGE) {
+		Intensity(0x60);
+		SetCharSizeHW(0xf850);
+		Print_Str_d(page_left, y, "PUTA\200");	
+	}
+
+	return sel_y;
+}
+int TestFrame(int frame) {
+	int sel_y = drawPageItemsX();
+	return 0;
+}
+#endif
