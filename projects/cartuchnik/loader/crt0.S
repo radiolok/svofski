@@ -30,7 +30,7 @@
 		.area .ctors (BANK=prog)
 		.word 0
 		.area .bss   (BANK=prog)
-
+__bss_start:
 	    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		;;;
 		;;; cartridge init block
@@ -53,6 +53,16 @@
 		.area	.text
 		.globl __start
 __start:
+		lds #__STACK_TOP
+
+		ldu #__STACK_TOP
+		ldx #0
+__clear_bss_loop:
+		stx ,--u
+		cmpu #__bss_start
+		beq __clear_done
+		bra __clear_bss_loop
+__clear_done:
 
 ; TODO: crash
 	;; Call any "initializer" functions

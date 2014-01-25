@@ -8,9 +8,10 @@ LD=$(CC)
 AS=$(CC)
 
 OPTIMIZE=
+#OPTIMIZE=-freorder-blocks -fmove-loop-invariants
 #include optimizations.s.inc
 
-CFLAGS=-fomit-frame-pointer -std=c99 $(OPTIMIZE)
+CFLAGS=-std=c99 -fomit-frame-pointer $(OPTIMIZE) -save-temps
 LDFLAGS=-L/opt/local/gccvectrex/m6809-unknown-none/lib -lc
 
 CRT0 = crt0

@@ -7,12 +7,13 @@
 #include "vectrex.h"
 #include "pecado.h"
 #include "menu.h"
+
+static uint8_t i = 0;
+static uint8_t state = 0;
+static uint8_t frame;
                              
 int main()
 {
-	uint8_t i = 0;
-	uint8_t state = 0;
-
 	FRAMEFUNC frame_func = MainFrame;
 	MainFrameReset();
 	MainFrameInit();
@@ -22,13 +23,14 @@ int main()
 
 	frame_func = Start_Anim;
 
-	for (uint8_t frame = 0;; frame++) {
+	for (frame = 0;; frame++) {
 		// wait for frame boundary (one frame = 30,000 cyles = 50 Hz)
 		Wait_Recal();
 
 		state = frame_func(frame);
 		if (state) {
 			frame_func = MainFrame;
+			//frame_func = TestFrame;
 		}
 
 		// zero the integrators and set active ground
