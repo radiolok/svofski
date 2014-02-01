@@ -23,6 +23,9 @@ int main()
 
 	frame_func = Start_Anim;
 
+	Set_Refresh(0x927c);
+
+	uint8_t anal_precision = 0x08; 
 	for (frame = 0;; frame++) {
 		// wait for frame boundary (one frame = 30,000 cyles = 50 Hz)
 		Wait_Recal();
@@ -34,9 +37,18 @@ int main()
 		}
 
 		// zero the integrators and set active ground
-		Reset0Ref();
+		//Reset0Ref();
 
-		Joy_Analog(0x08);
+		uint8_t butt_on = Read_Btns();
+		if (butt_on)
+			anal_precision = butt_on << 1;
+		if (anal_precision == 0x10) {
+			Joy_Digital();
+		} else {
+			Joy_Analog(anal_precision);
+		}
+		//Read_Btns();
+		//Joy_Digital();
 	}
 	return 0;
 }

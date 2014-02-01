@@ -9,6 +9,10 @@
 #define YTHRESHOLD 		8
 #define PAGE_LEFT (-40)
 
+#define SCALE 256
+
+
+#define TEST 1
 
 const int8_t boxpath[] = {
    0,   -10,-10,    
@@ -29,7 +33,7 @@ const int8_t starpath[] = {
 	255, 55, -26,
 	255, 122, 31,
 	255, 34, 38, 
-	255, 0, 120,
+	255, 0, 120, // not calculated
 	1
 };
 
@@ -128,13 +132,13 @@ uint8_t ythreshold;
 char debug[16];
 
 static void Star_Animate(uint8_t frame) {
-	int16_t last_x = 0, last_y = 0;
+	int8_t last_x = 0, last_y = 0;
 	uint8_t i;
 
 	for (i = 0; i < sizeof(starpath)/sizeof(starpath[0]) - 3; i += 3) {
 		starrot[i] = starpath[i];
-		int16_t x = starpath[i+1];
-		int16_t y = starpath[i+2];
+		int8_t x = starpath[i+1];
+		int8_t y = starpath[i+2];
 		irotate0(&x, &y, frame);
         starrot[i+1] = y - last_y;
         starrot[i+2] = x - last_x;
@@ -166,11 +170,10 @@ static int8_t drawPageItems()
 			animate_selected();
 
 			Print_Str_d(page_left + anix, y + aniy, title);
-			//Print_Str_d(page_left + anix, y + 1 + aniy, title);
 			sel_y = y;
 		} else {
 			Intensity(0x60);
-			SetCharSizeHW(0xf850);
+			SetCharSizeHW(0xf840);
 			Print_Str_d(page_left, y, title);
 		}
 	}
@@ -187,7 +190,7 @@ static int FlipPageInit(uint8_t forward) {
 }
 
 static int FlipPage(int frame) {
-	int16_t error = (page_left_goal - page_left_current) / 6;
+	int16_t error = (page_left_goal - page_left_current) / 4;
 	page_left_current += error;
 
 	page_left = page_left_current/128;
@@ -305,29 +308,27 @@ int MainFrame(int frame) {
 
 	int16_t sel_y = drawPageItems();
 
-	int16_t star_y_error = ((sel_y  * 128) - star_y) / 6;
+	int16_t star_y_error = ((sel_y  * 128) - star_y) / 8;
 	star_y += star_y_error;
 
 	if (starspeed > 1) --starspeed;
+
+	itohex8(debug, *(uint8_t*) 0xc83e);
+	itohex8(debug + 2, *(uint8_t*) 0xc83d);
+	SetCharSizeHW(0xfc30);
+
+	Intensity(0x60);
+	Print_Str_d(-36, -128, debug);
+
+	Intensity(0x7f);
+	SetCharSizeHW(0xf068);
+	Print_Str_d(-100, 120, "VECTREXADOR\200");
 
 	starframe += starspeed;
 	Star_Animate(starframe);
 	Moveto(page_left - 10 + anix, (star_y/128) - 5);
 	Intensity(0x60);
 	Draw_VLp_b(starrot, 0xa - (abs(star_y_error>>9)), 0);
-
-	//itohex8(debug, joystick1_x);
-	//itohex8(debug + 3, joystick1_y);
-	SetCharSizeHW(0xfc30);
-
-	Reset0Ref();
-	Print_Str_d(-36, -128, debug);
-
-	//Reset0Ref();
-	Intensity(0x7f);
-	SetCharSizeHW(0xf068);
-	Print_Str_d(-100, 120, "VECTREXADOR\200");
-
 	return 0;
 }
 
@@ -354,22 +355,3 @@ int Start_Anim(int frame) {
 	}
 	return 1;
 }
-
-#if TEST
-int8_t drawPageItemsX() 
-{
-	int8_t sel_y = 0;
-
-	for (int8_t i = page_start, y = 80; i < page_boundary; i++, y -= 220/ITEMS_PER_PAGE) {
-		Intensity(0x60);
-		SetCharSizeHW(0xf850);
-		Print_Str_d(page_left, y, "PUTA\200");	
-	}
-
-	return sel_y;
-}
-int TestFrame(int frame) {
-	int sel_y = drawPageItemsX();
-	return 0;
-}
-#endif

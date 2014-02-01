@@ -1,6 +1,7 @@
 #pragma once
 
 void Moveto(uint8_t x, uint8_t y);
+void Set_Refresh(uint16_t value);
 void Wait_Recal(void);
 void Reset0Ref(void);
 void Intensity(uint8_t i);
@@ -33,6 +34,17 @@ void Print_Str_d(int8_t x, int8_t y, const char *str);
 
 void Joy_Digital(void);
 void Joy_Analog(uint8_t precision);
+
+#define JOY1_BUTTON1	0x01
+#define JOY1_BUTTON2 	0x02
+#define JOY1_BUTTON3	0x04
+#define JOY1_BUTTON4	0x08
+#define JOY2_BUTTON1	0x10
+#define JOY2_BUTTON2 	0x20
+#define JOY2_BUTTON3	0x40
+#define JOY2_BUTTON4	0x80
+
+uint8_t Read_Btns(void);
 
 typedef int (*FRAMEFUNC)(int);
 

@@ -18,8 +18,8 @@ int8_t icos(uint8_t angle)
 
 void irotate(int16_t* x, int16_t* y, int16_t ox, int16_t oy, uint8_t angle)
 {
-    int16_t sintheta = isin(angle);
-    int16_t costheta = icos(angle);
+    int16_t sintheta = isin(angle) * 2;
+    int16_t costheta = icos(angle) * 2;
 
     int xc = *x - ox;
     int yc = *y - oy;
@@ -27,22 +27,22 @@ void irotate(int16_t* x, int16_t* y, int16_t ox, int16_t oy, uint8_t angle)
     int xr =  xc * costheta + yc * sintheta;
     int yr = -xc * sintheta + yc * costheta;
 
-    *x = xr/128 + ox;
-    *y = yr/128 + oy;
+    *x = xr/256 + ox;
+    *y = yr/256 + oy;
 }
 
 
-void irotate0(int16_t* x, int16_t* y, uint8_t angle)
+void irotate0(int8_t* x, int8_t* y, uint8_t angle)
 {
-    int16_t sintheta = isin(angle);
-    int16_t costheta = icos(angle);
+    int16_t sintheta = isin(angle) * 2;
+    int16_t costheta = icos(angle) * 2;
 
-    int16_t xc = *x;
-    int16_t yc = *y;
+    int8_t xc = *x;
+    int8_t yc = *y;
 
     int16_t xr =  xc * costheta + yc * sintheta;
     int16_t yr = -xc * sintheta + yc * costheta;
 
-    *x = xr/128;
-    *y = yr/128;
+    *x = xr/256;
+    *y = yr/256;
 }
