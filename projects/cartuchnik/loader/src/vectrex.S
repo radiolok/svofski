@@ -15,6 +15,13 @@ _Wait_Recal:
 	jsr	0xf192
 	puls	a, b, x, dp, pc
 
+	.globl _Set_Refresh
+_Set_Refresh:
+	pshs	a, b, dp
+	stx 	0xc83e
+	jsr 	0xf1a2
+	puls    a, b, dp, pc
+
 	.globl _Moveto
 _Moveto:
 ; input from C compiler:
@@ -31,12 +38,14 @@ _Moveto:
 _Intensity:
 ; input from C compiler:
 ; - 8-bit argument in register b
-	pshs	a, b, dp	; save registers
+	;pshs	a, b, dp	; save registers
+	pshs a, b, x, y, u, dp
 	lda	#0xd0		; required input values for the intens executive subroutine:
 	tfr	a, dp		; DP = 0xd0
 	tfr	b, a		; a = intensity
 	jsr	0xf2ab
-	puls	a, b, dp, pc	; restore registers and PC (=return)
+	;puls	a, b, dp, pc	; restore registers and PC (=return)
+	puls a, b, x, y, u, dp, pc
 
 	.globl _diffab
 _diffab:
@@ -95,13 +104,13 @@ _Print_Str_d:
 ;	byte x in register b
 ;	byte y on stack
 ;   string pointer in register x
-	pshs a, b, x, dp
+	pshs a, b, x, u, dp
 	lda #0xd0
 	tfr a, dp
 	exg x, u
-	lda 7, s
+	lda 9, s
 	jsr 0xf37a
-	puls a, b, x, dp, pc
+	puls a, b, x, u, dp, pc
 
 _Print_Str_hwyx:
 ; input:
@@ -124,9 +133,18 @@ _Joy_Analog:
 	pshs a, b, x, dp
 	//lda #0x08
 	stb 0xc81a
-	lda #0xd0
+	lda #0xd0 
 	tfr a, dp
 	jsr 0xf1f5
 	puls a, b, x, dp, pc
+
+	.globl _Read_Btns
+_Read_Btns:
+	pshs a, x, dp
+	lda #0xd0
+	tfr a, dp
+	jsr 0xf1ba
+	tfr a, b
+	puls a, x, dp, pc
 
 	.end
