@@ -2,6 +2,8 @@
 /* Low level disk I/O module skeleton for Petit FatFs (C)ChaN, 2009      */
 /*-----------------------------------------------------------------------*/
 
+
+#include <string.h>
 #include "dataram.h"
 #include "diskio.h"
 

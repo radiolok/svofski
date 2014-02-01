@@ -211,6 +211,10 @@ void DataRam_SetROMBase(uint8_t* rom) {
 	ROMBase = rom;
 }
 
+uint8_t* DataRam_GetScratchRAM() {
+	return Scratch;
+}
+
 void DataRam_Initialize(void)
 {
 #ifndef PROGMEMDISK		

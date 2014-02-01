@@ -55,6 +55,19 @@ void itohex8(char* buf, uint8_t val) {
 	*buf++ = hexchar[val & 0x0f];
 }
 
+typedef struct _ROMEntry {
+	char 		Name[16];
+	uint32_t 	ROMBase;
+	uint16_t	ROMSize;
+} __attribute__((packed)) ROMEntry;
+
+ROMEntry* ROMEntries;
+
+const ROMEntry FakeROMs[] __attribute__ ((section (".faketable"))) = {
+	{"LOADER.BIN\200", 0x0, 0x8000},
+};
+
+/*
 const char* names[] = {
 	"TITLE1\200", 
 	"TITLE2\200",
@@ -77,6 +90,7 @@ const char* names[] = {
 	// "TITLE19\200",
 	// "TITLE20\200",
 };
+*/
 
 typedef struct zoomani_ {
 	uint16_t zoom;
@@ -148,16 +162,15 @@ static void Star_Animate(uint8_t frame) {
     starrot[sizeof(starrot)/sizeof(starrot[0]) - 1] = 1;
 }
 
-
-void MainFrameReset() {
-	total_items = sizeof(names)/sizeof(names[0]);
-	page_boundary = min(ITEMS_PER_PAGE, sizeof(names)/sizeof(names[0]));
-}
-
 void MainFrameInit() {
 	starspeed = 0;
 	page_left = PAGE_LEFT;
 	xthreshold = XTHRESHOLD;
+	ROMEntries = (ROMEntry*) (32768 - 4096);
+
+	for (total_items = 0; ROMEntries[total_items].Name[0] != 0; total_items++);
+	page_boundary = min(ITEMS_PER_PAGE, total_items);
+
 	memcpy(debug, "g SVO 2014\200", sizeof(debug));
 }
 
@@ -165,7 +178,7 @@ static int8_t drawPageItems()
 {
 	int8_t sel_y = 0;
 	for (int8_t i = page_start, y = 80; i < page_boundary; i++, y -= 220/ITEMS_PER_PAGE) {
-		const char *title = names[i];
+		const char *title = ROMEntries[i].Name;
 		if (i - page_start == selected) {
 			animate_selected();
 
@@ -313,8 +326,8 @@ int MainFrame(int frame) {
 
 	if (starspeed > 1) --starspeed;
 
-	itohex8(debug, *(uint8_t*) 0xc83e);
-	itohex8(debug + 2, *(uint8_t*) 0xc83d);
+	itohex8(debug, total_items);
+	//itohex8(debug + 2, *(uint8_t*) 0xc83d);
 	SetCharSizeHW(0xfc30);
 
 	Intensity(0x60);

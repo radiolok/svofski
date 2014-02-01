@@ -15,7 +15,6 @@ static uint8_t frame;
 int main()
 {
 	FRAMEFUNC frame_func = MainFrame;
-	MainFrameReset();
 	MainFrameInit();
 
 	enable_joystick_1x();
