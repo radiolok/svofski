@@ -36,26 +36,22 @@
 #ifndef __DATARAM_H_
 #define __DATARAM_H_
 
-#include "../MassStorage.h"
-#include "../Descriptors.h"
-#include "USB.h"
+#include <stdint.h>
 
 #define DATA_RAM_BLOCK_SIZE             0x200
 
 /** Start address and size of RAM area which used for disk image */
-#if defined(CHIP_LPC175X_6X)
-	#define UTILITY_AREA_SECTORS 			4
- 	#define UTILITY_AREA_RAM_SIZE			((DATA_RAM_BLOCK_SIZE)*(UTILITY_AREA_SECTORS))
- 	#define DATA_RAM_USER_SIZE				0x8000
-	#define DATA_RAM_PHYSICAL_SIZE          (DATA_RAM_USER_SIZE + UTILITY_AREA_RAM_SIZE)
-	#define DATA_RAM_VIRTUAL_SIZE           DATA_RAM_PHYSICAL_SIZE
+#define UTILITY_AREA_SECTORS 			4
+#define UTILITY_AREA_RAM_SIZE			((DATA_RAM_BLOCK_SIZE)*(UTILITY_AREA_SECTORS))
+#define DATA_RAM_USER_SIZE				0x8000
+#define DATA_RAM_PHYSICAL_SIZE          (DATA_RAM_USER_SIZE + UTILITY_AREA_RAM_SIZE)
+#define DATA_RAM_VIRTUAL_SIZE           DATA_RAM_PHYSICAL_SIZE
 
 #ifdef PROGMEMDISK
- 	#define FLASH_DISK_SIZE 				(384*1024)
- 	#define FLASH_SECTOR_BASE				18
- 	#define FLASH_SECTOR_COUNT				(29-18)
- 	#define FLASH_SECTOR_SIZE				32768
- #endif
+#define FLASH_DISK_SIZE 				(384*1024)
+#define FLASH_SECTOR_BASE				18
+#define FLASH_SECTOR_COUNT				(29-18)
+#define FLASH_SECTOR_SIZE				32768
 #endif
 
 /** Total number of bytes of the storage medium, comprised of one or more Dataflash ICs. */
@@ -77,16 +73,6 @@
 #define VIRTUAL_MEMORY_BLOCKS               (VIRTUAL_MEMORY_BYTES / VIRTUAL_MEMORY_BLOCK_SIZE)
 #endif
 
-#if 0
-void DataRam_WriteBlocks(USB_ClassInfo_MS_Device_t *const MSInterfaceInfo,
-						 const uint32_t BlockAddress,
-						 uint16_t TotalBlocks);
-
-void DataRam_ReadBlocks(USB_ClassInfo_MS_Device_t *const MSInterfaceInfo,
-						const uint32_t BlockAddress,
-						uint16_t TotalBlocks);
-#endif
-
 uint32_t MassStorage_GetAddressInImage(uint32_t startblock, uint16_t requestblocks, uint16_t *availableblocks);
 uint32_t MassStorage_GetAddressInFlash(uint32_t startblock, uint16_t requestblocks, uint16_t *availableblocks);
 
@@ -97,6 +83,10 @@ void MassStorage_WriteBlock(int block);
 void MassStorage_FinishWritingBlocks();
 
 void DataRam_Initialize(void);
+
+extern volatile uint8_t* ROMBase;
+
 void DataRam_SetROMBase(uint8_t* rom);
+uint8_t* DataRam_GetScratchRAM();
 
 #endif /* __DATARAM_H_ */

@@ -4,11 +4,11 @@
 
 #ifndef _DISKIO
 
-//#include "integer.h"
+#include "integer.h"
 
-typedef uint8_t BYTE;
-typedef uint16_t WORD;
-typedef uint32_t DWORD;
+//typedef uint8_t BYTE;
+//typedef uint16_t WORD;
+//typedef uint32_t DWORD;
 
 
 /* Status of Disk Functions */

@@ -36,7 +36,8 @@
 #include "xprintf.h"
 #include "cartucho.h"
 #include "DataRam.h"
-#include "pff.h"
+#include "loader.h"
+
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -87,41 +88,6 @@ static void SetupHardware(void)
 volatile int USBUnplugged = 0;
 volatile int USBConnected = 0;
 
-extern const uint8_t Berzerk_vec[];
-extern const int Berzerk_size;
-extern const uint8_t BNZ17_BIN[];
-extern const int BNZ17_BIN_size;
-extern const uint8_t Mail_Plane_bin[];
-extern const int Mail_Plane_bin_size;
-extern const uint8_t cubedemo_vec[];
-extern const int cubedemo_vec_size;
-extern const uint8_t demo184_bin[];
-
-
-void copyrom() {
-	//ROMBase = (uint8_t *) &BNZ17_BIN[0];
-	//ROMBase = (uint8_t *) &demo184_bin[0];
-	//ROMBase = DataRam_GetDataPtr();
-	//memcpy(DataRam_GetDataPtr(), Berzerk_vec, Berzerk_size);
-	//memcpy(DataRam_GetDataPtr(), BNZ17_BIN, BNZ17_BIN_size);
-	//memcpy(DataRam_GetDataPtr(), Mail_Plane_bin, Mail_Plane_bin_size);
-	//memcpy(DataRam_GetDataPtr(), cubedemo_vec, cubedemo_vec_size);
-}
-
-void getfirstrom() {
-	FATFS fs;
-	DIR root;
-
-	uint16_t dummy;
-	int result;
-
-	result = pf_mount(&fs);
-	result = pf_open("LOADER.BIN");
-
-	// trick pff into calculating the sector number for us
-	// disk_readp() will call DataRam_SetROMBase()
-	result = pf_read(&dummy, 1, &dummy);
-}
 
 #define WITH_USB
 
@@ -152,7 +118,7 @@ int main(void)
 	}
 #endif
 	// if USB is unplugged, serve the vectrex bus
-	getfirstrom();
+	PrepareLoader(DataRam_GetScratchRAM());
 
     NVIC_DisableIRQ(UART0_IRQn);
 	UART0_UnInit();		
