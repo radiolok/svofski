@@ -65,32 +65,11 @@ ROMEntry* ROMEntries;
 
 const ROMEntry FakeROMs[] __attribute__ ((section (".faketable"))) = {
 	{"LOADER.BIN\200", 0x0, 0x8000},
+	{"LOADER.BIN\200", 0x0, 0x8000},
+	{"LOADER.BIN\200", 0x0, 0x8000},
+	{"LOADER.BIN\200", 0x0, 0x8000},
+	{"LOADER.BIN\200", 0x0, 0x8000},
 };
-
-/*
-const char* names[] = {
-	"TITLE1\200", 
-	"TITLE2\200",
-	"POLAR RESCUE\200",
-	"BUTT POSITION\200",
-	"TITLE5\200",
-	"TITLE6\200",
-	"TITLE7\200",
-	"TITLE8\200",
-	"TITLE9\200",
-	"TITLE10\200",
-	"TITLE11\200", 
-	"TITLE12\200",
-	"TITLE13\200",
-	// "TITLE14\200",
-	// "TITLE15\200",
-	// "TITLE16\200",
-	// "TITLE17\200",
-	// "TITLE18\200",
-	// "TITLE19\200",
-	// "TITLE20\200",
-};
-*/
 
 typedef struct zoomani_ {
 	uint16_t zoom;
@@ -214,6 +193,7 @@ static int FlipPage(int frame) {
 static int JoyInput(uint8_t flipping) {
 	static uint8_t funprohibited;
 	int8_t advance = 0;
+	int8_t old_page_start = page_start;
 
 	if (funprohibited > 0) --funprohibited;
 
@@ -279,8 +259,9 @@ static int JoyInput(uint8_t flipping) {
 					page_start = 0;
 				}
 				page_boundary = min(page_start + ITEMS_PER_PAGE, total_items);
-
-				flipping = FlipPageInit(1);
+				if (page_start != old_page_start) {
+					flipping = FlipPageInit(1);
+				}
 			}
 		}
 
@@ -288,13 +269,15 @@ static int JoyInput(uint8_t flipping) {
 			if (advance == -2 || selected == -1) {
 				page_start -= ITEMS_PER_PAGE;
 				if (page_start < 0) {
-					page_start = ITEMS_PER_PAGE * (total_items/ITEMS_PER_PAGE);
+					page_start = ITEMS_PER_PAGE * ((total_items - 1)/ITEMS_PER_PAGE); 
 				}
-				page_boundary = min(page_start + ITEMS_PER_PAGE, total_items);
+				page_boundary = min(page_start + ITEMS_PER_PAGE, total_items); 
 
 				if (advance != -2) selected = page_boundary - page_start - 1;
 				
-				flipping = FlipPageInit(0);
+				if (page_start != old_page_start) {
+					flipping = FlipPageInit(0);
+				}
 			} 
 		}
 

@@ -33,7 +33,8 @@ $(OUTDIR):
 	mkdir -p $(OUTDIR)
 
 $(OUTDIR)/$(PROJECT).bin:	$(OUTDIR)/$(PROJECT).s19
-	srec_cat -Disable_Sequence_Warnings $? -Output $@ -Binary 
+	srec_cat -Disable_Sequence_Warnings $? -Output $@.64k -Binary 
+	dd if=$@.64k of=$@ bs=16384 count=1
 
 $(OUTDIR)/$(PROJECT).s19:	$(OUTDIR)/$(OFILES)
 	$(LD) $(LDFLAGS) $(OUTDIR)/$(OFILES) -o $@ -Wl,--map
