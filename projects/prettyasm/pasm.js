@@ -62,6 +62,7 @@ var downloadFormat = 'bin';
 var objCopy = 'gobjcopy';
 var postbuild = '';
 var doHexDump = true;
+var targetEncoding = 'koi8-r';
 
 // -- encodings.js --
 // example python line to get encoding mapping
@@ -129,6 +130,10 @@ function isValidIm8(s) {
 
 function isWhitespace(c) {
     return c=='\t' || c == ' ';// this is too slow c.match(/\s/);
+}
+
+function toTargetEncoding(str, encoding) {
+	return toEncoding(str, encoding);
 }
 
 Array.prototype.indexOf = function (element) {
@@ -392,6 +397,7 @@ function parseRegisterPair(s) {
 // b=000, c=001, d=010, e=011, h=100, l=101, m=110, a=111
 function parseRegister(s) {
     if (s == undefined) return -1;
+    if (s.length > 1) return -1;
     s = s.toLowerCase();
     return "bcdehlma".indexOf(s[0]);
 }
@@ -735,6 +741,17 @@ function parseInstruction(s, addr, linenumber) {
             markLabel(labelTag, value, linenumber, true);
             return 0;
         }
+
+		if (mnemonic == ".encoding") {
+    		var encoding = parts.slice(1).join(' ');	
+			try {
+				var encoded = toTargetEncoding('test', encoding);
+				targetEncoding = encoding;
+			} catch(err) {
+				return -1;
+			}
+			return -100000;
+		}
 
         if (mnemonic == 'cpu' ||
             mnemonic == 'aseg' ||
@@ -1262,14 +1279,15 @@ function assemble(filename) {
     objCopy = 'gobjcopy';
     
     for (var line = 0; line < inputlines.length; line++) {
-        var size = parseInstruction(inputlines[line].trim(), addr, line);
-        if (size <= -100000) {
-            addr = -size-100000;
-            size = 0;
-        } else if (size < 0) {
-            error(line, "syntax error");
-            size = -size;
-        }
+		var encodedLine = toTargetEncoding(inputlines[line].trim(), targetEncoding);
+		var size = parseInstruction(encodedLine, addr, line);
+		if (size <= -100000) {
+			addr = -size-100000;
+			size = 0;
+		} else if (size < 0) {
+			error(line, "syntax error");
+			size = -size;
+		}
         lengths[line] = size;
         addresses[line] = addr;
         addr += size;
@@ -1943,20 +1961,20 @@ if (!JSON) {
 // These forms are obsolete. It is recommended that JSON.stringify and
 // JSON.parse be used instead.
 
-    if (!Object.prototype.toJSONString) {
-        Object.prototype.toJSONString = function (filter) {
-            return JSON.stringify(this, filter);
-        };
-        Object.prototype.parseJSON = function (filter) {
-            return JSON.parse(this, filter);
-        };
-    }
+//    if (!Object.prototype.toJSONString) {
+//        Object.prototype.toJSONString = function (filter) {
+//            return JSON.stringify(this, filter);
+//        };
+//        Object.prototype.parseJSON = function (filter) {
+//            return JSON.parse(this, filter);
+//        };
+//   }
 }());
 //------
 
 function jsons() {
-    return '<div style="display:none" id="json_references">\n' + references.toJSONString() + '</div>\n' +
-     '<div style="display:none" id="json_textlabels">\n' + textlabels.toJSONString() + '</div>\n';
+    return '<div style="display:none" id="json_references">\n' + JSON.stringify(references) + '</div>\n' +
+     '<div style="display:none" id="json_textlabels">\n' + JSON.stringify(textlabels) + '</div>\n';
 }
 
 var lst = assemble(inputFile)
