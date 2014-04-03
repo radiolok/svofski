@@ -42,6 +42,8 @@
 // Rev.G: $ can now work as hex prefix
 // Rev.H: Fixed spaces in reg-reg, .binfile, .hexfile
 // Rev.I: Fixed bug in evaluation of hex literals ending with d
+// Rev.J: Backport from offline version: register highlighting
+// Rev.K: Target encodings support
 //
 // TODO: evaluation should ignore precedence, it's all left-to-right
 //
@@ -60,6 +62,30 @@ var downloadFormat = 'bin';
 var objCopy = 'gobjcopy';
 var postbuild = '';
 var doHexDump = true;
+
+// -- encodings.js --
+// example python line to get encoding mapping
+// ''.join(map(chr, range(256))).decode('koi8-r', 'replace')
+var
+  encodings = {
+    'koi8-r': '\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f\u2500\u2502\u250c\u2510\u2514\u2518\u251c\u2524\u252c\u2534\u253c\u2580\u2584\u2588\u258c\u2590\u2591\u2592\u2593\u2320\u25a0\u2219\u221a\u2248\u2264\u2265\xa0\u2321\xb0\xb2\xb7\xf7\u2550\u2551\u2552\u0451\u2553\u2554\u2555\u2556\u2557\u2558\u2559\u255a\u255b\u255c\u255d\u255e\u255f\u2560\u2561\u0401\u2562\u2563\u2564\u2565\u2566\u2567\u2568\u2569\u256a\u256b\u256c\xa9\u044e\u0430\u0431\u0446\u0434\u0435\u0444\u0433\u0445\u0438\u0439\u043a\u043b\u043c\u043d\u043e\u043f\u044f\u0440\u0441\u0442\u0443\u0436\u0432\u044c\u044b\u0437\u0448\u044d\u0449\u0447\u044a\u042e\u0410\u0411\u0426\u0414\u0415\u0424\u0413\u0425\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u042f\u0420\u0421\u0422\u0423\u0416\u0412\u042c\u042b\u0417\u0428\u042d\u0429\u0427\u042a',
+    'koi8-u': '\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f\u2500\u2502\u250c\u2510\u2514\u2518\u251c\u2524\u252c\u2534\u253c\u2580\u2584\u2588\u258c\u2590\u2591\u2592\u2593\u2320\u25a0\u2219\u221a\u2248\u2264\u2265\xa0\u2321\xb0\xb2\xb7\xf7\u2550\u2551\u2552\u0451\u0454\u2554\u0456\u0457\u2557\u2558\u2559\u255a\u255b\u0491\u255d\u255e\u255f\u2560\u2561\u0401\u0404\u2563\u0406\u0407\u2566\u2567\u2568\u2569\u256a\u0490\u256c\xa9\u044e\u0430\u0431\u0446\u0434\u0435\u0444\u0433\u0445\u0438\u0439\u043a\u043b\u043c\u043d\u043e\u043f\u044f\u0440\u0441\u0442\u0443\u0436\u0432\u044c\u044b\u0437\u0448\u044d\u0449\u0447\u044a\u042e\u0410\u0411\u0426\u0414\u0415\u0424\u0413\u0425\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u042f\u0420\u0421\u0422\u0423\u0416\u0412\u042c\u042b\u0417\u0428\u042d\u0429\u0427\u042a',
+    'cp866': '\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f\u0410\u0411\u0412\u0413\u0414\u0415\u0416\u0417\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u0420\u0421\u0422\u0423\u0424\u0425\u0426\u0427\u0428\u0429\u042a\u042b\u042c\u042d\u042e\u042f\u0430\u0431\u0432\u0433\u0434\u0435\u0436\u0437\u0438\u0439\u043a\u043b\u043c\u043d\u043e\u043f\u2591\u2592\u2593\u2502\u2524\u2561\u2562\u2556\u2555\u2563\u2551\u2557\u255d\u255c\u255b\u2510\u2514\u2534\u252c\u251c\u2500\u253c\u255e\u255f\u255a\u2554\u2569\u2566\u2560\u2550\u256c\u2567\u2568\u2564\u2565\u2559\u2558\u2552\u2553\u256b\u256a\u2518\u250c\u2588\u2584\u258c\u2590\u2580\u0440\u0441\u0442\u0443\u0444\u0445\u0446\u0447\u0448\u0449\u044a\u044b\u044c\u044d\u044e\u044f\u0401\u0451\u0404\u0454\u0407\u0457\u040e\u045e\xb0\u2219\xb7\u221a\u2116\xa4\u25a0\xa0',
+    'latin1': '\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff'
+  }
+
+function toEncoding(str, encoding) {
+  var table = encodings[encoding];
+  var strlen = str.length;
+  var encoded = new Array(strlen);
+  for (var i = 0; i < strlen; i++) {
+    var c = table.indexOf(str.charAt(i));
+    if (c == null) c = 255;
+    encoded[i] = String.fromCharCode(c);
+  }
+  return encoded.join('');
+}
+// -- end of encodings.js --
 
 
 // -- utility stuffs --
@@ -90,15 +116,15 @@ function hex8(val) {
 }
 
 function hex16(val) {
-	return hex8((val & 0xff00) >> 8) + hex8(val & 0x00ff);
+    return hex8((val & 0xff00) >> 8) + hex8(val & 0x00ff);
 }
 
 function isValidIm16(s) {
-	return s != null && s.length > 0;
+    return s != null && s.length > 0;
 }
 
 function isValidIm8(s) {
-	return s != null && s.length > 0;
+    return s != null && s.length > 0;
 }
 
 function isWhitespace(c) {
@@ -122,82 +148,82 @@ String.prototype.startsWith = function(s) {return (this.match("^"+s)==s); }
 
 var ops0 = {
 "nop": "00",
-"hlt":	"76",
-"ei":	"fb",
-"di":	"f3",
-"sphl":	"f9",
-"xchg":	"eb",
-"xthl":	"e3",
-"daa":	"27",
-"cma":	"2f",
-"stc":	"37",
-"cmc":	"3f",
-"rlc":	"07",
-"rrc":	"0f",
-"ral":	"17",
-"rar":	"1f",
-"pchl":	"e9",
-"ret":	"c9",
-"rnz":	"c0",
-"rz":	"c8",
-"rnc":	"d0",
-"rc":	"d8",
-"rpo":	"e0",
-"rpe":	"e8",
-"rp":	"f0",
-"rm":	"f8"
+"hlt":  "76",
+"ei":   "fb",
+"di":   "f3",
+"sphl": "f9",
+"xchg": "eb",
+"xthl": "e3",
+"daa":  "27",
+"cma":  "2f",
+"stc":  "37",
+"cmc":  "3f",
+"rlc":  "07",
+"rrc":  "0f",
+"ral":  "17",
+"rar":  "1f",
+"pchl": "e9",
+"ret":  "c9",
+"rnz":  "c0",
+"rz":   "c8",
+"rnc":  "d0",
+"rc":   "d8",
+"rpo":  "e0",
+"rpe":  "e8",
+"rp":   "f0",
+"rm":   "f8"
 };
 
 var opsIm16 = {
-"lda":	"3a",
-"sta":	"32",
-"lhld":	"2a",
-"shld":	"22",
-"jmp":	"c3",
-"jnz":	"c2",
-"jz":	"ca",
-"jnc":	"d2",
-"jc":	"da",
-"jpo":	"e2",
-"jpe":	"ea",
-"jp":	"f2",
-"jm":	"fa",
-"call":	"cd",
-"cnz":	"c4",
-"cz":	"cc",
-"cnc":	"d4",
-"cc":	"dc",
-"cpo":	"e4",
-"cpe":	"ec",
-"cp":	"f4",
-"cm":	"fc"
+"lda":  "3a",
+"sta":  "32",
+"lhld": "2a",
+"shld": "22",
+"jmp":  "c3",
+"jnz":  "c2",
+"jz":   "ca",
+"jnc":  "d2",
+"jc":   "da",
+"jpo":  "e2",
+"jpe":  "ea",
+"jp":   "f2",
+"jm":   "fa",
+"call": "cd",
+"cnz":  "c4",
+"cz":   "cc",
+"cnc":  "d4",
+"cc":   "dc",
+"cpo":  "e4",
+"cpe":  "ec",
+"cp":   "f4",
+"cm":   "fc"
 };
 
 // lxi rp, im16
 var opsRpIm16 = {
-"lxi":	"01"	// 00rp0001, bc=00, de=01,hl=10, sp=11
+"lxi":  "01"    // 00rp0001, bc=00, de=01,hl=10, sp=11
 };
 
 // adi 33, out 10
 var opsIm8 = {
-"adi": 	"c6",
-"aci": 	"ce",
-"sui":	"d6",
-"sbi":	"de",
-"ani":	"e6",
-"xri":	"ee",
-"ori":	"f6",
-"cpi":	"fe",
-"in":	"0db",
-"out": 	"d3"
+"adi":  "c6",
+"aci":  "ce",
+"sui":  "d6",
+"sbi":  "de",
+"ani":  "e6",
+"xri":  "ee",
+"ori":  "f6",
+"cpi":  "fe",
+"in":   "0db",
+"out":  "d3"
 };
 
 var opsRegIm8 = {
-"mvi": 	"06"
+"mvi":  "06"
 };
 
 var opsRegReg = {
-"mov": 	"40"
+"mov":  "40"
 };
 
 var opsReg = {
@@ -256,12 +282,12 @@ function resolveNumber(identifier) {
         identifier = "0x" + identifier.substr(1, identifier.length-1);
     }
 
-	if ("0123456789".indexOf(identifier[0]) != -1) {
+    if ("0123456789".indexOf(identifier[0]) != -1) {
         var test;
-		test = new Number(identifier);
-		if (!isNaN(test)) {
-			return test;
-		}
+        test = new Number(identifier);
+        if (!isNaN(test)) {
+            return test;
+        }
 
         var suffix = identifier[identifier.length-1].toLowerCase();
         switch (suffix) {
@@ -272,16 +298,16 @@ function resolveNumber(identifier) {
             }
             break;
         case 'h':
-			test = new Number("0x" + identifier.substr(0, identifier.length-1));
-			if (!isNaN(test)) {
-				return test;
-			}
+            test = new Number("0x" + identifier.substr(0, identifier.length-1));
+            if (!isNaN(test)) {
+                return test;
+            }
             break;
         case 'b':
-			test = fromBinary(identifier.substr(0, identifier.length-1));
-			if (!isNaN(test)) {
-				return test;
-			}
+            test = fromBinary(identifier.substr(0, identifier.length-1));
+            if (!isNaN(test)) {
+                return test;
+            }
             break;
         case 'q':
             try {
@@ -294,8 +320,8 @@ function resolveNumber(identifier) {
             } catch(err) {}
             break;
         }
-	}
-	return -1;
+    }
+    return -1;
 }
 
 function referencesLabel(identifier, linenumber) {
@@ -308,17 +334,17 @@ function referencesLabel(identifier, linenumber) {
 function markLabel(identifier, address, linenumber, override) {
     identifier = identifier.replace(/\$([0-9a-fA-F]+)/, '0x$1');
     identifier = identifier.replace(/(^|[^'])(\$|\.)/, ' '+address+' ');
-	var number = resolveNumber(identifier.trim());
-	if (number != -1) return number;
-	
-	if (linenumber == undefined) {
+    var number = resolveNumber(identifier.trim());
+    if (number != -1) return number;
+    
+    if (linenumber == undefined) {
         LabelsCount++;
-		address = -1 - LabelsCount;
-	}
+        address = -1 - LabelsCount;
+    }
 
     identifier = identifier.toLowerCase();
-	
-	var found = labels[identifier];
+    
+    var found = labels[identifier];
     if (found != undefined) {
         if (address >= 0) {
             resolveTable[-found] = address;
@@ -327,47 +353,47 @@ function markLabel(identifier, address, linenumber, override) {
         }
     }
 
-	if (!found || override) {
+    if (!found || override) {
         labels[identifier] = address;
-	}
+    }
 
     if (linenumber != undefined) {
         textlabels[linenumber] = identifier;
     }
-	
-	return address;
+    
+    return address;
 }
 
 function setmem16(addr, immediate) {
-	if (immediate >= 0) {
-		mem[addr] = immediate & 0xff;
-		mem[addr+1] = immediate >> 8;
-	} else {
-		mem[addr] = immediate;
-		mem[addr+1] = immediate;
-	}
+    if (immediate >= 0) {
+        mem[addr] = immediate & 0xff;
+        mem[addr+1] = immediate >> 8;
+    } else {
+        mem[addr] = immediate;
+        mem[addr+1] = immediate;
+    }
 }
 
 function setmem8(addr, immediate) {
-	mem[addr] = immediate < 0 ? immediate : immediate & 0xff;
+    mem[addr] = immediate < 0 ? immediate : immediate & 0xff;
 }
 
 function parseRegisterPair(s) {
     if (s != undefined) {
         s = s.split(';')[0].toLowerCase();
-    	if (s == 'b' || s == 'bc') return 0;
-    	if (s == 'd' || s == 'de') return 1;
-     	if (s == 'h' || s == 'hl') return 2;
-          	if (s == 'sp'|| s == 'psw' || s == 'a') return 3;
+        if (s == 'b' || s == 'bc') return 0;
+        if (s == 'd' || s == 'de') return 1;
+        if (s == 'h' || s == 'hl') return 2;
+            if (s == 'sp'|| s == 'psw' || s == 'a') return 3;
     }
-	return -1;
+    return -1;
 }
 
 // b=000, c=001, d=010, e=011, h=100, l=101, m=110, a=111
 function parseRegister(s) {
     if (s == undefined) return -1;
     s = s.toLowerCase();
-	return "bcdehlma".indexOf(s[0]);
+    return "bcdehlma".indexOf(s[0]);
 }
 
 function tokenDBDW(s, addr, len, linenumber) {
@@ -468,29 +494,29 @@ function useExpr(s, addr, linenumber) {
 
 function parseInstruction(s, addr, linenumber) {
     var parts = s.split(/\s+/);
-		
-	for (var i = 0; i < parts.length; i++) {
-		if (parts[i][0] == ';') {
-			parts.length = i;
-			break;
-		}
-	}
+        
+    for (var i = 0; i < parts.length; i++) {
+        if (parts[i][0] == ';') {
+            parts.length = i;
+            break;
+        }
+    }
     
     var labelTag;
     var immediate;
 
-	for (;parts.length > 0;) {
-		var opcs;
-	    var mnemonic = parts[0].toLowerCase();
+    for (;parts.length > 0;) {
+        var opcs;
+        var mnemonic = parts[0].toLowerCase();
 
         if (mnemonic.length == 0) {
             parts = parts.slice(1);
             continue;
         }
 
-		// no operands
-		if ((opcs = ops0[mnemonic]) != undefined) {
-			mem[addr] = new Number("0x" + opcs);
+        // no operands
+        if ((opcs = ops0[mnemonic]) != undefined) {
+            mem[addr] = new Number("0x" + opcs);
             if (mnemonic == "xchg") {
                 regUsage[linenumber] = [];
                 regUsage[linenumber][0] = '#'; 
@@ -510,16 +536,16 @@ function parseInstruction(s, addr, linenumber) {
             }
 
 
-			return 1;
-		}
-		
-		// immediate word
-		if ((opcs = opsIm16[mnemonic]) != undefined) {
-			mem[addr] = new Number("0x" + opcs);
+            return 1;
+        }
+        
+        // immediate word
+        if ((opcs = opsIm16[mnemonic]) != undefined) {
+            mem[addr] = new Number("0x" + opcs);
 
             immediate = useExpr(parts.slice(1), addr, linenumber);
 
-			setmem16(addr+1, immediate);
+            setmem16(addr+1, immediate);
 
             if (["lhld", "shld"].indexOf(mnemonic) != -1) {
                 regUsage[linenumber] = [];
@@ -534,33 +560,33 @@ function parseInstruction(s, addr, linenumber) {
             }
 
 
-			return 3;
-		}
-		
-		// register pair <- immediate
-		if ((opcs = opsRpIm16[mnemonic]) != undefined) {
-			subparts = parts.slice(1).join(" ").split(",");
-			if (subparts.length < 2) return -3;
-			rp = parseRegisterPair(subparts[0]);
-			if (rp == -1) return -3;
+            return 3;
+        }
+        
+        // register pair <- immediate
+        if ((opcs = opsRpIm16[mnemonic]) != undefined) {
+            subparts = parts.slice(1).join(" ").split(",");
+            if (subparts.length < 2) return -3;
+            rp = parseRegisterPair(subparts[0]);
+            if (rp == -1) return -3;
 
-			mem[addr] = (new Number("0x" + opcs)) | (rp << 4);
+            mem[addr] = (new Number("0x" + opcs)) | (rp << 4);
 
             immediate = useExpr(subparts.slice(1), addr, linenumber);
 
-			setmem16(addr+1, immediate);
+            setmem16(addr+1, immediate);
             regUsage[linenumber] = ['@'+subparts[0].trim()];
             if (["h","d"].indexOf(subparts[0].trim()) != -1) {
                 var rpmap = {"h":"l","d":"e"};
                 regUsage[linenumber][1] = '#';
                 regUsage[linenumber][2] = rpmap[subparts[0].trim()];
             }
-			return 3;
-		}
+            return 3;
+        }
 
-		// immediate byte		
-		if ((opcs = opsIm8[mnemonic]) != undefined) {
-			mem[addr] = new Number("0x" + opcs);
+        // immediate byte       
+        if ((opcs = opsIm8[mnemonic]) != undefined) {
+            mem[addr] = new Number("0x" + opcs);
             immediate = useExpr(parts.slice(1), addr, linenumber);
             setmem8(addr+1, immediate);
 
@@ -571,65 +597,65 @@ function parseInstruction(s, addr, linenumber) {
             }
 
             return 2;
-		}
+        }
 
-		// single register, im8
-		if ((opcs = opsRegIm8[mnemonic]) != undefined) {
-			subparts = parts.slice(1).join(" ").split(",");
-			if (subparts.length < 2) return -2;
-			reg = parseRegister(subparts[0]);
-			if (reg == -1) return -2;
+        // single register, im8
+        if ((opcs = opsRegIm8[mnemonic]) != undefined) {
+            subparts = parts.slice(1).join(" ").split(",");
+            if (subparts.length < 2) return -2;
+            reg = parseRegister(subparts[0]);
+            if (reg == -1) return -2;
 
-			mem[addr] = new Number("0x" + opcs) | reg << 3;
+            mem[addr] = new Number("0x" + opcs) | reg << 3;
 
             immediate = useExpr(subparts.slice(1), addr, linenumber);
 
             setmem8(addr+1, immediate);
             
-			regUsage[linenumber] = [subparts[0].trim()];
+            regUsage[linenumber] = [subparts[0].trim()];
             
-			return 2;			
-		}
-				
-		// dual register (mov)
-		if ((opcs = opsRegReg[mnemonic]) != undefined) {
-			subparts = parts.slice(1).join(" ").split(",");
-			if (subparts.length < 2) return -1;
-			reg1 = parseRegister(subparts[0].trim());
-			reg2 = parseRegister(subparts[1].trim());
-			if (reg1 == -1 || reg2 == -1) return -1;
-			mem[addr] = new Number("0x" + opcs) | reg1 << 3 | reg2;
-			regUsage[linenumber] = [subparts[0].trim(), subparts[1].trim()];
-			return 1;
-		}
+            return 2;           
+        }
+                
+        // dual register (mov)
+        if ((opcs = opsRegReg[mnemonic]) != undefined) {
+            subparts = parts.slice(1).join(" ").split(",");
+            if (subparts.length < 2) return -1;
+            reg1 = parseRegister(subparts[0].trim());
+            reg2 = parseRegister(subparts[1].trim());
+            if (reg1 == -1 || reg2 == -1) return -1;
+            mem[addr] = new Number("0x" + opcs) | reg1 << 3 | reg2;
+            regUsage[linenumber] = [subparts[0].trim(), subparts[1].trim()];
+            return 1;
+        }
 
-		// single register
-		if ((opcs = opsReg[mnemonic]) != undefined) {
-			reg = parseRegister(parts[1]);
-			if (reg == -1) return -1;
-			
-			if (opsRegDst.indexOf(mnemonic) != -1) {
-				reg <<= 3;
-			}
-			mem[addr] = new Number("0x" + opcs) | reg;
+        // single register
+        if ((opcs = opsReg[mnemonic]) != undefined) {
+            reg = parseRegister(parts[1]);
+            if (reg == -1) return -1;
+            
+            if (opsRegDst.indexOf(mnemonic) != -1) {
+                reg <<= 3;
+            }
+            mem[addr] = new Number("0x" + opcs) | reg;
 
             regUsage[linenumber] = []
-			regUsage[linenumber][0] = [parts[1].trim()];
+            regUsage[linenumber][0] = [parts[1].trim()];
             if (["ora", "ana", "xra", "add", "adc", "sub", "sbc", "cmp"].indexOf(mnemonic) != -1) {
                 regUsage[linenumber][1] = '#'; 
                 regUsage[linenumber][2] = 'a'; 
             }
 
-			return 1;
-		}
-		
-		// single register pair
-		if ((opcs = opsRp[mnemonic]) != undefined) {
-			rp = parseRegisterPair(parts[1]);
-			if (rp == -1) return -1;
-			mem[addr] = new Number("0x" + opcs) | rp << 4;
+            return 1;
+        }
+        
+        // single register pair
+        if ((opcs = opsRp[mnemonic]) != undefined) {
+            rp = parseRegisterPair(parts[1]);
+            if (rp == -1) return -1;
+            mem[addr] = new Number("0x" + opcs) | rp << 4;
 
-			regUsage[linenumber] = ['@'+parts[1].trim()];
+            regUsage[linenumber] = ['@'+parts[1].trim()];
             if (mnemonic == "dad") {
                 regUsage[linenumber][1] = '#';
                 regUsage[linenumber][2] = 'h';
@@ -641,26 +667,26 @@ function parseInstruction(s, addr, linenumber) {
                     regUsage[linenumber][2] = rpmap[parts[1].trim()];
                 }
             }
-			return 1;
-		}		
-		
-		// rst
-		if (mnemonic == "rst") {
-			n = resolveNumber(parts[1]);
-			if (n >= 0 && n < 8) {
-				mem[addr] = 0xC7 | n << 3;
-				return 1;
-			}
-			return -1;
-		}
-		
-		if (mnemonic == ".org" || mnemonic == "org") {
+            return 1;
+        }       
+        
+        // rst
+        if (mnemonic == "rst") {
+            n = resolveNumber(parts[1]);
+            if (n >= 0 && n < 8) {
+                mem[addr] = 0xC7 | n << 3;
+                return 1;
+            }
+            return -1;
+        }
+        
+        if (mnemonic == ".org" || mnemonic == "org") {
             n = evaluateExpression(parts.slice(1).join(' '), addr);
-			if (n >= 0) {
-				return -100000-n;
-			}
-			return -1;
-		}
+            if (n >= 0) {
+                return -100000-n;
+            }
+            return -1;
+        }
 
         if (mnemonic == ".binfile") {
             if (parts[1] != undefined && parts[1].trim().length > 0) {
@@ -730,10 +756,10 @@ function parseInstruction(s, addr, linenumber) {
             }
             return -1;
         }
-		
-		if (parts[0][0] == ";") {
-			return 0;
-		}
+        
+        if (parts[0][0] == ";") {
+            return 0;
+        }
 
         // nothing else works, it must be a label
         if (labelTag == undefined) {
@@ -744,12 +770,12 @@ function parseInstruction(s, addr, linenumber) {
             parts.splice(0, 1, splat.slice(1).join(':'));
             continue;
         }
-		
+        
         mem[addr] = -2;
-		return -1; // error
-	}
-	
-	return 0; // empty
+        return -1; // error
+    }
+    
+    return 0; // empty
 }
 
 
@@ -824,11 +850,11 @@ function dumpspan(org, mode) {
 }
 
 function dump() {
-	var org;
-	for (org = 0; org < mem.length && mem[org] == undefined; org++);
-	
-	if (org % 16 != 0) org = org - org % 16;
-	
+    var org;
+    for (org = 0; org < mem.length && mem[org] == undefined; org++);
+    
+    if (org % 16 != 0) org = org - org % 16;
+    
     var result = "<pre>Memory dump:</pre>";
     result += '<div class="hordiv"></div>';
     var lastempty;
@@ -838,7 +864,7 @@ function dump() {
     for (i = org; i < mem.length; i += 16) {
         span = dumpspan(i, 0);
         if (span || !lastempty) {
-		    result += '<pre ' + 'class="d' + (printline++%2) + '"';
+            result += '<pre ' + 'class="d' + (printline++%2) + '"';
             result += ">";
         }
         if (span) {
@@ -1236,17 +1262,17 @@ function assemble(filename) {
     objCopy = 'gobjcopy';
     
     for (var line = 0; line < inputlines.length; line++) {
-		var size = parseInstruction(inputlines[line].trim(), addr, line);
-		if (size <= -100000) {
-			addr = -size-100000;
-			size = 0;
-		} else if (size < 0) {
-			error(line, "syntax error");
-			size = -size;
-		}
+        var size = parseInstruction(inputlines[line].trim(), addr, line);
+        if (size <= -100000) {
+            addr = -size-100000;
+            size = 0;
+        } else if (size < 0) {
+            error(line, "syntax error");
+            size = -size;
+        }
         lengths[line] = size;
         addresses[line] = addr;
-		addr += size;
+        addr += size;
     }
     
     resolveLabelsTable();
