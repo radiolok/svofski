@@ -951,62 +951,7 @@ function intelHex() {
     }
     r += '</pre>';
 
-//    var formData = document.getElementById('hex');
-//    formData.value = pureHex;
-//    var formBinName = document.getElementById('formbinname');
-//    formBinName.value = binFileName;
-//    var formHexName = document.getElementById('formhexname');
-//    formHexName.value = hexFileName;
-//   var formDownloadFormat = document.getElementById('downloadformat');
-//    formDownloadFormat.value = downloadFormat;
-
     return pureHex;
-}
-
-function getListHeight() {
-    var listElement = document.getElementById('list');
-    return inTheOpera ? 
-        listElement.style.pixelHeight : listElement.offsetHeight;
-
-}
-
-function gotoLabel(label) {
-    var sought = textlabels.indexOf(label.toLowerCase());
-    var element = document.getElementById("label" + sought);
-    if (element != undefined) {
-        startHighlighting(sought, element);
-        element = element.parentNode;
-        var destination = element.offsetTop - getListHeight()/2;
-        scrollTo(destination, true);
-    }
-    return false;
-}
-
-function getReferencedLabel(lineno) {
-    var refto = references[lineno];
-    if (refto != undefined) {
-        var sought = textlabels.indexOf(refto.toLowerCase());
-        return document.getElementById("label" + sought);
-    }
-    return undefined;
-}
-
-function getReferencingLines(lineno) {
-    var refs = new Array();
-    var fullrefs = new Array();
-    var label = textlabels[lineno];
-    if (label != undefined) {
-        for(var i = 0; i < references.length; i++) {
-            if (references[i] == label) {
-                var element = document.getElementById("code" + i);
-                refs[refs.length] = element;
-                element = document.getElementById("l" + i);
-                fullrefs[fullrefs.length] = element;
-            }
-        }
-    }
-    referencingLinesFull = fullrefs;
-    return refs;
 }
 
 function getLabel(l) {
