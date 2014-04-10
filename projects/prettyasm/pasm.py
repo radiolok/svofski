@@ -6,12 +6,6 @@ import sys
 import getopt
 from os.path import splitext
 
-def fromBinary(val):
-    try:
-        return eval('0b' + val)
-    except Exception, e:
-        return None
-
 def char8(byteval):
     return [lambda x:'.', chr][byteval > 32 and byteval < 127](byteval)
 
@@ -172,10 +166,11 @@ def parseRegister(s):
     s = s.strip()
     if len(s) > 1: 
         return -1
-    return "bcdehlma".index(s[0])
+    return "bcdehlma".find(s[0])
 
 def resolveNumber(identifier):
-    if identifier == None or len(identifier) == 0: return -1
+    if identifier == None or len(identifier) == 0: 
+        return -1
     if (identifier[0] == "'" or identifier[0] == '"') and (len(identifier) == 3):
         return 0xff & ord(identifier[1])
     if identifier.startswith('0x'):
@@ -202,27 +197,24 @@ def resolveNumber(identifier):
     return -1
 
 def referencesLabel(identifier, linenumber):
-    global labelsCount, labels, textLabels, references
-    identifier = identifier.lower()
+    global references
     if references[linenumber] == None:
-        references[linenumber] = identifier
+        references[linenumber] = identifier.lower()
 
 def markLabel(identifier, address, linenumber = None, override = False):
-    global labelsCount, labels, textLabels, references, resolveTable
+    global labelsCount, labels, resolveTable, textlabels
 
-    #print 'MARKLABEL', identifier, address, linenumber, override
     identifier = re.sub(r'\$([0-9a-fA-F]+)', r'0x\1', identifier)
     identifier = re.sub(r"(^|[^'])(\$|\.)", ' ' + str(address) + ' ', identifier)
     number = resolveNumber(identifier.strip())
-    #print 'MARKLABEL X', identifier, address, number
-    if number != -1: return number
+    if number != -1: 
+        return number
     if linenumber == None:
         labelsCount = labelsCount + 1
         address = -1 - labelsCount
     identifier = identifier.lower()
 
     found = labels.get(identifier)
-    #print 'FOUND = ', found
     if found != None:
         if address >= 0:
             resolveTable[-found] = address
@@ -231,7 +223,6 @@ def markLabel(identifier, address, linenumber = None, override = False):
 
     if (found == None) or override:
         labels[identifier] = address
-        #print 'MARKED LABOL', identifier, address
 
     if linenumber != None:
         textlabels[linenumber] = identifier
@@ -239,22 +230,21 @@ def markLabel(identifier, address, linenumber = None, override = False):
     return address
 
 def tokenDBDW(s, addr, longueur, linenumber):
-    if len(s) == 0: return 0
+    if len(s) == 0: 
+        return 0
 
-    size = -1
     n = markLabel(s, addr)
     referencesLabel(s, linenumber)
 
     if longueur == None: 
         longueur = 1
-
+    size = -1
     if longueur == 1 and n < 256:
         setmem8(addr, n)
         size = 1
     elif longueur == 2 and n < 65536:
         setmem16(addr, n)
         size = 2
-
     return size
 
 def tokenString(s, addr, linenumber):
@@ -318,12 +308,10 @@ def useExpr(s, addr, linenumber):
 def inSet(set, val):
     return set.intersection({val}) != ({0}-{0})
 
-def parseInstruction(s, addr, linenumber):
-    parts = filter(lambda x: len(x) > 0, re.split(r'\s+', s))
-    for i in xrange(len(parts)):
-        if parts[i][0] == ';':
-            parts = parts[:i]
-            break
+def parseInstruction(text, addr, linenumber):
+    parts = ((lambda s: 
+                s[:next((i for i,q in enumerate(s) if q.startswith(';')), len(s))])
+                ([x for x in re.split(r'\s+', text) if len(x) > 0]))
     
     labelTag = None
     immediate = None
@@ -350,7 +338,6 @@ def parseInstruction(s, addr, linenumber):
             mem[addr] = int(opcs, 16)
             immediate = useExpr(parts[1:], addr, linenumber)
             setmem16(addr+1, immediate)
-
             if inSet({"lhld", "shld"}, mnemonic):
                 regUsage[linenumber] = ['#', 'h', 'l']
             elif inSet({"lda", "sta"}, mnemonic):
@@ -383,7 +370,7 @@ def parseInstruction(s, addr, linenumber):
             setmem8(addr+1, immediate)
             if inSet({"sui", "sbi", "xri", "ori", "ani", "adi", "aci", "cpi"}, mnemonic):
                 regUsage[linenumber] = ['#', 'a']
-            return 2;
+            return 2
 
         # single register, im8
         opcs = opsRegIm8.get(mnemonic)
@@ -394,12 +381,10 @@ def parseInstruction(s, addr, linenumber):
             reg = parseRegister(subparts[0])
             if reg == -1:
                 return -2
-
             mem[addr] = int(opcs, 16) | (reg << 3)
             immediate = useExpr(subparts[1:], addr, linenumber)
             setmem8(addr+1, immediate)
             regUsage[linenumber] = [subparts[0].strip()]
-            
             return 2
                 
         # dual register (mov)
@@ -437,7 +422,6 @@ def parseInstruction(s, addr, linenumber):
             if rp == -1:
                 return -1
             mem[addr] = int(opcs, 16) | (rp << 4)
-
             regUsage[linenumber] = ['@'+parts[1].strip()]
             if mnemonic == "dad":
                 regUsage[linenumber] += ['#', 'h', 'l']
@@ -445,7 +429,6 @@ def parseInstruction(s, addr, linenumber):
                 if inSet({"h","d"}, parts[1].strip()):
                     rpmap = {"h":"l","d":"e"}
                     regUsage[linenumber] += ['#', rpmap[parts[1].strip()]]
-            
             return 1
         
         # rst
@@ -524,7 +507,7 @@ def parseInstruction(s, addr, linenumber):
                 return size
             return -1
         
-        if parts[0][0] == ';':
+        if parts[0].startswith(';'):
             return 0
 
         # nothing else works, it must be a label
@@ -543,7 +526,7 @@ def parseInstruction(s, addr, linenumber):
 
 # -- output --
 
-def labelList():
+def labelList(labels):
     return ''.join(
         ['<pre>Labels:</pre><div class="hordiv"/><pre class="labeltable">'] +
         [
@@ -701,94 +684,93 @@ def processRegUsage(instr, linenumber):
                 instr = re.sub(r'([^\s]+[\s]+)([abcdehlm])', replace, instr, count = 1)
     return instr
 
+def hexorize(bytes, prefix=''):
+    return reduce(lambda x, y: x + hex8(y) + ' ', bytes, prefix)
+
+def listing_line_uncond(i, labeltext, remainder, currentLength, currentAddr):
+    lineResult = ''
+    semicolon = remainder.find(';')
+    comment = ''
+    if semicolon != -1:
+        comment = remainder[semicolon:]
+        remainder = remainder[:semicolon]
+    remainder = processRegUsage(remainder, i)
+
+    id = "l" + str(i)
+    labelid = "label" + str(i)
+    remid = "code" + str(i)
+
+    hexlen = [currentLength, 4][currentLength > 4]
+    unresolved = len([x for x in mem[currentAddr:currentAddr + hexlen] if x < 0]) > 0
+
+    lineResult += '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or errors.get(i) != None else '')
+    lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(currentAddr)][currentLength > 0] # address
+    lineResult += hexorize(mem[currentAddr : currentAddr + hexlen])                              # hexes
+    lineResult += ' ' * (16 - hexlen * 3)
+    if len(labeltext) > 0:
+        lineResult += ('<span class="l" id="%s" onmouseover="return mouseovel(%d);"'
+            ' onmouseout="return mouseout(%d);">%s</span>') % (labelid, i, i, labeltext)
+
+    tmp = len(remainder)
+    remainder = remainder.lstrip()
+    lineResult += ' ' * (tmp - len(remainder))
+    if len(remainder) > 0:
+        lineResult += ('<span id="%s" onmouseover="return mouseover(%d);"' 
+            ' onmouseout="return mouseout(%d);">%s</span>') % (remid, i, i, remainder)
+    if len(comment) > 0:
+        lineResult += '<span class="cmt">%s</span>' % comment
+
+    # display only first and last lines of a long db section
+    if hexlen < currentLength:
+        lineResult += '<br/>\t.&nbsp;.&nbsp;.&nbsp;<br/>'
+        endofs = (currentLength / 4) * 4
+        if currentLength % 4 == 0:
+            endofs -= 4
+        lineResult += hexorize(mem[currentAddr + endofs : currentAddr + currentLength], 
+            prefix = hex16(currentAddr + endofs) + '\t') + '<br/>'
+    
+    lineResult += '</pre>'
+    return lineResult
+
+
+def listing_line(i, currentLine, currentLength, currentAddr, listOn, skipLineCount):
+    skipLine = False
+    lineResult = ''
+    listOffComment = ''
+    labeltext = ''
+    remainder = currentLine
+    parts = re.split(r'[\:\s]', currentLine)
+    if len(parts) > 1:
+        if getLabel(parts[0]) != -1 and not parts[0].strip().startswith(';'):
+            labeltext = parts[0]
+            remainder = currentLine[len(labeltext):]
+
+    if remainder.strip().startswith(".nolist"):
+        skipLine = True
+        listOn = False
+        listOffComment = "                        ; list generation turned off"
+        return '<pre><span class="cmt">%s</span></pre>' % listOffComment, False
+    elif remainder.strip().startswith(".list"):
+        skipLine = True
+        listOn = True
+        listOffComment = "                        ; skipped %d lines" % skipLineCount
+        return '<pre><span class="cmt">%s</span></pre>' % listOffComment, True
+    elif not listOn:
+        return '', False
+    else:
+        return listing_line_uncond(i, labeltext, remainder, currentLength, currentAddr), True
+
 def listing(text, lengths, addresses, doHexDump = False):
-    result = ""
-    addr = 0
+    result = ''
     listOn = True
     skipLineCount = 0
     for i, (currentLine, currentLength, currentAddr) in enumerate(zip(text, lengths, addresses)):
-        lineResult = ""
-        skipLine = False
-        listOffComment = ""
-        labeltext = ""
-        remainder = currentLine
-        comment = ''
-        parts = re.split(r'[\:\s]', currentLine)
-        if len(parts) > 1:
-            if getLabel(parts[0]) != -1 and not parts[0].strip().startswith(';'):
-                labeltext = parts[0]
-                remainder = currentLine[len(labeltext):]
-
-        if remainder.strip().startswith(".nolist"):
-            skipLine = True
-            listOn = False
-            listOffComment = "                        ; list generation turned off"
-        elif remainder.strip().startswith(".list"):
-            skipLine = True
-            listOn = True
-            listOffComment = "                        ; skipped " + skipLineCount + " lines"
-
+        lineResult, listOn = listing_line(i, currentLine, currentLength, currentAddr, 
+            listOn, skipLineCount)
+        result += lineResult
         skipLineCount = [(skipLineCount + 1), 0][listOn]
 
-        semicolon = remainder.find(';')
-        if semicolon != -1:
-            comment = remainder[semicolon:]
-            remainder = remainder[:semicolon]
-
-        remainder = processRegUsage(remainder, i)
-
-        id = "l" + str(i)
-        labelid = "label" + str(i)
-        remid = "code" + str(i)
-
-        le_len = [currentLength, 4][currentLength > 4]
-        unresolved = len([x for x in mem[currentAddr:currentAddr + le_len] if x < 0]) > 0
-
-        lineResult += '<pre id="' + id + '"'
-        if unresolved or errors.get(i) != None:
-            lineResult += ' class="errorline" '
-
-        lineResult += '>'
-        lineResult += '<span class="adr">%s</span>' % [' ', hex16(currentAddr)][currentLength > 0]
-        lineResult += '\t'
-
-        # hexes
-        lineResult += reduce(lambda x, y: x + hex8(y) + ' ', mem[currentAddr : currentAddr + le_len], '')
-        lineResult += ' ' * (16 - le_len * 3)
-
-        if len(labeltext) > 0:
-            lineResult += ('<span class="l" id="%s" onmouseover="return mouseovel(%d);"'
-                ' onmouseout="return mouseout(%d);">%s</span>') % (labelid, i, i, labeltext)
-
-        tmp = len(remainder)
-        remainder = remainder.lstrip()
-        lineResult += ' ' * (tmp - len(remainder))
-
-        if len(remainder) > 0:
-            lineResult += ('<span id="%s" onmouseover="return mouseover(%d);"' 
-                ' onmouseout="return mouseout(%d);">%s</span>') % (remid, i, i, remainder)
-
-        if len(comment) > 0:
-            lineResult += '<span class="cmt">%s</span>' % comment
-
-        # display only first and last lines of a long db section
-        if le_len < currentLength:
-            lineResult += '<br/>\t.&nbsp;.&nbsp;.&nbsp;<br/>'
-            endofs = (currentLength / 4) * 4
-            if currentLength % 4 == 0:
-                endofs -= 4
-            lineResult += reduce(lambda x, y: x + hex8(y) + ' ', 
-                mem[currentAddr + endofs : currentAddr + currentLength], 
-                hex16(currentAddr + endofs) + '\t') + '<br/>'
-        lineResult += '</pre>'
-        if listOn and not skipLine:
-            result += lineResult
-        if listOffComment != "":
-            result += '<pre><span class="cmt">' + listOffComment + '</span></pre>'
-
-        addr += currentLength
-
-    result += labelList()
+    result += labelList(labels)
 
     result += "<div>&nbsp;</div>"
 
