@@ -27,9 +27,6 @@ def isValidIm16(s):
 def isValidIm8(s):
     return s != None and len(s) > 0
 
-def isWhitespace(c):
-    return c == '\t' or c == ' '
-
 def toTargetEncoding(str, encoding):
     return str.decode('utf-8').encode(encoding)
 
@@ -546,34 +543,19 @@ def parseInstruction(s, addr, linenumber):
 
 # -- output --
 
-def labelList_format(label, addr):
-    return '%-24s%4s' % (label, hex16(addr))
-
-
 def labelList():
-    result = "<pre>Labels:</pre>"
-    result += '<div class="hordiv"></div>'
-    result += '<pre class="labeltable">'
-    col = 1
+    return ''.join(
+        ['<pre>Labels:</pre><div class="hordiv"/><pre class="labeltable">'] +
+        [
+            "<span class='%s%s' onclick=\"return gotoLabel('%s');\">%-24s%4s</span>%s" % 
+                (['t1','t2'][(col + 1) % 4 == 0], ' errorline' if label_val < 0 else '', 
+                    label_id, label_id, hex16(label_val),
+                    '<br/>' if (col + 1) % 4 == 0 else '')
+            for col, (label_id, label_val) in enumerate(sorted(labels.items(), key=lambda x:x[1])) 
+                if label_id != None and len(label_id) > 0
+        ] +
+        ['</pre>'])
 
-    for label_id, label_val in sorted(labels.items(), key=lambda x:x[1]):
-        if label_id == None: 
-            continue
-        if len(label_id) == 0:
-            continue # resolved expressions
-        resultClass = ['t1','t2'][col % 4 == 0]
-        if label_val < 0:
-            resultClass += ' errorline'
-
-        result += "<span class='" + resultClass + "' onclick=\"return gotoLabel('"+label_id+"');\""
-        result += ">"
-        result += labelList_format(label_id, label_val)
-        result += "</span>"
-        if col % 4 == 0:
-            result += "<br/>"
-        col += 1
-    result += "</pre>"
-    return result
 
 def dumpspan(org, mode):
     result = ""
@@ -724,18 +706,18 @@ def listing(text, lengths, addresses, doHexDump = False):
     addr = 0
     listOn = True
     skipLineCount = 0
-    for i in xrange(len(text)):
+    for i, (currentLine, currentLength, currentAddr) in enumerate(zip(text, lengths, addresses)):
         lineResult = ""
         skipLine = False
         listOffComment = ""
         labeltext = ""
-        remainder = text[i]
+        remainder = currentLine
         comment = ''
-        parts = re.split(r'[\:\s]', text[i])
+        parts = re.split(r'[\:\s]', currentLine)
         if len(parts) > 1:
             if getLabel(parts[0]) != -1 and not parts[0].strip().startswith(';'):
                 labeltext = parts[0]
-                remainder = text[i][len(labeltext):]
+                remainder = currentLine[len(labeltext):]
 
         if remainder.strip().startswith(".nolist"):
             skipLine = True
@@ -759,69 +741,52 @@ def listing(text, lengths, addresses, doHexDump = False):
         labelid = "label" + str(i)
         remid = "code" + str(i)
 
-        hexes = ""
-        unresolved = False
-        width = 0
+        le_len = [currentLength, 4][currentLength > 4]
+        unresolved = len([x for x in mem[currentAddr:currentAddr + le_len] if x < 0]) > 0
 
-        le_len = [lengths[i], 4][lengths[i] > 4]
-        for b in xrange(le_len):
-            hexes += hex8(mem[addresses[i]+b]) + ' '
-            width += 3
-            if mem[addresses[i]+b] < 0:
-                unresolved = True
-        for b in xrange(16 - width):
-            hexes += ' ';
         lineResult += '<pre id="' + id + '"'
-
-        if unresolved or errors.get(i) != None: 
+        if unresolved or errors.get(i) != None:
             lineResult += ' class="errorline" '
 
         lineResult += '>'
-        lineResult += '<span class="adr">' + [" ", hex16(addresses[i])][lengths[i] > 0] + "</span>"
+        lineResult += '<span class="adr">%s</span>' % [' ', hex16(currentAddr)][currentLength > 0]
         lineResult += '\t'
 
-        lineResult += hexes
+        # hexes
+        lineResult += reduce(lambda x, y: x + hex8(y) + ' ', mem[currentAddr : currentAddr + le_len], '')
+        lineResult += ' ' * (16 - le_len * 3)
 
         if len(labeltext) > 0:
-            t = '<span class="l" id="' + labelid + '"'
-            t += ' onmouseover="return mouseovel(%d);"' % i
-            t += ' onmouseout="return mouseout(%d);"' % i
-            t += '>' + labeltext + '</span>'
-            lineResult += t
-        b = 0
-        while b < len(remainder) and isWhitespace(remainder[b]):
-            lineResult += ' '
-            b += 1
-        remainder = remainder[b:]
+            lineResult += ('<span class="l" id="%s" onmouseover="return mouseovel(%d);"'
+                ' onmouseout="return mouseout(%d);">%s</span>') % (labelid, i, i, labeltext)
+
+        tmp = len(remainder)
+        remainder = remainder.lstrip()
+        lineResult += ' ' * (tmp - len(remainder))
+
         if len(remainder) > 0:
-            lineResult += '<span id="' + remid + '"'
-            lineResult += ' onmouseover="return mouseover(%d);"' % i
-            lineResult += ' onmouseout="return mouseout(%d);"' % i
-            lineResult += '>' + remainder + '</span>'
+            lineResult += ('<span id="%s" onmouseover="return mouseover(%d);"' 
+                ' onmouseout="return mouseout(%d);">%s</span>') % (remid, i, i, remainder)
 
         if len(comment) > 0:
-            lineResult += '<span class="cmt">' + comment + '</span>'
+            lineResult += '<span class="cmt">%s</span>' % comment
 
-        # hacked this into displaying only first and last lines
-        # of db thingies
-        sublineResult = ''
-        if le_len < lengths[i]:
+        # display only first and last lines of a long db section
+        if le_len < currentLength:
             lineResult += '<br/>\t.&nbsp;.&nbsp;.&nbsp;<br/>'
-            for subline in xrange(4, lengths[i], 4):
-                sublineResult = ''
-                sublineResult += hex16(addresses[i]+subline) + '\t'
-                for sofs in xrange(4):
-                    adr = subline + sofs
-                    if adr < lengths[i]:
-                        sublineResult += hex8(mem[addresses[i]+adr]) + ' '
-            lineResult += sublineResult + "<br/>"
+            endofs = (currentLength / 4) * 4
+            if currentLength % 4 == 0:
+                endofs -= 4
+            lineResult += reduce(lambda x, y: x + hex8(y) + ' ', 
+                mem[currentAddr + endofs : currentAddr + currentLength], 
+                hex16(currentAddr + endofs) + '\t') + '<br/>'
         lineResult += '</pre>'
         if listOn and not skipLine:
             result += lineResult
         if listOffComment != "":
             result += '<pre><span class="cmt">' + listOffComment + '</span></pre>'
 
-        addr += lengths[i]
+        addr += currentLength
 
     result += labelList()
 
@@ -843,25 +808,10 @@ def readInput(filename):
     with open(filename) as lefile:
         for text in lefile:
             text = text.rstrip()
-            parts = re.split(r'\s+', text)
-            for i in xrange(len(parts)):
-                if parts[i].startswith(';'):
-                    parts = parts[:i]
-                    break
-            aslist = [text]
-            while len(parts) > 0:
-                directive = parts[0].lower()
-                if len(directive) == 0:
-                    parts = parts[1:]
-                    continue
-                if directive == '.include':
-                    if len(parts) > 1 and len(parts[1].strip()) > 0:
-                        includeFileName = parts[1]
-                        aslist = [";;; include " + includeFileName + " begin"]
-                        aslist += readInput(includeFileName)
-                        aslist += [";;; include " + includeFileName + " end"]
-                break
-            result += aslist
+            parts = filter(lambda x: len(x) > 0, re.split(r'\s+', text.split(';')[0]))
+            result += [";;; include %s begin" % parts[1]] + readInput(parts[1]) + [";;; include %s end" % parts[1]] \
+                if len(parts) > 1 and parts[0].lower() == '.include' \
+                else [text]
     return result
 
 # assembler main entry point
@@ -932,7 +882,7 @@ def evaluateExpression(input, addr):
                 expr += '_%s=%s;\n' % (qident, str(addr))
                 input = re.sub(r'\b' + qident + r'\b', '_' + qident, input, re.M)
             else:
-                expr = False
+                expr = ''
                 break
     expr += re.sub(r"0x[0-9a-fA-F]+|[0-9][0-9a-fA-F]*[hbqdHBQD]|'.'", lambda x: str(resolveNumber(x.group(0))), input)
     try:
@@ -980,38 +930,38 @@ def resolveLabelsTable():
 
 
 def preamble():
-    r = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru"> <head> <title>Pretty 8080 Assembler</title>\n'
-    r += '<script type="text/javascript"><!--  --></script>\n'
-    r += '<script type="text/javascript" src="navigate.js"></script>\n'
-    r += '<link href="listn.css" rel="stylesheet" type="text/css" media="screen"/>\n'
-    r += '<style type="text/css">\n'
-    r += '.rga { color: lightgray; }\n'
-    r += '.rgb { color: lightgray; }\n'
-    r += '.rgc { color: lightgray; }\n'
-    r += '.rgd { color: lightgray; }\n'
-    r += '.rge { color: lightgray; }\n'
-    r += '.rgh { color: lightgray; }\n'
-    r += '.rgl { color: lightgray; }\n'
-    r += '.rgm { color: lightgray; }\n'
-    r += '.rgsp { color: lightgray; }\n'
-    r += '.rpb { color: lightgray; }\n'
-    r += '.rpd { color: lightgray; }\n'
-    r += '.rph { color: lightgray; }\n'
-    r += '.rpsp { color: lightgray; }\n'
-    r += '</style>\n'
-    r += '<body id="main" onload="loaded(); return false;" onresize="updateSizes(); return false;">\n' 
-    r += '<div id="list">'
+    return '\n'.join([
+        '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru"> <head> <title>Pretty 8080 Assembler</title>',
+        '<script type="text/javascript"><!--  --></script>',
+        '<script type="text/javascript" src="navigate.js"></script>',
+        '<link href="listn.css" rel="stylesheet" type="text/css" media="screen"/>',
+        '<style type="text/css">',
+        '.rga { color: lightgray; }',
+        '.rgb { color: lightgray; }',
+        '.rgc { color: lightgray; }',
+        '.rgd { color: lightgray; }',
+        '.rge { color: lightgray; }',
+        '.rgh { color: lightgray; }',
+        '.rgl { color: lightgray; }',
+        '.rgm { color: lightgray; }',
+        '.rgsp { color: lightgray; }',
+        '.rpb { color: lightgray; }',
+        '.rpd { color: lightgray; }',
+        '.rph { color: lightgray; }',
+        '.rpsp { color: lightgray; }',
+        '</style>',
+        '<body id="main" onload="loaded(); return false;" onresize="updateSizes(); return false;">',
+        '<div id="list">'])
     return r
 
 def tail():
     return '</div></body></html>'
 
 def jsons():
-    r = '<div style="display:none" id="json_references">\n' + json.dumps(references) + '</div>\n'
-    r += '<div style="display:none" id="json_textlabels">\n' + json.dumps(textlabels) + '</div>\n'
-    return r
+    return '\n'.join(['<div style="display:none" id="json_references">\n' + json.dumps(references) + '</div>',
+        '<div style="display:none" id="json_textlabels">\n' + json.dumps(textlabels) + '</div>\n'])
 
-def usage():
+def printusage():
     print "Usage: pasm.py inputfilename"
 
 def main(argv):
@@ -1026,10 +976,8 @@ def main(argv):
         opts, args = getopt.getopt(argv, "h", ["ihex=", "lst="])
     except getopt.GetoptError as merde:
         print str(merde)
-        usage()
+        printusage()
         sys.exit(2)
-
-    print repr(args)
 
     for opt,arg in opts:
         if opt == "--ihex":
@@ -1046,19 +994,20 @@ def main(argv):
             hexFileName = root + ".hex"
     else:
         print "no input file"
-        usage()
+        printusage()
         sys.exit(2)
 
     if lstFileName != None:
-        try:
+        #try:
             with open(lstFileName, "w") as lst:
                 lst.write(preamble())
                 lst.write(assemble(inputFileName))
                 lst.write(jsons())
                 lst.write(tail())
-        except Exception, e:
-            print str(e)
-            sys.exit(1)
+        #except Exception, e:
+            #print str(e)
+            #print e
+            #sys.exit(1)
 
     if hexFileName != None:
         try:
