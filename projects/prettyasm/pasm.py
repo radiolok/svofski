@@ -529,14 +529,12 @@ def parseInstruction(text, addr, linenumber):
 def labelList(labels):
     return ''.join(
         ['<pre>Labels:</pre><div class="hordiv"/><pre class="labeltable">'] +
-        [
-            "<span class='%s%s' onclick=\"return gotoLabel('%s');\">%-24s%4s</span>%s" % 
-                (['t1','t2'][(col + 1) % 4 == 0], ' errorline' if label_val < 0 else '', 
-                    label_id, label_id, hex16(label_val),
-                    '<br/>' if (col + 1) % 4 == 0 else '')
-            for col, (label_id, label_val) in enumerate(sorted(labels.items(), key=lambda x:x[1])) 
-                if label_id != None and len(label_id) > 0
-        ] +
+        ["<span class='%s%s' onclick=\"return gotoLabel('%s');\">%-24s%4s</span>%s" % 
+            (['t1','t2'][(col + 1) % 4 == 0], ' errorline' if label_val < 0 else '', 
+                label_id, label_id, hex16(label_val),
+                '<br/>' if (col + 1) % 4 == 0 else '')
+            for col, (label_id, label_val) in 
+                enumerate(sorted(labels.items(), key=lambda x:x[1])) if label_id != None and len(label_id) > 0] +
         ['</pre>'])
 
 
@@ -560,29 +558,21 @@ def dumpspan(org, mode):
     return [False, result][nonempty]
 
 def dump():
-    org = 0
-    while org < len(mem) and mem[org] == None:
-        org += 1
+    org = next((i for i, q in enumerate(mem) if q != None), len(mem))
     if org % 16 != 0:
         org = org - org % 16
     
-    result = "<pre>Memory dump:</pre>"
-    result += '<div class="hordiv"></div>'
+    result = ('<pre>Memory dump:</pre>'
+              '<div class="hordiv"></div>')
     lastempty = 0
     printline = 0
-
     for i in xrange(org, len(mem), 16):
         span = dumpspan(i, 0)
         if span and not lastempty:
             printline += 1
-            result += '<pre ' + 'class="d%d"' % (printline % 2)
-            result += ">"
+            result += '<pre class="d%d">' % (printline % 2)
         if span:
-            result += hex16(i) + ": "
-            result += span
-            result += '  '
-            result += dumpspan(i, 1)
-            result += "</pre><br/>"
+            result += '%s: %s  %s</pre><br/>' % (hex16(i), span, dumpspan(i, 1))
             lastempty = False
         if (not span) and (not lastempty):
             result += " </pre><br/>"
