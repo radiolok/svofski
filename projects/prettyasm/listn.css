@@ -25,8 +25,8 @@ pre.labeltable { margin-top:1ex; margin-bottom:0.4ex; }
 
 .errorline { background-color: #ff4040; color: #ffffff; }
 
-.d1 { padding-right:0.5em; background-color: #f0f0f0; display:inline;}
-.d0 { padding-right:0.5em; background-color: #e0ffff; display:inline;}
+.d1 { padding-right:0.5em; background-color: #103240; display:inline;}
+.d0 { padding-right:0.5em; background-color: #002230; display:inline;}
 
 #header {
 font-family:Gill Sans, Franklin Gothic Medium, sans-serif;

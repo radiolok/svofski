@@ -7,5 +7,6 @@
     call 5
     mov e, c
     ret
+    lxi h, nonexistent
 babor: nop
-    .include messages.inc
+    .include messages.inc ; bob
