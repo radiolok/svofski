@@ -16,6 +16,13 @@ def enumerate2(sequence, start=0, granularity=1):
             v += granularity
             n = 0
 
+def slicing_enumerate2(sequence, start=0, granularity=1, validator = lambda x: True):
+    i = 0
+    for base in xrange(start, len(sequence), granularity):
+        if len([x for x in sequence[base : base + granularity] if validator(x)]) > 0:
+            yield i, base, sequence[base : base + granularity]
+            i += 1
+
 def char8(byteval):
     return [lambda x:'.', chr][byteval > 32 and byteval < 127](byteval)
 
@@ -323,9 +330,7 @@ def parseInstruction(text, addr, linenumber):
                 s[:next((i for i,q in enumerate(s) if q.startswith(';')), len(s))])
                 ([x for x in re.split(r'\s+', text) if len(x) > 0]))
     
-    labelTag = None
-    immediate = None
-
+    labelTag, immediate = None, None
     while len(parts) > 0:
         opcs = ''
         mnemonic = parts[0].lower()
@@ -537,7 +542,7 @@ def parseInstruction(text, addr, linenumber):
 # -- output --
 
 def labelList(labels):
-    return ''.join(
+    return (
         ['<pre>Labels:</pre><div class="hordiv"/><pre class="labeltable">'] +
         ["<span class='%s%s' onclick=\"return gotoLabel('%s');\">%-24s%4s</span>%s" % 
             (['t1','t2'][(col + 1) % 4 == 0], ' errorline' if label_val < 0 else '', 
@@ -549,32 +554,18 @@ def labelList(labels):
 
 def dumpspan(bytes, mode):
     conv = [lambda i, x: '%s%s' % ([' ', '-'][(i > 0) and (i % 8 == 0)], 
-                ('  ' if x == None else errorSpan(hex8(x)) if x < 0 else hex8(x))), 
-            lambda i, x: char8(x)][mode] 
+                ('  ' if x == None else errorSpan(hex8(x)) if x < 0 else hex8(x))), # hexes with separators
+            lambda i, x: char8(x)][mode]                                            # characters
     return (''.join([conv(i, x) for i, x in enumerate(bytes)]) 
                 if reduce(lambda x,y: x or y != None, bytes, False) else False)
 
-def dump():
-    org = next((i for i, q in enumerate2(mem, 0, 16) if q != None), len(mem))
-    result = ('<pre>Memory dump:</pre>'
-              '<div class="hordiv"></div>')
-    lastempty = 0
-    printline = 0
-    for i in xrange(org, len(mem), 16):
-        span = dumpspan(mem[i:i+16], 0)
-        if span and not lastempty:
-            printline += 1
-            result += '<pre class="d%d">' % (printline % 2)
-        if span:
-            result += '%s: %s  %s</pre><br/>' % (hex16(i), span, dumpspan(mem[i:i+16], 1))
-            lastempty = False
-        if (not span) and (not lastempty):
-            result += " </pre><br/>"
-            lastempty = True
-    return result
+def dump(mem):
+    return (['<pre>Memory dump:</pre><div class="hordiv"></div>'] +
+            ['<pre class="d%d">%s: %s  %s</pre><br/>' % (line % 2, hex16(addr), dumpspan(memr, 0), dumpspan(memr, 1))
+            for line, addr, memr in slicing_enumerate2(mem, 0, 16, lambda x: x != None)])
 
 def intelHex():
-    pureHex = ""
+    pureHex = []
     i = 0
     while i < len(mem):
         j = i
@@ -583,10 +574,8 @@ def intelHex():
         i = j
         if i >= len(mem):
             break
-        line = ":"
-        cs = 0
-        rec = ""
-        j = 0
+        line, rec = ":", ""
+        cs, j = 0, 0
         while j < 32 and mem[i+j] != None:
             if mem[i+j] < 0:
                 mem[i+j] = 0
@@ -596,8 +585,8 @@ def intelHex():
 
         cs += j
         line += hex8(j)    # byte count
-        cs += (i>>8)&255
-        cs += i&255
+        cs += (i >> 8) & 255
+        cs += i & 255
         line += hex16(i)   # record address
         cs += 0
         line += "00"       # record type 0, data
@@ -605,10 +594,9 @@ def intelHex():
 
         cs = 0xff&(-(cs&255))
         line += hex8(cs)
-        pureHex += line + '\n'
+        pureHex += [line]
         i += j
-    pureHex += ':00000001FF\n'
-    return pureHex
+    return pureHex + [':00000001FF']
 
 
 def getLabel(l):
@@ -751,15 +739,15 @@ def listing(text, lengths, addresses, doHexDump = False):
         result += [lineResult]
         skipLineCount = [(skipLineCount + 1), 0][listOn]
 
-    result += [labelList(labels)]
+    result += labelList(labels)
 
     result += ["<div>&nbsp;</div>"]
 
     if True or not makeListing:
         if doHexDump:
-            result += [dump()]
+            result += dump(mem)
         result += ["<div>&nbsp;</div>"]
-        result += [intelHex()]
+        result += ['<br/>'.join(intelHex())]
         result += ["<div>&nbsp;</div>"]
     return ''.join(result)
 
@@ -975,7 +963,7 @@ def main(argv):
     if hexFileName != None:
         try:
             with open(hexFileName, "w") as hf:
-                hf.write(intelHex())
+                hf.write('\n'.join(intelHex()))
         except Exception, e:
             print str(e)
             sys.exit(1)
