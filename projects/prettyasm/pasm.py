@@ -6,6 +6,9 @@ import sys
 import getopt
 from os.path import splitext
 
+NOLIST = ".nolist"
+LIST   = ".list"
+
 def slicing_enumerate2(sequence, start=0, granularity=1, validator = lambda x: True):
     i = 0
     for base in xrange(start, len(sequence), granularity):
@@ -196,7 +199,6 @@ labels = {}
 resolveTable = {} # label negative id, resolved address
 linedata = []
 errors = {}
-regUsage = {}
 lineCount = 0
 doHexDump = True
 hexFileName = None
@@ -357,7 +359,7 @@ def useExpr(s, addr, linenumber):
     referencesLabel(expr, linenumber)
     return immediate
 
-def parseInstruction(text, addr, linenumber):
+def parseInstruction(text, addr, linenumber, regUsage):
     parts = ((lambda s: 
                 s[:next((i for i,q in enumerate(s) if q.startswith(';')), len(s))])
                 ([x for x in re.split(r'\s+', text) if len(x) > 0]))
@@ -518,7 +520,7 @@ def parseInstruction(text, addr, linenumber):
             return -100000
 
         if mnemonic == ".nolist" or mnemonic == ".list":
-            return 0
+            return mnemonic
 
         # assign immediate value to label
         if mnemonic == ".equ" or mnemonic == "equ":
@@ -587,7 +589,7 @@ def labelList(labels):
 def getLabel(l):
     return labels.get(l.lower())
 
-def processRegUsage(instr, linenumber):
+def processRegUsage(regUsage, instr, linenumber):
     usage = regUsage.get(linenumber)
     if usage != None:
         # check indirects
@@ -652,26 +654,28 @@ def errorSpan(comment, pre=False):
     pretag = ['<pre>', '</pre>'] if pre else [''] * 2
     return '%s<span class="errorline">%s</span>%s' % (pretag[0], comment, pretag[1])
 
-def listingLineUncond(i, labeltext, remainder, linedata):
+def listingLineUncond(i, remainder, linedata, regUsage):
     addr = linedata[LineData.ADDR]
-    lineResult = ''
+    labeltext = linedata[LineData.TEXTLABEL] if linedata[LineData.TEXTLABEL] != None else ''
+    remainder = remainder[len(labeltext):]
     comment = ''
     semicolon = remainder.find(';')
     if semicolon != -1:
         comment = remainder[semicolon:]
         remainder = remainder[:semicolon]
-    remainder = processRegUsage(remainder, i)
+    remainder = processRegUsage(regUsage, remainder, i)
 
     id = "l" + str(i)
     labelid = "label" + str(i)
     remid = "code" + str(i)
 
-    hexlen = min(linedata.getLength(), 4) 
+    length = linedata[LineData.LENGTH]
+    hexlen = min(length, 4) 
     unresolved = len([x for x in mem[addr:addr + hexlen] if x < 0]) > 0
 
-    lineResult += '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or errors.get(i) != None else '')
-    lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(addr)][linedata.getLength() > 0] # address
-    lineResult += hexorize(mem[addr : addr + hexlen])                              # hexes
+    lineResult  = '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or errors.get(i) != None else '')
+    lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(addr)][length > 0] 
+    lineResult += hexorize(mem[addr : addr + hexlen])                              
     lineResult += ' ' * (16 - hexlen * 3)
     if len(labeltext) > 0:
         lineResult += ('<span class="l" id="%s" onmouseover="return mouseovel(%d);"'
@@ -687,46 +691,30 @@ def listingLineUncond(i, labeltext, remainder, linedata):
         lineResult += commentSpan(comment, pre=False)
 
     # display only first and last lines of a long db section
-    if hexlen < linedata.getLength():
+    if hexlen < length:
         lineResult += '<br/>\t.&nbsp;.&nbsp;.&nbsp;<br/>'
-        endofs = (linedata.getLength() / 4) * 4
-        if linedata.getLength() % 4 == 0:
+        endofs = (length / 4) * 4
+        if length % 4 == 0:
             endofs -= 4
-        lineResult += hexorize(mem[addr + endofs : addr + linedata.getLength()], 
+        lineResult += hexorize(mem[addr + endofs : addr + length], 
             prefix = hex16(addr + endofs) + '\t') + '<br/>'
     
     lineResult += '</pre>'
     return lineResult
 
-def listingLine(i, line, linedata, listOn, skipLineCount):
-    labeltext = ''
-    remainder = line
-    parts = re.split(r'[\:\s]', line, 1)
-    if len(parts) > 1:
-        if getLabel(parts[0]) != -1 and not parts[0].strip().startswith(';'):
-            labeltext = parts[0]
-            remainder = line[len(labeltext):]
-
-    if remainder.strip().startswith(".nolist"):
-        return commentSpan("                        ; list generation turned off", pre=True), False
-    elif remainder.strip().startswith(".list"):
-        return commentSpan("                        ; skipped %d lines" % skipLineCount, pre=True), True
-    elif not listOn:
-        return '', False
+def listingLine(i, line, linedata, regUsage):
+    if linedata[LineData.FLAGS] == -1:
+        return commentSpan("                        ; list generation turned off", pre=True)
+    elif linedata[LineData.FLAGS] >= 0:
+        return commentSpan("                        ; skipped %d lines" % linedata[LineData.FLAGS], pre=True)
+    elif linedata[LineData.FLAGS] != None:
+        return ''
     else:
-        return listingLineUncond(i, labeltext, remainder, linedata), True
+        return listingLineUncond(i, line, linedata, regUsage)
 
-def listing(text, linedata, doHexDump = False):
-    result = ['']
-    listOn = True
-    skipLineCount = 0
-    for i, (line, linedata) in enumerate(zip(text, linedata)):
-        lineResult, listOn = listingLine(i, line, linedata, listOn, skipLineCount)
-        result += [lineResult]
-        skipLineCount = [(skipLineCount + 1), 0][listOn]
-
+def listing(text, linedata, regUsage, doHexDump = False):
+    result = [listingLine(i, line, linedata, regUsage) for i, (line, linedata) in enumerate(zip(text, linedata))]
     result += labelList(labels)
-
     result += ["<div>&nbsp;</div>"]
 
     if True or not makeListing:
@@ -762,31 +750,10 @@ class LineData:
         self.data[key] = value
     def __repr__(self):
         return "[len=%s; addr=%s; ref=%s; textlabel=%s; flags=%s]" % tuple([str(x) for x in self.data])
-    def getLength(self):
-        return self.data[self.LENGTH]
-    def setLength(self, length):
-        self.data[self.LENGTH] = length
-    def getAddr(self):
-        return self.data[self.ADDR]
-    def setAddr(self, addr):
-        self.data[self.ADDR] = addr
-    def getReference(self):
-        return self.data[self.REFERENCE]
-    def setReference(self, ref):
-        self.data[self.REFERENCE] = ref
-    def getTextLabel(self):
-        return self.data[self.TEXTLABEL]
-    def setTextLabel(self, textlabel):
-        self.data[self.TEXTLABEL] = textlabel
-    def getFlags(self):
-        return self.data[self.FLAGS]
-    def setFlags(self, flags):
-        self.data[self.FLAGS] = flags
-
 
 # assembler main entry point
 def assemble(filename):
-    global regUsage, linedata
+    global linedata
 
     inputlines = readInput(filename)
     linedata = [LineData() for x in xrange(len(inputlines))]
@@ -798,25 +765,41 @@ def assemble(filename):
     regUsage = {}
     mem = [None] * 65536
     doHexDump = True
+    listOff = False
+    listOffCount = 0
     
     for line in xrange(len(inputlines)):
         encodedLine = toTargetEncoding(inputlines[line].strip(), targetEncoding)
-        size = parseInstruction(encodedLine, addr, line)
-        if size <= -100000:
+        size = parseInstruction(encodedLine, addr, line, regUsage)
+        if size == NOLIST:
+            listOff = True
+            size = 0
+        elif size == LIST:
+            listOff = False
+            linedata[line][LineData.FLAGS] = listOffCount
+            listOffCount = 0
+            size = 0
+        elif size <= -100000:
             addr = -size-100000
             size = 0
         elif size < 0:
             error(line, "syntax error")
             size = -size
+
         linedata[line][LineData.LENGTH] = size
         linedata[line][LineData.ADDR] = addr
+        
+        if listOff:
+            listOffCount += 1
+            linedata[line][LineData.FLAGS] = -listOffCount
+
         addr += size;
     
     resolveLabelsTable()
     evaluateLabels()
     resolveLabelsInMem()
 
-    return listing(inputlines, linedata, doHexDump)
+    return listing(inputlines, linedata, regUsage, doHexDump)
 
 
 def substituteBitwiseOps(x):
@@ -924,6 +907,9 @@ def references(data):
 
 def textlabels(data):
     return [x[LineData.TEXTLABEL] for x in data]
+
+def flags(data):
+    return [x[LineData.FLAGS] for x in data]
 
 def jsons():
     global linedata
