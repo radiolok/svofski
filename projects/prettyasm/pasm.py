@@ -738,7 +738,7 @@ def listing(text, lengths, addresses, doHexDump = False):
         result += ["<div>&nbsp;</div>"]
         result += ['<br/>'.join(intelHex())]
         result += ["<div>&nbsp;</div>"]
-    return ''.join(result)
+    return result
 
 def error(line, text):
     errors[line] = text
@@ -857,8 +857,7 @@ def resolveLabelsInMem():
                     mem[i] = 0xff & (newvalue >> 8)
                 i += 1
         else:
-            i += 1
- 
+            i += 1 
 
 def resolveLabelsTable():
     for i in labels.keys():
@@ -868,11 +867,9 @@ def resolveLabelsTable():
             if addr != None:
                 labels[i] = addr
 
-
 def preamble():
-    return '\n'.join([
+    return ([
         '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru"> <head> <title>Pretty 8080 Assembler</title>',
-        '<script type="text/javascript"><!--  --></script>',
         '<script type="text/javascript" src="navigate.js"></script>',
         '<link href="listn.css" rel="stylesheet" type="text/css" media="screen"/>',
         '<style type="text/css">',
@@ -895,10 +892,10 @@ def preamble():
     return r
 
 def tail():
-    return '</div></body></html>'
+    return ['</div></body></html>']
 
 def jsons():
-    return '\n'.join(['<div style="display:none" id="json_references">\n' + json.dumps(references) + '</div>',
+    return (['<div style="display:none" id="json_references">\n' + json.dumps(references) + '</div>',
         '<div style="display:none" id="json_textlabels">\n' + json.dumps(textlabels) + '</div>\n'])
 
 def printusage():
@@ -940,10 +937,10 @@ def main(argv):
     if lstFileName != None:
         #try:
             with open(lstFileName, "w") as lst:
-                lst.write(preamble())
-                lst.write(assemble(inputFileName))
-                lst.write(jsons())
-                lst.write(tail())
+                lst.write(''.join(preamble() +
+                    assemble(inputFileName) +
+                    jsons() +
+                    tail()))
         #except Exception, e:
             #print str(e)
             #print e
