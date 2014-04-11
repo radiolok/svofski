@@ -16,5 +16,5 @@
     .list
     ; listing should have been turned on now
     nop
-babor: nop
+babor: db 10, 10b, 10q, 10h, 8n
     .include messages.inc ; bob
