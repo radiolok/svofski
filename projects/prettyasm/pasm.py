@@ -129,6 +129,9 @@ class Resolver:
     def __init__(self, linedata):
         self.linedata = linedata
 
+    def setError(self, line, text):
+        self.errors[line] = text
+
     def getError(self, key):
         return self.errors.get(key)
 
@@ -157,6 +160,10 @@ class Resolver:
             self.linedata[linenumber][LineData.TEXTLABEL] = identifier
 
         return address
+    
+    def referencesLabel(self, identifier, linenumber):
+        if self.linedata[linenumber][LineData.REFERENCE] == None:
+            self.linedata[linenumber][LineData.REFERENCE] = identifier.lower()
 
     def evaluateLabels(self):
         for i in self.labels.keys():
@@ -198,10 +205,11 @@ class Resolver:
             input = re.sub(r"(^|[^'])\$|\.", ' ' + str(addr) + ' ', input, re.I)
             input = re.sub(r'([\d\w]+)\s(shr|shl|and|or|xor)\s([\d\w]+)', r'(\1 \2 \3)', input, re.I)
             input = re.sub(r'\b(shl|shr|xor|or|and|[+\-*\/()])\b', substituteBitwiseOps, input)
-            q = re.split(r'<<|>>|[+\-*\/()\^\&]', input)
+            q = re.split(r'<<|>>|[+\-*\/()\^\&\|]', input)
         except Exception, e:
             return -1
-        expr = ''
+
+        vars = []
         for qident in q:
             qident = qident.strip()
             if evaluateNumber(qident) != -1:
@@ -209,22 +217,98 @@ class Resolver:
             addr = self.labels.get(qident)
             if addr != None:
                 if addr >= 0:
-                    expr += '_%s=%s;\n' % (qident, str(addr))
-                    input = re.sub(r'\b' + qident + r'\b', '_' + qident, input, re.M)
+                    vars += [('_'+qident, addr)]
+                    input = re.sub(r'\b' + qident + r'\b', '_' + qident, input)
                 else:
-                    expr = ''
                     break
-        expr += re.sub(r"0x[0-9a-fA-F]+|[0-9][0-9a-fA-F]*[hbqdHBQD]|'.'", lambda x: str(evaluateNumber(x.group(0))), input)
+        expr = re.sub(r"0x[0-9a-fA-F]+|[0-9][0-9a-fA-F]*[hbqdHBQD]|'.'", lambda x: str(evaluateNumber(x.group(0))), input)
         try:
+            for variable, value in vars:
+                locals()[variable] = value
             return eval(expr.lower())
         except Exception, e:
             pass
         return -1
 
+    @staticmethod
+    def getExpr(arr):
+        ex = ' '.join(arr).strip()
+        if ex[0] == '"' or ex[0] == "'":
+            return ex
+        return ex.split(';')[0]
+
+    def useExpr(self, s, addr, linenumber):
+        expr = self.getExpr(s)
+        if expr == None or len(expr.strip()) == 0: 
+            return False
+        immediate = self.markLabel(expr, addr)
+        self.referencesLabel(expr, linenumber)
+        return immediate
+
     def resolve(self, mem):
         self.resolveLabelsTable()
         self.evaluateLabels()
         self.resolveLabelsInMem(mem)
+
+class RegUsage:
+    usageMap = {}
+
+    def __getitem__(self, key): return self.usageMap[key]
+    def __setitem__(self, key, value): self.usageMap[key] = value
+
+    def process(self, instr, linenumber):
+        usage = self.usageMap.get(linenumber)
+        if usage != None:
+            # check indirects
+            indirectsidx = -1
+            if '#' in usage:
+                indirectsidx = usage.index('#')
+            indirects = None
+            directs = ""
+            if indirectsidx != -1:
+                indirects = usage[indirectsidx + 1:]
+                directs = usage[0:indirectsidx]
+            else:
+                directs = usage
+
+            if indirects != None:
+                regs = "','rg".join([''] + indirects)[2:] + "'"
+                rep1 = '<span onmouseover="return rgmouseover([%s]);" onmouseout="return rgmouseout([%s]);">\\1</span>'
+                rep1 = rep1 % (regs,regs)
+                instr = re.sub(r'(\w+)', rep1, instr, count = 1)
+
+            if len(directs) == 2:
+                # reg, reg
+                s1 = "rg" + directs[0]
+                s2 = "rg" + directs[1]
+                rep1 = '<span class="%s" ' % s1
+                rep1 += 'onmouseover="return rgmouseover(\'%s\');" ' % s1
+                rep1 += 'onmouseout="return rgmouseout(\'%s\');">\\2</span>' % s1
+                rep2 = '<span class="%s" ' % s2
+                rep2 += 'onmouseover="return rgmouseover(\'%s\');" ' % s2
+                rep2 += 'onmouseout="return rgmouseout(\'%s\');">\\3</span>' % s2
+                replace = '\\1%s, %s' % (rep1, rep2)
+                instr = re.sub(r'(.+\s)([abcdehlm])\s*,\s*([abcdehlm])', replace, instr, count = 1)
+            elif len(directs) == 1:
+                rpname = directs[0]
+                if rpname[0] == '@':
+                    rpname = rpname[1:]
+                    # register pair
+                    s1 = "rg" + rpname
+                    rep1 = '<span class="%s" ' % s1
+                    rep1 += 'onmouseover="return rgmouseover(\'%s\');" ' % s1
+                    rep1 += 'onmouseout="return rgmouseout(\'%s\');">\\2</span>' % s1
+                    replace = '\\1'+rep1
+                    instr = re.sub(r'([^\s]+[\s]+)([bdh]|sp)', replace, instr, count = 1)
+                else:
+                    # normal register
+                    s1 = "rg" + rpname
+                    rep1 = '<span class="%s" ' % s1
+                    rep1 += 'onmouseover="return rgmouseover(\'%s\');" ' % s1
+                    rep1 += 'onmouseout="return rgmouseout(\'%s\');">\\2</span>' % s1
+                    replace = '\\1'+rep1
+                    instr = re.sub(r'([^\s]+[\s]+)([abcdehlm])', replace, instr, count = 1)
+        return instr
 
 ops0 = {
     "nop": "00",
@@ -329,14 +413,6 @@ opsRp = {
     "pop":  "c1"  # rp << 4
     }
 
-linedata = []
-resolver = None
-lineCount = 0
-doHexDump = True
-hexFileName = None
-binFileName = None
-mem = None
-
 def parseRegisterPair(s):
     if (s != None):
         s = s.strip().split(';')[0].lower()
@@ -358,12 +434,14 @@ def parseRegister(s):
 def evaluateNumber(identifier):
     if identifier == None or len(identifier) == 0: 
         return -1
+    else:
+        identifier = identifier.strip().lower()
     if (identifier[0] == "'" or identifier[0] == '"') and (len(identifier) == 3):
         return 0xff & ord(identifier[1])
     if identifier.startswith('0x'):
-        identifier = identifier[2:] + 'h'
+        identifier = '0' + identifier[2:] + 'h'
     if identifier[0] == '$':
-        identifier = identifier[1:] + 'h'
+        identifier = '0' + identifier[1:] + 'h'
     if '0123456789'.find(identifier[0]) != -1:
         try:
             return int(identifier)
@@ -375,11 +453,6 @@ def evaluateNumber(identifier):
             pass
     return -1
 
-def referencesLabel(identifier, linenumber):
-    global linedata
-    if linedata[linenumber][LineData.REFERENCE] == None:
-        linedata[linenumber][LineData.REFERENCE] = identifier.lower()
-
 def tokenDBDW(s, addr, longueur, linenumber):
     global resolver
 
@@ -387,7 +460,7 @@ def tokenDBDW(s, addr, longueur, linenumber):
         return 0
 
     n = resolver.markLabel(s, addr)
-    referencesLabel(s, linenumber)
+    resolver.referencesLabel(s, linenumber)
 
     if longueur == None: 
         longueur = 1
@@ -441,22 +514,6 @@ def parseDeclDB(args, addr, linenumber, dw):
     if longueur < 0: return -1
     return nbytes + longueur
 
-def getExpr(arr):
-    ex = ' '.join(arr).strip()
-    if ex[0] == '"' or ex[0] == "'":
-        return ex
-    return ex.split(';')[0]
-
-def useExpr(s, addr, linenumber):
-    global resolver
-
-    expr = getExpr(s)
-    if expr == None or len(expr.strip()) == 0: 
-        return False
-    immediate = resolver.markLabel(expr, addr)
-    referencesLabel(expr, linenumber)
-    return immediate
-
 def parseInstruction(text, addr, linenumber, regUsage):
     global resolver 
 
@@ -485,7 +542,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
         opcs = opsIm16.get(mnemonic)
         if opcs != None:
             mem[addr] = int(opcs, 16)
-            immediate = useExpr(parts[1:], addr, linenumber)
+            immediate = resolver.useExpr(parts[1:], addr, linenumber)
             mem.set16(addr+1, immediate)
             if mnemonic in {"lhld", "shld"}:
                 regUsage[linenumber] = ['#', 'h', 'l']
@@ -503,7 +560,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
             if rp == -1:
                 return -3
             mem[addr] = int(opcs, 16) | (rp << 4)
-            immediate = useExpr(subparts[1:], addr, linenumber)
+            immediate = resolver.useExpr(subparts[1:], addr, linenumber)
             mem.set16(addr+1, immediate)
             regUsage[linenumber] = ['@'+subparts[0].strip()]
             if subparts[0].strip() in {"h","d"}:
@@ -515,7 +572,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
         opcs = opsIm8.get(mnemonic)
         if opcs != None:
             mem[addr] = int(opcs, 16)
-            immediate = useExpr(parts[1:], addr, linenumber)
+            immediate = resolver.useExpr(parts[1:], addr, linenumber)
             mem.set8(addr+1, immediate)
             if mnemonic in {"sui", "sbi", "xri", "ori", "ani", "adi", "aci", "cpi"}:
                 regUsage[linenumber] = ['#', 'a']
@@ -531,7 +588,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
             if reg == -1:
                 return -2
             mem[addr] = int(opcs, 16) | (reg << 3)
-            immediate = useExpr(subparts[1:], addr, linenumber)
+            immediate = resolver.useExpr(subparts[1:], addr, linenumber)
             mem.set8(addr+1, immediate)
             regUsage[linenumber] = [subparts[0].strip()]
             return 2
@@ -686,63 +743,6 @@ def labelList(labels):
                 enumerate(sorted(labels.items(), key=lambda x:x[1])) if label_id != None and len(label_id) > 0] +
         ['</pre>'])
 
-def getLabel(l):
-    return labels.get(l.lower())
-
-def processRegUsage(regUsage, instr, linenumber):
-    usage = regUsage.get(linenumber)
-    if usage != None:
-        # check indirects
-        indirectsidx = -1
-        if '#' in usage:
-            indirectsidx = usage.index('#')
-        indirects = None
-        directs = ""
-        if indirectsidx != -1:
-            indirects = usage[indirectsidx + 1:]
-            directs = usage[0:indirectsidx]
-        else:
-            directs = usage
-
-        if indirects != None:
-            regs = "','rg".join([''] + indirects)[2:] + "'"
-            rep1 = '<span onmouseover="return rgmouseover([%s]);" onmouseout="return rgmouseout([%s]);">\\1</span>'
-            rep1 = rep1 % (regs,regs)
-            instr = re.sub(r'(\w+)', rep1, instr, count = 1)
-
-        if len(directs) == 2:
-            # reg, reg
-            s1 = "rg" + directs[0]
-            s2 = "rg" + directs[1]
-            rep1 = '<span class="%s" ' % s1
-            rep1 += 'onmouseover="return rgmouseover(\'%s\');" ' % s1
-            rep1 += 'onmouseout="return rgmouseout(\'%s\');">\\2</span>' % s1
-            rep2 = '<span class="%s" ' % s2
-            rep2 += 'onmouseover="return rgmouseover(\'%s\');" ' % s2
-            rep2 += 'onmouseout="return rgmouseout(\'%s\');">\\3</span>' % s2
-            replace = '\\1%s, %s' % (rep1, rep2)
-            instr = re.sub(r'(.+\s)([abcdehlm])\s*,\s*([abcdehlm])', replace, instr, count = 1)
-        elif len(directs) == 1:
-            rpname = directs[0]
-            if rpname[0] == '@':
-                rpname = rpname[1:]
-                # register pair
-                s1 = "rg" + rpname
-                rep1 = '<span class="%s" ' % s1
-                rep1 += 'onmouseover="return rgmouseover(\'%s\');" ' % s1
-                rep1 += 'onmouseout="return rgmouseout(\'%s\');">\\2</span>' % s1
-                replace = '\\1'+rep1
-                instr = re.sub(r'([^\s]+[\s]+)([bdh]|sp)', replace, instr, count = 1)
-            else:
-                # normal register
-                s1 = "rg" + rpname
-                rep1 = '<span class="%s" ' % s1
-                rep1 += 'onmouseover="return rgmouseover(\'%s\');" ' % s1
-                rep1 += 'onmouseout="return rgmouseout(\'%s\');">\\2</span>' % s1
-                replace = '\\1'+rep1
-                instr = re.sub(r'([^\s]+[\s]+)([abcdehlm])', replace, instr, count = 1)
-    return instr
-
 def hexorize(bytes, prefix=''):
     return reduce(lambda x, y: x + hex8(y) + ' ', bytes, prefix)
 
@@ -765,7 +765,7 @@ def listingLineUncond(i, remainder, linedata, regUsage):
     if semicolon != -1:
         comment = remainder[semicolon:]
         remainder = remainder[:semicolon]
-    remainder = processRegUsage(regUsage, remainder, i)
+    remainder = regUsage.process(remainder, i)
 
     id = "l" + str(i)
     labelid = "label" + str(i)
@@ -829,20 +829,6 @@ def listing(text, linedata, regUsage, doHexDump = False):
         result += ["<div>&nbsp;</div>"]
     return result
 
-def error(line, text):
-    errors[line] = text
-
-def readInput(filename):
-    result = []
-    with open(filename) as lefile:
-        for text in lefile:
-            text = text.rstrip()
-            parts = filter(lambda x: len(x) > 0, re.split(r'\s+', text.split(';')[0]))
-            result += [";;; include %s begin" % parts[1]] + readInput(parts[1]) + [";;; include %s end" % parts[1]] \
-                if len(parts) > 1 and parts[0].lower() == '.include' \
-                else [text]
-    return result
-
 # assembler main entry point
 def assemble(filename):
     global linedata, mem, resolver
@@ -852,7 +838,7 @@ def assemble(filename):
     resolver = Resolver(linedata)
 
     addr = 0
-    regUsage = {}
+    regUsage = RegUsage()
     mem = Memory()
     doHexDump = True
     listOff = False
@@ -873,20 +859,16 @@ def assemble(filename):
             addr = -size-100000
             size = 0
         elif size < 0:
-            error(line, "syntax error")
+            resolver.setError(line, "syntax error")
             size = -size
-
         linedata[line][LineData.LENGTH] = size
         linedata[line][LineData.ADDR] = addr
-        
         if listOff:
             listOffCount += 1
             linedata[line][LineData.FLAGS] = -listOffCount
+        addr += size
 
-        addr += size;
-
-    resolver.resolve(mem)    
-
+    resolver.resolve(mem)
     return listing(inputlines, linedata, regUsage, doHexDump)
 
 
@@ -897,6 +879,17 @@ def substituteBitwiseOps(x):
     elif x.group(0) == 'shl': return '<<'
     elif x.group(0) == 'shr': return '>>'
     else: return m
+
+def readInput(filename):
+    result = []
+    with open(filename) as lefile:
+        for text in lefile:
+            text = text.rstrip()
+            parts = filter(lambda x: len(x) > 0, re.split(r'\s+', text.split(';')[0]))
+            result += [";;; include %s begin" % parts[1]] + readInput(parts[1]) + [";;; include %s end" % parts[1]] \
+                if len(parts) > 1 and parts[0].lower() == '.include' \
+                else [text]
+    return result
 
 def preamble():
     return [

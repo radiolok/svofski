@@ -1272,7 +1272,7 @@ function evaluateExpression(input, addr) {
                     return m;
                 }
             });
-        q = input.split(/<<|>>|[+\-*\/()\^\&]/);
+        q = input.split(/<<|>>|[+\-*\/()\^\&\|]/);
     } catch (e) {
         return -1;
     }

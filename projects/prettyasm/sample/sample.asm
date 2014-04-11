@@ -8,6 +8,7 @@
     mov e, c
     ret
     lxi h, nonexistent
+    lxi d, babor or $ff00
     ; the following 3 nops should be skipped in the listing
     .nolist
     nop
@@ -16,5 +17,6 @@
     .list
     ; listing should have been turned on now
     nop
+    bbbeo gnobu
 babor: db 10, 10b, 10q, 10h, 8n
     .include messages.inc ; bob
