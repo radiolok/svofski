@@ -304,7 +304,10 @@ function backrefHintLine(n) {
     backrefHintLine(-1);
     var line = document.getElementById(n);
     if (line != undefined) {
-        backrefHintLine.unhint = line.childNodes[line.childNodes.length-1];
+        var node = line.childNodes[line.childNodes.length-1];
+        if (node.className == 'cmt')
+            node = line.childNodes[line.childNodes.length-2];
+        backrefHintLine.unhint = node;
         backrefHintLine.unhint.className = 'srchl3';
     }
 }

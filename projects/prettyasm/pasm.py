@@ -46,7 +46,7 @@ class MemoryDump:
 
     @classmethod
     def spanChar(cls, bytes):
-        return cls.span(bytes, lambda i, x: char8(x))
+        return cls.span(bytes, lambda i, x: char8(x) if x != None else ' ')
 
     @classmethod
     def dump(cls, mem):
@@ -139,9 +139,10 @@ class Resolver:
         return self.labels
 
     def markLabel(self, identifier, address, linenumber = None, override = False):
+        identifier = identifier.strip()
         identifier = re.sub(r'\$([0-9a-fA-F]+)', r'0x\1', identifier)
         identifier = re.sub(r"(^|[^'])(\$|\.)", ' ' + str(address) + ' ', identifier)
-        number = evaluateNumber(identifier.strip())
+        number = evaluateNumber(identifier)
         if number != -1: 
             return number
         if linenumber == None:
@@ -162,7 +163,7 @@ class Resolver:
         return address
     
     def referencesLabel(self, identifier, linenumber):
-        if self.linedata[linenumber][LineData.REFERENCE] == None:
+        #if self.linedata[linenumber][LineData.REFERENCE] == None:
             self.linedata[linenumber][LineData.REFERENCE] = identifier.lower()
 
     def evaluateLabels(self):
@@ -179,7 +180,6 @@ class Resolver:
         while i < len(mem):
             negativeId = mem[i]
             if negativeId != None and negativeId < 0:
-                #print "resolveLabelsInMem negativeId=", negativeId
                 newvalue = self.resolveTable.get(-negativeId)
                 if newvalue != None:
                     mem[i] = newvalue & 0xff
@@ -199,7 +199,7 @@ class Resolver:
                 if addr != None:
                     self.labels[i] = addr
 
-    def evaluateExpression(self, input, addr):
+    def evaluateExpression(self, input, addr, linenumber = None):
         try:
             input = re.sub(r'\$([0-9a-fA-F]+)', r'0x\1', input)
             input = re.sub(r"(^|[^'])\$|\.", ' ' + str(addr) + ' ', input, re.I)
@@ -208,13 +208,15 @@ class Resolver:
             q = re.split(r'<<|>>|[+\-*\/()\^\&\|]', input)
         except Exception, e:
             return -1
-
         vars = []
         for qident in q:
             qident = qident.strip()
             if evaluateNumber(qident) != -1:
                 continue
             addr = self.labels.get(qident)
+            if linenumber != None and len(qident) > 0:
+                self.referencesLabel(qident, linenumber)
+                #print linenumber, 'referencesLabel was', self.linedata[linenumber][LineData.REFERENCE], '->', repr(qident), ' because ', input, ' but', self.linedata[linenumber][LineData.REFERENCE]
             if addr != None:
                 if addr >= 0:
                     vars += [('_'+qident, addr)]
@@ -242,7 +244,9 @@ class Resolver:
         if expr == None or len(expr.strip()) == 0: 
             return False
         immediate = self.markLabel(expr, addr)
-        self.referencesLabel(expr, linenumber)
+        #print 'EVAL useExpr ', repr(expr), repr(linenumber)
+        #self.referencesLabel(expr, linenumber)
+        self.evaluateExpression(expr, addr, linenumber) ## BOB
         return immediate
 
     def resolve(self, mem):
@@ -494,7 +498,7 @@ def parseDeclDB(args, addr, linenumber, dw):
                 nbytes = nbytes + longueur
                 arg = ''
             elif text[i] == ';':
-                i = longueur(text)
+                break
             else:
                 arg = arg + text[i]
         elif mode == 1:
@@ -734,7 +738,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
 
 def labelList(labels):
     return (
-        ['<pre>Labels:</pre><div class="hordiv"/><pre class="labeltable">'] +
+        ['<pre>Labels:</pre><div class="hordiv"></div><pre class="labeltable">'] +
         ["<span class='%s%s' onclick=\"return gotoLabel('%s');\">%-24s%4s</span>%s" % 
             (['t1','t2'][(col + 1) % 4 == 0], ' errorline' if label_val < 0 else '', 
                 label_id, label_id, hex16(label_val),
@@ -758,8 +762,13 @@ def listingLineUncond(i, remainder, linedata, regUsage):
     global resolver
 
     addr = linedata[LineData.ADDR]
-    labeltext = linedata[LineData.TEXTLABEL] if linedata[LineData.TEXTLABEL] != None else ''
-    remainder = remainder[len(labeltext):]
+    textlabel = linedata[LineData.TEXTLABEL]
+
+    if textlabel != None:
+        labeltext = remainder[:remainder.index(textlabel) + len(textlabel)] 
+        remainder = remainder[len(labeltext):]
+    else:
+        labeltext = ''
     comment = ''
     semicolon = remainder.find(';')
     if semicolon != -1:
@@ -773,7 +782,9 @@ def listingLineUncond(i, remainder, linedata, regUsage):
 
     length = linedata[LineData.LENGTH]
     hexlen = min(length, 4) 
-    unresolved = len([x for x in mem[addr:addr + hexlen] if x < 0]) > 0
+    unresolved = len([x for x in mem[addr:addr + length] if x < 0]) > 0
+
+    #print i, 'error=', resolver.getError(i), 'labeltext=', labeltext, 'remainder=', remainder, 'unresolved=', unresolved
 
     lineResult  = '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or resolver.getError(i) != None else '')
     lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(addr)][length > 0] 
@@ -794,7 +805,9 @@ def listingLineUncond(i, remainder, linedata, regUsage):
 
     # display only first and last lines of a long db section
     if hexlen < length:
-        lineResult += '<br/>\t.&nbsp;.&nbsp;.&nbsp;<br/>'
+        lineResult += '<br/>'
+        if length / 4 > 1: 
+            lineResult += '\t.&nbsp;.&nbsp;.&nbsp;<br/>'
         endofs = (length / 4) * 4
         if length % 4 == 0:
             endofs -= 4
