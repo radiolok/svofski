@@ -8,7 +8,8 @@
     mov e, c
     ret
     lxi h, nonexistent
-    lxi d, babor or $ff00
+    lxi b, babor or $ff00
+    lxi d, babor;snip
     ; the following 3 nops should be skipped in the listing
     .nolist
     nop
@@ -17,6 +18,10 @@
     .list
     ; listing should have been turned on now
     nop
-    bbbeo gnobu
-babor: db 10, 10b, 10q, 10h, 8n
+    syntax error
+babor: db 10, 10b, 10q, 10h
+failexpr: db 'four', 8n
+refexpr: dw babor;, babor + 1, 2 * babor, babor
+    lxi d, babor + 4; back reference
+	;.include nonono.inc
     .include messages.inc ; bob
