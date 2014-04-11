@@ -358,9 +358,6 @@ def useExpr(s, addr, linenumber):
     referencesLabel(expr, linenumber)
     return immediate
 
-def inSet(set, val):
-    return set.intersection({val}) != ({0}-{0})
-
 def parseInstruction(text, addr, linenumber):
     parts = ((lambda s: 
                 s[:next((i for i,q in enumerate(s) if q.startswith(';')), len(s))])
@@ -379,7 +376,7 @@ def parseInstruction(text, addr, linenumber):
                 regUsage[linenumber] = ['#', 'h', 'l', 'd', 'e']
             elif mnemonic == "sphl" or mnemonic == "xthl":
                 regUsage[linenumber] = ['#', 'sp', 'h']
-            elif inSet({"ral", "rar", "rla", "rra", "cma"}, mnemonic):
+            elif mnemonic in {"ral", "rar", "rla", "rra", "cma"}:
                 regUsage[linenumber] = ['#', 'a']
             return 1
         
@@ -389,9 +386,9 @@ def parseInstruction(text, addr, linenumber):
             mem[addr] = int(opcs, 16)
             immediate = useExpr(parts[1:], addr, linenumber)
             setmem16(addr+1, immediate)
-            if inSet({"lhld", "shld"}, mnemonic):
+            if mnemonic in {"lhld", "shld"}:
                 regUsage[linenumber] = ['#', 'h', 'l']
-            elif inSet({"lda", "sta"}, mnemonic):
+            elif mnemonic in {"lda", "sta"}:
                 regUsage[linenumber] = ['#', 'a']
             return 3
         
@@ -408,7 +405,7 @@ def parseInstruction(text, addr, linenumber):
             immediate = useExpr(subparts[1:], addr, linenumber)
             setmem16(addr+1, immediate)
             regUsage[linenumber] = ['@'+subparts[0].strip()]
-            if inSet({"h","d"}, subparts[0].strip()):
+            if subparts[0].strip() in {"h","d"}:
                 rpmap = {"h":"l","d":"e"}
                 regUsage[linenumber] += ['#', rpmap[subparts[0].strip()]]
             return 3
@@ -419,7 +416,7 @@ def parseInstruction(text, addr, linenumber):
             mem[addr] = int(opcs, 16)
             immediate = useExpr(parts[1:], addr, linenumber)
             setmem8(addr+1, immediate)
-            if inSet({"sui", "sbi", "xri", "ori", "ani", "adi", "aci", "cpi"}, mnemonic):
+            if mnemonic in {"sui", "sbi", "xri", "ori", "ani", "adi", "aci", "cpi"}:
                 regUsage[linenumber] = ['#', 'a']
             return 2
 
@@ -458,11 +455,11 @@ def parseInstruction(text, addr, linenumber):
             reg = parseRegister(parts[1])
             if reg == -1:
                 return -1
-            if inSet(opsRegDst, mnemonic):
+            if mnemonic in opsRegDst:
                 reg = reg << 3
             mem[addr] = int(opcs, 16) | reg
             regUsage[linenumber] = [parts[1].strip()]
-            if inSet({"ora", "ana", "xra", "add", "adc", "sub", "sbc", "cmp"}, mnemonic):
+            if mnemonic in {"ora", "ana", "xra", "add", "adc", "sub", "sbc", "cmp"}:
                 regUsage[linenumber] += ['#', 'a']
             return 1
         
@@ -476,8 +473,8 @@ def parseInstruction(text, addr, linenumber):
             regUsage[linenumber] = ['@'+parts[1].strip()]
             if mnemonic == "dad":
                 regUsage[linenumber] += ['#', 'h', 'l']
-            elif inSet({"inx", "dcx"}, mnemonic):
-                if inSet({"h","d"}, parts[1].strip()):
+            elif mnemonic in {"inx", "dcx"}:
+                if parts[1].strip() in {"h","d"}:
                     rpmap = {"h":"l","d":"e"}
                     regUsage[linenumber] += ['#', rpmap[parts[1].strip()]]
             return 1
@@ -541,10 +538,10 @@ def parseInstruction(text, addr, linenumber):
                 return -1
             return -100000
 
-        if inSet({'cpu', 'aseg', '.aseg'}, mnemonic):
+        if mnemonic in {'cpu', 'aseg', '.aseg'}:
             return 0;
 
-        if inSet({'db', '.db', 'str'}, mnemonic):
+        if mnemonic in {'db', '.db', 'str'}:
             return parseDeclDB(parts, addr, linenumber, 1)
         
         if mnemonic == 'dw' or mnemonic == '.dw':
@@ -669,7 +666,7 @@ def listingLineUncond(i, labeltext, remainder, length, addr):
     labelid = "label" + str(i)
     remid = "code" + str(i)
 
-    hexlen = [length, 4][length > 4]
+    hexlen = min(length, 4) 
     unresolved = len([x for x in mem[addr:addr + hexlen] if x < 0]) > 0
 
     lineResult += '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or errors.get(i) != None else '')
