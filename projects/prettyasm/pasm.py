@@ -90,6 +90,142 @@ class IntelHex:
             i += j
         return pureHex + [':00000001FF']
 
+class Memory:
+    mem = [None] * 65536
+    def __getitem__(self, key):
+        return self.mem[key]
+    def __setitem__(self, key, value):
+        self.mem[key] = value
+    def __len__(self):
+        return len(self.mem)
+    def set16(self, addr, immediate):
+        if immediate >= 0:
+            self[addr] = immediate & 0xff
+            self[addr+1] = immediate >> 8
+        else:
+            self[addr] = immediate
+            self[addr+1] = immediate
+    def set8(self, addr, immediate):
+        self[addr] = [immediate, immediate & 0xff][immediate >= 0]
+
+class LineData:
+    LENGTH, ADDR, REFERENCE, TEXTLABEL, FLAGS = range(5)
+    data = []
+    def __init__(self):
+        self.data = [None] * 5    
+    def __getitem__(self, key):
+        return self.data[key]
+    def __setitem__(self, key, value):
+        self.data[key] = value
+    def __repr__(self):
+        return "[len=%s; addr=%s; ref=%s; textlabel=%s; flags=%s]" % tuple([str(x) for x in self.data])
+
+class Resolver:
+    labels = {}
+    resolveTable = {} # label negative id, resolved address
+    errors = {}
+    labelsCount = 0
+
+    def __init__(self, linedata):
+        self.linedata = linedata
+
+    def getError(self, key):
+        return self.errors.get(key)
+
+    def getLabels(self):
+        return self.labels
+
+    def markLabel(self, identifier, address, linenumber = None, override = False):
+        identifier = re.sub(r'\$([0-9a-fA-F]+)', r'0x\1', identifier)
+        identifier = re.sub(r"(^|[^'])(\$|\.)", ' ' + str(address) + ' ', identifier)
+        number = evaluateNumber(identifier.strip())
+        if number != -1: 
+            return number
+        if linenumber == None:
+            self.labelsCount += 1
+            address = -1 - self.labelsCount
+        identifier = identifier.lower()
+        found = self.labels.get(identifier)
+        if found != None:
+            if address >= 0:
+                self.resolveTable[-found] = address
+            else:
+                address = found
+        if (found == None) or override:
+            self.labels[identifier] = address
+        if linenumber != None:
+            self.linedata[linenumber][LineData.TEXTLABEL] = identifier
+
+        return address
+
+    def evaluateLabels(self):
+        for i in self.labels.keys():
+            label = self.labels[i]
+            if label < 0 and self.resolveTable.get(-label) == None:
+                result = self.evaluateExpression(i, -1)
+                if result >= 0:
+                    self.resolveTable[-label] = result
+                    self.labels[i] = None
+
+    def resolveLabelsInMem(self, mem):
+        i = 0
+        while i < len(mem):
+            negativeId = mem[i]
+            if negativeId != None and negativeId < 0:
+                #print "resolveLabelsInMem negativeId=", negativeId
+                newvalue = self.resolveTable.get(-negativeId)
+                if newvalue != None:
+                    mem[i] = newvalue & 0xff
+                i += 1
+                if mem[i] == negativeId:
+                    if newvalue != None:
+                        mem[i] = 0xff & (newvalue >> 8)
+                    i += 1
+            else:
+                i += 1 
+
+    def resolveLabelsTable(self):
+        for i in self.labels.keys():
+            label = self.labels[i]
+            if label < 0:
+                addr = self.resolveTable.get(-label)
+                if addr != None:
+                    self.labels[i] = addr
+
+    def evaluateExpression(self, input, addr):
+        try:
+            input = re.sub(r'\$([0-9a-fA-F]+)', r'0x\1', input)
+            input = re.sub(r"(^|[^'])\$|\.", ' ' + str(addr) + ' ', input, re.I)
+            input = re.sub(r'([\d\w]+)\s(shr|shl|and|or|xor)\s([\d\w]+)', r'(\1 \2 \3)', input, re.I)
+            input = re.sub(r'\b(shl|shr|xor|or|and|[+\-*\/()])\b', substituteBitwiseOps, input)
+            q = re.split(r'<<|>>|[+\-*\/()\^\&]', input)
+        except Exception, e:
+            return -1
+        expr = ''
+        for qident in q:
+            qident = qident.strip()
+            if evaluateNumber(qident) != -1:
+                continue
+            addr = self.labels.get(qident)
+            if addr != None:
+                if addr >= 0:
+                    expr += '_%s=%s;\n' % (qident, str(addr))
+                    input = re.sub(r'\b' + qident + r'\b', '_' + qident, input, re.M)
+                else:
+                    expr = ''
+                    break
+        expr += re.sub(r"0x[0-9a-fA-F]+|[0-9][0-9a-fA-F]*[hbqdHBQD]|'.'", lambda x: str(evaluateNumber(x.group(0))), input)
+        try:
+            return eval(expr.lower())
+        except Exception, e:
+            pass
+        return -1
+
+    def resolve(self, mem):
+        self.resolveLabelsTable()
+        self.evaluateLabels()
+        self.resolveLabelsInMem(mem)
+
 ops0 = {
     "nop": "00",
     "hlt":  "76",
@@ -193,27 +329,13 @@ opsRp = {
     "pop":  "c1"  # rp << 4
     }
 
-mem = [None] * 65536
-labelsCount = 0
-labels = {}
-resolveTable = {} # label negative id, resolved address
 linedata = []
-errors = {}
+resolver = None
 lineCount = 0
 doHexDump = True
 hexFileName = None
 binFileName = None
-
-def setmem16(addr, immediate):
-    if immediate >= 0:
-        mem[addr] = immediate & 0xff
-        mem[addr+1] = immediate >> 8
-    else:
-        mem[addr] = immediate
-        mem[addr+1] = immediate
-
-def setmem8(addr, immediate):
-    mem[addr] = [immediate, immediate & 0xff][immediate >= 0]
+mem = None
 
 def parseRegisterPair(s):
     if (s != None):
@@ -233,7 +355,7 @@ def parseRegister(s):
         return -1
     return "bcdehlma".find(s[0])
 
-def resolveNumber(identifier):
+def evaluateNumber(identifier):
     if identifier == None or len(identifier) == 0: 
         return -1
     if (identifier[0] == "'" or identifier[0] == '"') and (len(identifier) == 3):
@@ -258,54 +380,28 @@ def referencesLabel(identifier, linenumber):
     if linedata[linenumber][LineData.REFERENCE] == None:
         linedata[linenumber][LineData.REFERENCE] = identifier.lower()
 
-def markLabel(identifier, address, linenumber = None, override = False):
-    global labelsCount, labels, resolveTable, linedata
-
-    identifier = re.sub(r'\$([0-9a-fA-F]+)', r'0x\1', identifier)
-    identifier = re.sub(r"(^|[^'])(\$|\.)", ' ' + str(address) + ' ', identifier)
-    number = resolveNumber(identifier.strip())
-    if number != -1: 
-        return number
-    if linenumber == None:
-        labelsCount = labelsCount + 1
-        address = -1 - labelsCount
-    identifier = identifier.lower()
-
-    found = labels.get(identifier)
-    if found != None:
-        if address >= 0:
-            resolveTable[-found] = address
-        else:
-            address = found
-
-    if (found == None) or override:
-        labels[identifier] = address
-
-    if linenumber != None:
-        linedata[linenumber][LineData.TEXTLABEL] = identifier
-
-    return address
-
 def tokenDBDW(s, addr, longueur, linenumber):
+    global resolver
+
     if len(s) == 0: 
         return 0
 
-    n = markLabel(s, addr)
+    n = resolver.markLabel(s, addr)
     referencesLabel(s, linenumber)
 
     if longueur == None: 
         longueur = 1
     size = -1
     if longueur == 1 and n < 256:
-        setmem8(addr, n)
+        mem.set8(addr, n)
         size = 1
     elif longueur == 2 and n < 65536:
-        setmem16(addr, n)
+        mem.set16(addr, n)
         size = 2
     return size
 
 def tokenString(s, addr, linenumber):
-    return len([setmem8(addr+i, ord(s[i])) for i in xrange(len(s))])
+    return len([mem.set8(addr+i, ord(s[i])) for i in xrange(len(s))])
 
 def parseDeclDB(args, addr, linenumber, dw):
     text = ' '.join(args[1:])
@@ -352,14 +448,18 @@ def getExpr(arr):
     return ex.split(';')[0]
 
 def useExpr(s, addr, linenumber):
+    global resolver
+
     expr = getExpr(s)
     if expr == None or len(expr.strip()) == 0: 
         return False
-    immediate = markLabel(expr, addr)
+    immediate = resolver.markLabel(expr, addr)
     referencesLabel(expr, linenumber)
     return immediate
 
 def parseInstruction(text, addr, linenumber, regUsage):
+    global resolver 
+
     parts = ((lambda s: 
                 s[:next((i for i,q in enumerate(s) if q.startswith(';')), len(s))])
                 ([x for x in re.split(r'\s+', text) if len(x) > 0]))
@@ -386,7 +486,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
         if opcs != None:
             mem[addr] = int(opcs, 16)
             immediate = useExpr(parts[1:], addr, linenumber)
-            setmem16(addr+1, immediate)
+            mem.set16(addr+1, immediate)
             if mnemonic in {"lhld", "shld"}:
                 regUsage[linenumber] = ['#', 'h', 'l']
             elif mnemonic in {"lda", "sta"}:
@@ -404,7 +504,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
                 return -3
             mem[addr] = int(opcs, 16) | (rp << 4)
             immediate = useExpr(subparts[1:], addr, linenumber)
-            setmem16(addr+1, immediate)
+            mem.set16(addr+1, immediate)
             regUsage[linenumber] = ['@'+subparts[0].strip()]
             if subparts[0].strip() in {"h","d"}:
                 rpmap = {"h":"l","d":"e"}
@@ -416,7 +516,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
         if opcs != None:
             mem[addr] = int(opcs, 16)
             immediate = useExpr(parts[1:], addr, linenumber)
-            setmem8(addr+1, immediate)
+            mem.set8(addr+1, immediate)
             if mnemonic in {"sui", "sbi", "xri", "ori", "ani", "adi", "aci", "cpi"}:
                 regUsage[linenumber] = ['#', 'a']
             return 2
@@ -432,7 +532,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
                 return -2
             mem[addr] = int(opcs, 16) | (reg << 3)
             immediate = useExpr(subparts[1:], addr, linenumber)
-            setmem8(addr+1, immediate)
+            mem.set8(addr+1, immediate)
             regUsage[linenumber] = [subparts[0].strip()]
             return 2
                 
@@ -482,14 +582,14 @@ def parseInstruction(text, addr, linenumber, regUsage):
         
         # rst
         if mnemonic == "rst":
-            n = resolveNumber(parts[1])
+            n = evaluateNumber(parts[1])
             if n >= 0 and n < 8:
                 mem[addr] = 0xC7 | (n << 3)
                 return 1
             return -1;
         
         if mnemonic == ".org" or mnemonic == "org":
-            n = evaluateExpression(' '.join(parts[1:]), addr)
+            n = resolver.evaluateExpression(' '.join(parts[1:]), addr)
             if n >= 0:
                 return -100000-n
             return -1
@@ -552,7 +652,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
             size = evaluateExpression(' '.join(parts[1:]), addr)
             if size >= 0:
                 for i in xrange(size):
-                    setmem8(addr+i, 0)
+                    mem.set8(addr+i, 0)
                 return size
             return -1
         
@@ -563,7 +663,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
         if labelTag == None:
             splat = mnemonic.split(':')
             labelTag = splat[0]
-            markLabel(labelTag, addr, linenumber)
+            resolver.markLabel(labelTag, addr, linenumber)
             parts = parts[1:]
             if len(splat) > 1:
                 parts = filter(lambda x: len(x)>0, [':'.join(splat[1:])]) + parts
@@ -655,6 +755,8 @@ def errorSpan(comment, pre=False):
     return '%s<span class="errorline">%s</span>%s' % (pretag[0], comment, pretag[1])
 
 def listingLineUncond(i, remainder, linedata, regUsage):
+    global resolver
+
     addr = linedata[LineData.ADDR]
     labeltext = linedata[LineData.TEXTLABEL] if linedata[LineData.TEXTLABEL] != None else ''
     remainder = remainder[len(labeltext):]
@@ -673,7 +775,7 @@ def listingLineUncond(i, remainder, linedata, regUsage):
     hexlen = min(length, 4) 
     unresolved = len([x for x in mem[addr:addr + hexlen] if x < 0]) > 0
 
-    lineResult  = '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or errors.get(i) != None else '')
+    lineResult  = '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or resolver.getError(i) != None else '')
     lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(addr)][length > 0] 
     lineResult += hexorize(mem[addr : addr + hexlen])                              
     lineResult += ' ' * (16 - hexlen * 3)
@@ -713,8 +815,10 @@ def listingLine(i, line, linedata, regUsage):
         return listingLineUncond(i, line, linedata, regUsage)
 
 def listing(text, linedata, regUsage, doHexDump = False):
+    global resolver
+
     result = [listingLine(i, line, linedata, regUsage) for i, (line, linedata) in enumerate(zip(text, linedata))]
-    result += labelList(labels)
+    result += labelList(resolver.getLabels())
     result += ["<div>&nbsp;</div>"]
 
     if True or not makeListing:
@@ -739,31 +843,17 @@ def readInput(filename):
                 else [text]
     return result
 
-class LineData:
-    LENGTH, ADDR, REFERENCE, TEXTLABEL, FLAGS = range(5)
-    data = []
-    def __init__(self):
-        self.data = [None] * 5    
-    def __getitem__(self, key):
-        return self.data[key]
-    def __setitem__(self, key, value):
-        self.data[key] = value
-    def __repr__(self):
-        return "[len=%s; addr=%s; ref=%s; textlabel=%s; flags=%s]" % tuple([str(x) for x in self.data])
-
 # assembler main entry point
 def assemble(filename):
-    global linedata
+    global linedata, mem, resolver
 
     inputlines = readInput(filename)
     linedata = [LineData() for x in xrange(len(inputlines))]
+    resolver = Resolver(linedata)
 
-    addr, labelsCount = 0, 0
-    labels = {}
-    resolveTable = {}
-    errors = {}
+    addr = 0
     regUsage = {}
-    mem = [None] * 65536
+    mem = Memory()
     doHexDump = True
     listOff = False
     listOffCount = 0
@@ -794,10 +884,8 @@ def assemble(filename):
             linedata[line][LineData.FLAGS] = -listOffCount
 
         addr += size;
-    
-    resolveLabelsTable()
-    evaluateLabels()
-    resolveLabelsInMem()
+
+    resolver.resolve(mem)    
 
     return listing(inputlines, linedata, regUsage, doHexDump)
 
@@ -809,72 +897,6 @@ def substituteBitwiseOps(x):
     elif x.group(0) == 'shl': return '<<'
     elif x.group(0) == 'shr': return '>>'
     else: return m
-
-def evaluateExpression(input, addr):
-    #print "EE0:", input
-    try:
-        input = re.sub(r'\$([0-9a-fA-F]+)', r'0x\1', input)
-        input = re.sub(r"(^|[^'])\$|\.", ' ' + str(addr) + ' ', input, re.I)
-        input = re.sub(r'([\d\w]+)\s(shr|shl|and|or|xor)\s([\d\w]+)', r'(\1 \2 \3)', input, re.I)
-        input = re.sub(r'\b(shl|shr|xor|or|and|[+\-*\/()])\b', substituteBitwiseOps, input)
-        q = re.split(r'<<|>>|[+\-*\/()\^\&]', input)
-    except Exception, e:
-        return -1
-    expr = ''
-    for qident in q:
-        qident = qident.strip()
-        if resolveNumber(qident) != -1:
-            continue
-        addr = labels.get(qident)
-        if addr != None:
-            if addr >= 0:
-                expr += '_%s=%s;\n' % (qident, str(addr))
-                input = re.sub(r'\b' + qident + r'\b', '_' + qident, input, re.M)
-            else:
-                expr = ''
-                break
-    expr += re.sub(r"0x[0-9a-fA-F]+|[0-9][0-9a-fA-F]*[hbqdHBQD]|'.'", lambda x: str(resolveNumber(x.group(0))), input)
-    try:
-        return eval(expr.lower())
-    except Exception, e:
-        pass
-    return -1;
-
-
-def evaluateLabels():
-    for i in labels.keys():
-        label = labels[i]
-        if label < 0 and resolveTable.get(-label) == None:
-            result = evaluateExpression(i, -1)
-            if result >= 0:
-                resolveTable[-label] = result
-                labels[i] = None
-
-def resolveLabelsInMem():
-    i = 0
-    memsize = len(mem)
-    while i < memsize:
-        negativeId = mem[i]
-        if negativeId != None and negativeId < 0:
-            #print "resolveLabelsInMem negativeId=", negativeId
-            newvalue = resolveTable.get(-negativeId)
-            if newvalue != None:
-                mem[i] = newvalue & 0xff
-            i += 1
-            if mem[i] == negativeId:
-                if newvalue != None:
-                    mem[i] = 0xff & (newvalue >> 8)
-                i += 1
-        else:
-            i += 1 
-
-def resolveLabelsTable():
-    for i in labels.keys():
-        label = labels[i]
-        if label < 0:
-            addr = resolveTable.get(-label)
-            if addr != None:
-                labels[i] = addr
 
 def preamble():
     return [
