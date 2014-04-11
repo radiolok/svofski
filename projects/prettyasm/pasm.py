@@ -194,8 +194,7 @@ mem = [None] * 65536
 labelsCount = 0
 labels = {}
 resolveTable = {} # label negative id, resolved address
-textlabels = []
-references = []
+linedata = []
 errors = {}
 regUsage = {}
 lineCount = 0
@@ -253,12 +252,12 @@ def resolveNumber(identifier):
     return -1
 
 def referencesLabel(identifier, linenumber):
-    global references
-    if references[linenumber] == None:
-        references[linenumber] = identifier.lower()
+    global linedata
+    if linedata[linenumber][LineData.REFERENCE] == None:
+        linedata[linenumber][LineData.REFERENCE] = identifier.lower()
 
 def markLabel(identifier, address, linenumber = None, override = False):
-    global labelsCount, labels, resolveTable, textlabels
+    global labelsCount, labels, resolveTable, linedata
 
     identifier = re.sub(r'\$([0-9a-fA-F]+)', r'0x\1', identifier)
     identifier = re.sub(r"(^|[^'])(\$|\.)", ' ' + str(address) + ' ', identifier)
@@ -281,7 +280,7 @@ def markLabel(identifier, address, linenumber = None, override = False):
         labels[identifier] = address
 
     if linenumber != None:
-        textlabels[linenumber] = identifier
+        linedata[linenumber][LineData.TEXTLABEL] = identifier
 
     return address
 
@@ -653,7 +652,8 @@ def errorSpan(comment, pre=False):
     pretag = ['<pre>', '</pre>'] if pre else [''] * 2
     return '%s<span class="errorline">%s</span>%s' % (pretag[0], comment, pretag[1])
 
-def listingLineUncond(i, labeltext, remainder, length, addr):
+def listingLineUncond(i, labeltext, remainder, linedata):
+    addr = linedata[LineData.ADDR]
     lineResult = ''
     comment = ''
     semicolon = remainder.find(';')
@@ -666,11 +666,11 @@ def listingLineUncond(i, labeltext, remainder, length, addr):
     labelid = "label" + str(i)
     remid = "code" + str(i)
 
-    hexlen = min(length, 4) 
+    hexlen = min(linedata.getLength(), 4) 
     unresolved = len([x for x in mem[addr:addr + hexlen] if x < 0]) > 0
 
     lineResult += '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or errors.get(i) != None else '')
-    lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(addr)][length > 0] # address
+    lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(addr)][linedata.getLength() > 0] # address
     lineResult += hexorize(mem[addr : addr + hexlen])                              # hexes
     lineResult += ' ' * (16 - hexlen * 3)
     if len(labeltext) > 0:
@@ -687,18 +687,18 @@ def listingLineUncond(i, labeltext, remainder, length, addr):
         lineResult += commentSpan(comment, pre=False)
 
     # display only first and last lines of a long db section
-    if hexlen < length:
+    if hexlen < linedata.getLength():
         lineResult += '<br/>\t.&nbsp;.&nbsp;.&nbsp;<br/>'
-        endofs = (length / 4) * 4
-        if length % 4 == 0:
+        endofs = (linedata.getLength() / 4) * 4
+        if linedata.getLength() % 4 == 0:
             endofs -= 4
-        lineResult += hexorize(mem[addr + endofs : addr + length], 
+        lineResult += hexorize(mem[addr + endofs : addr + linedata.getLength()], 
             prefix = hex16(addr + endofs) + '\t') + '<br/>'
     
     lineResult += '</pre>'
     return lineResult
 
-def listingLine(i, line, length, addr, listOn, skipLineCount):
+def listingLine(i, line, linedata, listOn, skipLineCount):
     labeltext = ''
     remainder = line
     parts = re.split(r'[\:\s]', line, 1)
@@ -714,14 +714,14 @@ def listingLine(i, line, length, addr, listOn, skipLineCount):
     elif not listOn:
         return '', False
     else:
-        return listingLineUncond(i, labeltext, remainder, length, addr), True
+        return listingLineUncond(i, labeltext, remainder, linedata), True
 
-def listing(text, lengths, addresses, doHexDump = False):
+def listing(text, linedata, doHexDump = False):
     result = ['']
     listOn = True
     skipLineCount = 0
-    for i, (line, length, addr) in enumerate(zip(text, lengths, addresses)):
-        lineResult, listOn = listingLine(i, line, length, addr, listOn, skipLineCount)
+    for i, (line, linedata) in enumerate(zip(text, linedata)):
+        lineResult, listOn = listingLine(i, line, linedata, listOn, skipLineCount)
         result += [lineResult]
         skipLineCount = [(skipLineCount + 1), 0][listOn]
 
@@ -751,23 +751,52 @@ def readInput(filename):
                 else [text]
     return result
 
+class LineData:
+    LENGTH, ADDR, REFERENCE, TEXTLABEL, FLAGS = range(5)
+    data = []
+    def __init__(self):
+        self.data = [None] * 5    
+    def __getitem__(self, key):
+        return self.data[key]
+    def __setitem__(self, key, value):
+        self.data[key] = value
+    def __repr__(self):
+        return "[len=%s; addr=%s; ref=%s; textlabel=%s; flags=%s]" % tuple([str(x) for x in self.data])
+    def getLength(self):
+        return self.data[self.LENGTH]
+    def setLength(self, length):
+        self.data[self.LENGTH] = length
+    def getAddr(self):
+        return self.data[self.ADDR]
+    def setAddr(self, addr):
+        self.data[self.ADDR] = addr
+    def getReference(self):
+        return self.data[self.REFERENCE]
+    def setReference(self, ref):
+        self.data[self.REFERENCE] = ref
+    def getTextLabel(self):
+        return self.data[self.TEXTLABEL]
+    def setTextLabel(self, textlabel):
+        self.data[self.TEXTLABEL] = textlabel
+    def getFlags(self):
+        return self.data[self.FLAGS]
+    def setFlags(self, flags):
+        self.data[self.FLAGS] = flags
+
+
 # assembler main entry point
 def assemble(filename):
-    global references, textlabels, regUsage
+    global regUsage, linedata
 
     inputlines = readInput(filename)
-    lengths = [None] * len(inputlines)
-    addresses = [None] * len(inputlines)
-    addr = 0
-    labelsCount = 0
+    linedata = [LineData() for x in xrange(len(inputlines))]
+
+    addr, labelsCount = 0, 0
     labels = {}
     resolveTable = {}
-    mem = [None] * 65536
-    backrefWindow = False
-    references = [None] * len(inputlines)
-    textlabels = [None] * len(inputlines)
     errors = {}
     regUsage = {}
+    mem = [None] * 65536
     doHexDump = True
     
     for line in xrange(len(inputlines)):
@@ -779,15 +808,15 @@ def assemble(filename):
         elif size < 0:
             error(line, "syntax error")
             size = -size
-        lengths[line] = size;
-        addresses[line] = addr;
+        linedata[line][LineData.LENGTH] = size
+        linedata[line][LineData.ADDR] = addr
         addr += size;
     
     resolveLabelsTable()
     evaluateLabels()
     resolveLabelsInMem()
 
-    return listing(inputlines, lengths, addresses, doHexDump)
+    return listing(inputlines, linedata, doHexDump)
 
 
 def substituteBitwiseOps(x):
@@ -865,7 +894,7 @@ def resolveLabelsTable():
                 labels[i] = addr
 
 def preamble():
-    return ([
+    return [
         '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru"> <head> <title>Pretty 8080 Assembler</title>',
         '<script type="text/javascript" src="navigate.js"></script>',
         '<link href="listn.css" rel="stylesheet" type="text/css" media="screen"/>',
@@ -885,15 +914,21 @@ def preamble():
         '.rpsp { color: lightgray; }',
         '</style>',
         '<body id="main" onload="loaded(); return false;" onresize="updateSizes(); return false;">',
-        '<div id="list">'])
-    return r
+        '<div id="list">']
 
 def tail():
     return ['</div></body></html>']
 
+def references(data):
+    return [x[LineData.REFERENCE] for x in data]
+
+def textlabels(data):
+    return [x[LineData.TEXTLABEL] for x in data]
+
 def jsons():
-    return (['<div style="display:none" id="json_references">\n' + json.dumps(references) + '</div>',
-        '<div style="display:none" id="json_textlabels">\n' + json.dumps(textlabels) + '</div>\n'])
+    global linedata
+    return (['<div style="display:none" id="json_references">\n' + json.dumps(references(linedata)) + '</div>',
+        '<div style="display:none" id="json_textlabels">\n' + json.dumps(textlabels(linedata)) + '</div>\n'])
 
 def printusage():
     print "Usage: pasm.py inputfilename"
