@@ -199,16 +199,8 @@ def resolveNumber(identifier):
             return int(identifier)
         except Exception, e:
             pass
-        suffix = identifier[-1].lower()
         try:
-            if suffix == 'd':
-                return int(identifier[0:-1])
-            elif suffix == 'h':
-                return int(identifier[0:-1], 16)
-            elif suffix == 'b':
-                return int(identifier[0:-1], 2)
-            elif suffix == 'q':
-                return int(identifier[0:-1], 8)
+            return int(identifier[:-1], {'d':10,'h':16,'b':2,'q':8}[identifier[-1].lower()])
         except Exception, e:
             pass
     return -1
@@ -270,9 +262,8 @@ def tokenString(s, addr, linenumber):
 def parseDeclDB(args, addr, linenumber, dw):
     text = ' '.join(args[1:])
     arg = ""
-    mode = 0
+    mode, nbytes = 0, 0
     cork = False
-    nbytes = 0
 
     for i in xrange(len(text)):
         if mode == 0:
@@ -304,9 +295,7 @@ def parseDeclDB(args, addr, linenumber, dw):
     if mode == 1: return -1    # unterminated string
     longueur = tokenDBDW(arg, addr+nbytes, dw, linenumber)
     if longueur < 0: return -1
-    nbytes = nbytes + longueur
-
-    return nbytes
+    return nbytes + longueur
 
 def getExpr(arr):
     ex = ' '.join(arr).strip()
