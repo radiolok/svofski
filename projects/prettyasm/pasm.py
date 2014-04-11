@@ -118,7 +118,15 @@ class LineData:
     def __setitem__(self, key, value):
         self.data[key] = value
     def __repr__(self):
-        return "[len=%s; addr=%s; ref=%s; textlabel=%s; flags=%s]" % tuple([str(x) for x in self.data])
+        return "[len=%s; addr=%s; ref=%s; textlabel=%s; flags=%s]" % tuple((str(x) for x in self.data))
+
+def substituteBitwiseOps(x):
+    if x.group(0) == 'and': return '&'
+    elif x.group(0) == 'or': return '|'
+    elif x.group(0) == 'xor': return '^'
+    elif x.group(0) == 'shl': return '<<'
+    elif x.group(0) == 'shr': return '>>'
+    else: return m
 
 class Resolver:
     labels = {}
@@ -765,7 +773,7 @@ def listingLineUncond(i, remainder, linedata, regUsage):
     textlabel = linedata[LineData.TEXTLABEL]
 
     if textlabel != None:
-        labeltext = remainder[:remainder.index(textlabel) + len(textlabel)] 
+        labeltext = remainder[:remainder.index(textlabel) + len(textlabel)]
         remainder = remainder[len(labeltext):]
     else:
         labeltext = ''
@@ -786,51 +794,50 @@ def listingLineUncond(i, remainder, linedata, regUsage):
 
     #print i, 'error=', resolver.getError(i), 'labeltext=', labeltext, 'remainder=', remainder, 'unresolved=', unresolved
 
-    lineResult  = '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or resolver.getError(i) != None else '')
-    lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(addr)][length > 0] 
-    lineResult += hexorize(mem[addr : addr + hexlen])                              
-    lineResult += ' ' * (16 - hexlen * 3)
+    result = (['<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or resolver.getError(i) != None else '')] +
+        [hexorize(mem[addr : addr + hexlen], prefix='<span class="adr">%s</span>\t' % [' ', hex16(addr)][length>0])] +
+        [' ' * (16 - hexlen * 3)])
     if len(labeltext) > 0:
-        lineResult += ('<span class="l" id="%s" onmouseover="return mouseovel(%d);"'
-            ' onmouseout="return mouseout(%d);">%s</span>') % (labelid, i, i, labeltext)
+        result += [('<span class="l" id="%s" onmouseover="return mouseovel(%d);"'
+            ' onmouseout="return mouseout(%d);">%s</span>') % (labelid, i, i, labeltext)]
 
     tmp = len(remainder)
     remainder = remainder.lstrip()
-    lineResult += ' ' * (tmp - len(remainder))
+    result += [' ' * (tmp - len(remainder))]
     if len(remainder) > 0:
-        lineResult += ('<span id="%s" onmouseover="return mouseover(%d);"' 
-            ' onmouseout="return mouseout(%d);">%s</span>') % (remid, i, i, remainder)
+        result += [('<span id="%s" onmouseover="return mouseover(%d);"' 
+            ' onmouseout="return mouseout(%d);">%s</span>') % (remid, i, i, remainder)]
     if len(comment) > 0:
-        lineResult += commentSpan(comment, pre=False)
+        result += [commentSpan(comment, pre=False)]
 
     # display only first and last lines of a long db section
     if hexlen < length:
-        lineResult += '<br/>'
+        result += ['<br/>']
         if length / 4 > 1: 
-            lineResult += '\t.&nbsp;.&nbsp;.&nbsp;<br/>'
+            result += ['\t.&nbsp;.&nbsp;.&nbsp;<br/>']
         endofs = (length / 4) * 4
         if length % 4 == 0:
             endofs -= 4
-        lineResult += hexorize(mem[addr + endofs : addr + length], 
-            prefix = hex16(addr + endofs) + '\t') + '<br/>'
+        result += [hexorize(mem[addr + endofs : addr + length], prefix = hex16(addr + endofs) + '\t') + '<br/>']
     
-    lineResult += '</pre>'
-    return lineResult
+    result += ['</pre>']
+    return result
 
 def listingLine(i, line, linedata, regUsage):
     if linedata[LineData.FLAGS] == -1:
-        return commentSpan("                        ; list generation turned off", pre=True)
+        return [commentSpan("                        ; list generation turned off", pre=True)]
     elif linedata[LineData.FLAGS] >= 0:
-        return commentSpan("                        ; skipped %d lines" % linedata[LineData.FLAGS], pre=True)
+        return [commentSpan("                        ; skipped %d lines" % linedata[LineData.FLAGS], pre=True)]
     elif linedata[LineData.FLAGS] != None:
-        return ''
+        return []
     else:
         return listingLineUncond(i, line, linedata, regUsage)
 
 def listing(text, linedata, regUsage, doHexDump = False):
     global resolver
 
-    result = [listingLine(i, line, linedata, regUsage) for i, (line, linedata) in enumerate(zip(text, linedata))]
+    result = reduce(lambda x,y: x+y, 
+        (listingLine(i, line, linedata, regUsage) for i,(line,linedata) in enumerate(zip(text,linedata))))
     result += labelList(resolver.getLabels())
     result += ["<div>&nbsp;</div>"]
 
@@ -884,15 +891,6 @@ def assemble(filename):
     resolver.resolve(mem)
     return listing(inputlines, linedata, regUsage, doHexDump)
 
-
-def substituteBitwiseOps(x):
-    if x.group(0) == 'and': return '&'
-    elif x.group(0) == 'or': return '|'
-    elif x.group(0) == 'xor': return '^'
-    elif x.group(0) == 'shl': return '<<'
-    elif x.group(0) == 'shr': return '>>'
-    else: return m
-
 def readInput(filename):
     result = []
     with open(filename) as lefile:
@@ -905,8 +903,8 @@ def readInput(filename):
     return result
 
 def preamble():
-    return [
-        '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru"> <head> <title>Pretty 8080 Assembler</title>',
+    return ['<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">',
+        '<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru"> <head> <title>Pretty 8080 Assembler</title>',
         '<script type="text/javascript" src="navigate.js"></script>',
         '<link href="listn.css" rel="stylesheet" type="text/css" media="screen"/>',
         '<style type="text/css">',
@@ -941,8 +939,8 @@ def flags(data):
 
 def jsons():
     global linedata
-    return (['<div style="display:none" id="json_references">\n' + json.dumps(references(linedata)) + '</div>',
-        '<div style="display:none" id="json_textlabels">\n' + json.dumps(textlabels(linedata)) + '</div>\n'])
+    return ['<div style="display:none" id="json_references">\n' + json.dumps(references(linedata)) + '</div>',
+        '<div style="display:none" id="json_textlabels">\n' + json.dumps(textlabels(linedata)) + '</div>\n']
 
 def printusage():
     print "Usage: pasm.py inputfilename"
@@ -984,9 +982,9 @@ def main(argv):
         #try:
             with open(lstFileName, "w") as lst:
                 lst.write(''.join(preamble() +
-                    assemble(inputFileName) +
-                    jsons() +
-                    tail()))
+                                  assemble(inputFileName) +
+                                  jsons() +
+                                  tail()))
         #except Exception, e:
             #print str(e)
             #print e
