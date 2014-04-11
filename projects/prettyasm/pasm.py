@@ -6,16 +6,6 @@ import sys
 import getopt
 from os.path import splitext
 
-def enumerate2(sequence, start=0, granularity=1):
-    n = 0
-    v = start
-    for elem in sequence:
-        yield v, elem
-        n += 1
-        if n == granularity:
-            v += granularity
-            n = 0
-
 def slicing_enumerate2(sequence, start=0, granularity=1, validator = lambda x: True):
     i = 0
     for base in xrange(start, len(sequence), granularity):
@@ -41,31 +31,88 @@ def isValidIm8(s):
 def toTargetEncoding(str, encoding):
     return str.decode('utf-8').encode(encoding)
 
-ops0 = {"nop": "00",
-        "hlt":  "76",
-        "ei":   "fb",
-        "di":   "f3",
-        "sphl": "f9",
-        "xchg": "eb",
-        "xthl": "e3",
-        "daa":  "27",
-        "cma":  "2f",
-        "stc":  "37",
-        "cmc":  "3f",
-        "rlc":  "07",
-        "rrc":  "0f",
-        "ral":  "17",
-        "rar":  "1f",
-        "pchl": "e9",
-        "ret":  "c9",
-        "rnz":  "c0",
-        "rz":   "c8",
-        "rnc":  "d0",
-        "rc":   "d8",
-        "rpo":  "e0",
-        "rpe":  "e8",
-        "rp":   "f0",
-        "rm":   "f8"}
+class MemoryDump:
+    @staticmethod
+    def span(bytes, conv):
+        return (''.join([conv(i, x) for i, x in enumerate(bytes)]) 
+                    if reduce(lambda x,y: x or y != None, bytes, False) else False)
+    @classmethod
+    def spanHex(cls, bytes):
+        return cls.span(bytes, lambda i, x: '%s%s' % ([' ', '-'][(i > 0) and (i % 8 == 0)], 
+                    ('  ' if x == None else errorSpan(hex8(x)) if x < 0 else hex8(x))))
+
+    @classmethod
+    def spanChar(cls, bytes):
+        return cls.span(bytes, lambda i, x: char8(x))
+
+    @classmethod
+    def dump(cls, mem):
+        return (['<pre>Memory dump:</pre><div class="hordiv"></div>'] +
+                ['<pre class="d%d">%s: %s  %s</pre><br/>' % (line % 2, hex16(addr), cls.spanHex(memr), cls.spanChar(memr))
+                for line, addr, memr in slicing_enumerate2(mem, 0, 16, lambda x: x != None)])
+
+class IntelHex:
+    @staticmethod
+    def intelHex(mem):
+        pureHex = []
+        i = 0
+        while i < len(mem):
+            j = i
+            while j < len(mem) and mem[j] == None:
+                j += 1
+            i = j
+            if i >= len(mem):
+                break
+            line, rec = ":", ""
+            cs, j = 0, 0
+            while j < 32 and mem[i+j] != None:
+                if mem[i+j] < 0:
+                    mem[i+j] = 0
+                rec += hex8(mem[i+j])
+                cs += mem[i+j]
+                j += 1
+
+            cs += j
+            line += hex8(j)    # byte count
+            cs += (i >> 8) & 255
+            cs += i & 255
+            line += hex16(i)   # record address
+            cs += 0
+            line += "00"       # record type 0, data
+            line += rec
+
+            cs = 0xff&(-(cs&255))
+            line += hex8(cs)
+            pureHex += [line]
+            i += j
+        return pureHex + [':00000001FF']
+
+ops0 = {
+    "nop": "00",
+    "hlt":  "76",
+    "ei":   "fb",
+    "di":   "f3",
+    "sphl": "f9",
+    "xchg": "eb",
+    "xthl": "e3",
+    "daa":  "27",
+    "cma":  "2f",
+    "stc":  "37",
+    "cmc":  "3f",
+    "rlc":  "07",
+    "rrc":  "0f",
+    "ral":  "17",
+    "rar":  "1f",
+    "pchl": "e9",
+    "ret":  "c9",
+    "rnz":  "c0",
+    "rz":   "c8",
+    "rnc":  "d0",
+    "rc":   "d8",
+    "rpo":  "e0",
+    "rpe":  "e8",
+    "rp":   "f0",
+    "rm":   "f8"}
 
 opsIm16 = {
     "lda":  "3a",
@@ -541,53 +588,6 @@ def labelList(labels):
                 enumerate(sorted(labels.items(), key=lambda x:x[1])) if label_id != None and len(label_id) > 0] +
         ['</pre>'])
 
-def dumpspan(bytes, mode):
-    conv = [lambda i, x: '%s%s' % ([' ', '-'][(i > 0) and (i % 8 == 0)], 
-                ('  ' if x == None else errorSpan(hex8(x)) if x < 0 else hex8(x))), # hexes with separators
-            lambda i, x: char8(x)][mode]                                            # characters
-    return (''.join([conv(i, x) for i, x in enumerate(bytes)]) 
-                if reduce(lambda x,y: x or y != None, bytes, False) else False)
-
-def dump(mem):
-    return (['<pre>Memory dump:</pre><div class="hordiv"></div>'] +
-            ['<pre class="d%d">%s: %s  %s</pre><br/>' % (line % 2, hex16(addr), dumpspan(memr, 0), dumpspan(memr, 1))
-            for line, addr, memr in slicing_enumerate2(mem, 0, 16, lambda x: x != None)])
-
-def intelHex():
-    pureHex = []
-    i = 0
-    while i < len(mem):
-        j = i
-        while j < len(mem) and mem[j] == None:
-            j += 1
-        i = j
-        if i >= len(mem):
-            break
-        line, rec = ":", ""
-        cs, j = 0, 0
-        while j < 32 and mem[i+j] != None:
-            if mem[i+j] < 0:
-                mem[i+j] = 0
-            rec += hex8(mem[i+j])
-            cs += mem[i+j]
-            j += 1
-
-        cs += j
-        line += hex8(j)    # byte count
-        cs += (i >> 8) & 255
-        cs += i & 255
-        line += hex16(i)   # record address
-        cs += 0
-        line += "00"       # record type 0, data
-        line += rec
-
-        cs = 0xff&(-(cs&255))
-        line += hex8(cs)
-        pureHex += [line]
-        i += j
-    return pureHex + [':00000001FF']
-
-
 def getLabel(l):
     return labels.get(l.lower())
 
@@ -734,9 +734,9 @@ def listing(text, lengths, addresses, doHexDump = False):
 
     if True or not makeListing:
         if doHexDump:
-            result += dump(mem)
+            result += MemoryDump.dump(mem)
         result += ["<div>&nbsp;</div>"]
-        result += ['<br/>'.join(intelHex())]
+        result += ['<br/>'.join(IntelHex.intelHex(mem))]
         result += ["<div>&nbsp;</div>"]
     return result
 
@@ -949,7 +949,7 @@ def main(argv):
     if hexFileName != None:
         try:
             with open(hexFileName, "w") as hf:
-                hf.write('\n'.join(intelHex()))
+                hf.write('\n'.join(IntelHex.intelHex(mem)))
         except Exception, e:
             print str(e)
             sys.exit(1)
