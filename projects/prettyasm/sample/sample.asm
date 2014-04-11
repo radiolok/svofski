@@ -1,7 +1,7 @@
     .encoding koi8-r
     .nodump
     .hexfile sample.hex
-    .org $100
+    .org $105
     mvi c, 9
     lxi d, hello ; see messages.inc
     call 5
