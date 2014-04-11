@@ -6,6 +6,16 @@ import sys
 import getopt
 from os.path import splitext
 
+def enumerate2(sequence, start=0, granularity=1):
+    n = 0
+    v = start
+    for elem in sequence:
+        yield v, elem
+        n += 1
+        if n == granularity:
+            v += granularity
+            n = 0
+
 def char8(byteval):
     return [lambda x:'.', chr][byteval > 32 and byteval < 127](byteval)
 
@@ -537,42 +547,26 @@ def labelList(labels):
                 enumerate(sorted(labels.items(), key=lambda x:x[1])) if label_id != None and len(label_id) > 0] +
         ['</pre>'])
 
-
-def dumpspan(org, mode):
-    result = ""
-    nonempty = False
-    conv = [hex8, char8][mode]
-    for i in xrange(org, org + 16):
-        if mem[i] != None:
-            nonempty = True
-        if mode == 1:
-            result += conv(mem[i])
-        else:
-            result += [' ', '-'][(i > org) and (i % 8 == 0)]
-            if mem[i] == None:
-                result += '  '
-            elif mem[i] < 0:
-                result += '<span class="errorline">' + conv(mem[i]) + '</span>'
-            else:
-                result += conv(mem[i])
-    return [False, result][nonempty]
+def dumpspan(bytes, mode):
+    conv = [lambda i, x: '%s%s' % ([' ', '-'][(i > 0) and (i % 8 == 0)], 
+                ('  ' if x == None else errorSpan(hex8(x)) if x < 0 else hex8(x))), 
+            lambda i, x: char8(x)][mode] 
+    return (''.join([conv(i, x) for i, x in enumerate(bytes)]) 
+                if reduce(lambda x,y: x or y != None, bytes, False) else False)
 
 def dump():
-    org = next((i for i, q in enumerate(mem) if q != None), len(mem))
-    if org % 16 != 0:
-        org = org - org % 16
-    
+    org = next((i for i, q in enumerate2(mem, 0, 16) if q != None), len(mem))
     result = ('<pre>Memory dump:</pre>'
               '<div class="hordiv"></div>')
     lastempty = 0
     printline = 0
     for i in xrange(org, len(mem), 16):
-        span = dumpspan(i, 0)
+        span = dumpspan(mem[i:i+16], 0)
         if span and not lastempty:
             printline += 1
             result += '<pre class="d%d">' % (printline % 2)
         if span:
-            result += '%s: %s  %s</pre><br/>' % (hex16(i), span, dumpspan(i, 1))
+            result += '%s: %s  %s</pre><br/>' % (hex16(i), span, dumpspan(mem[i:i+16], 1))
             lastempty = False
         if (not span) and (not lastempty):
             result += " </pre><br/>"
@@ -677,10 +671,18 @@ def processRegUsage(instr, linenumber):
 def hexorize(bytes, prefix=''):
     return reduce(lambda x, y: x + hex8(y) + ' ', bytes, prefix)
 
-def listing_line_uncond(i, labeltext, remainder, currentLength, currentAddr):
+def commentSpan(comment, pre=False):
+    pretag = ['<pre>', '</pre>'] if pre else [''] * 2
+    return '%s<span class="cmt">%s</span>%s' % (pretag[0], comment, pretag[1])
+
+def errorSpan(comment, pre=False):
+    pretag = ['<pre>', '</pre>'] if pre else [''] * 2
+    return '%s<span class="errorline">%s</span>%s' % (pretag[0], comment, pretag[1])
+
+def listingLineUncond(i, labeltext, remainder, length, addr):
     lineResult = ''
-    semicolon = remainder.find(';')
     comment = ''
+    semicolon = remainder.find(';')
     if semicolon != -1:
         comment = remainder[semicolon:]
         remainder = remainder[:semicolon]
@@ -690,12 +692,12 @@ def listing_line_uncond(i, labeltext, remainder, currentLength, currentAddr):
     labelid = "label" + str(i)
     remid = "code" + str(i)
 
-    hexlen = [currentLength, 4][currentLength > 4]
-    unresolved = len([x for x in mem[currentAddr:currentAddr + hexlen] if x < 0]) > 0
+    hexlen = [length, 4][length > 4]
+    unresolved = len([x for x in mem[addr:addr + hexlen] if x < 0]) > 0
 
     lineResult += '<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or errors.get(i) != None else '')
-    lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(currentAddr)][currentLength > 0] # address
-    lineResult += hexorize(mem[currentAddr : currentAddr + hexlen])                              # hexes
+    lineResult += '<span class="adr">%s</span>\t' % [' ', hex16(addr)][length > 0] # address
+    lineResult += hexorize(mem[addr : addr + hexlen])                              # hexes
     lineResult += ' ' * (16 - hexlen * 3)
     if len(labeltext) > 0:
         lineResult += ('<span class="l" id="%s" onmouseover="return mouseovel(%d);"'
@@ -708,69 +710,58 @@ def listing_line_uncond(i, labeltext, remainder, currentLength, currentAddr):
         lineResult += ('<span id="%s" onmouseover="return mouseover(%d);"' 
             ' onmouseout="return mouseout(%d);">%s</span>') % (remid, i, i, remainder)
     if len(comment) > 0:
-        lineResult += '<span class="cmt">%s</span>' % comment
+        lineResult += commentSpan(comment, pre=False)
 
     # display only first and last lines of a long db section
-    if hexlen < currentLength:
+    if hexlen < length:
         lineResult += '<br/>\t.&nbsp;.&nbsp;.&nbsp;<br/>'
-        endofs = (currentLength / 4) * 4
-        if currentLength % 4 == 0:
+        endofs = (length / 4) * 4
+        if length % 4 == 0:
             endofs -= 4
-        lineResult += hexorize(mem[currentAddr + endofs : currentAddr + currentLength], 
-            prefix = hex16(currentAddr + endofs) + '\t') + '<br/>'
+        lineResult += hexorize(mem[addr + endofs : addr + length], 
+            prefix = hex16(addr + endofs) + '\t') + '<br/>'
     
     lineResult += '</pre>'
     return lineResult
 
-
-def listing_line(i, currentLine, currentLength, currentAddr, listOn, skipLineCount):
-    skipLine = False
-    lineResult = ''
-    listOffComment = ''
+def listingLine(i, line, length, addr, listOn, skipLineCount):
     labeltext = ''
-    remainder = currentLine
-    parts = re.split(r'[\:\s]', currentLine)
+    remainder = line
+    parts = re.split(r'[\:\s]', line, 1)
     if len(parts) > 1:
         if getLabel(parts[0]) != -1 and not parts[0].strip().startswith(';'):
             labeltext = parts[0]
-            remainder = currentLine[len(labeltext):]
+            remainder = line[len(labeltext):]
 
     if remainder.strip().startswith(".nolist"):
-        skipLine = True
-        listOn = False
-        listOffComment = "                        ; list generation turned off"
-        return '<pre><span class="cmt">%s</span></pre>' % listOffComment, False
+        return commentSpan("                        ; list generation turned off", pre=True), False
     elif remainder.strip().startswith(".list"):
-        skipLine = True
-        listOn = True
-        listOffComment = "                        ; skipped %d lines" % skipLineCount
-        return '<pre><span class="cmt">%s</span></pre>' % listOffComment, True
+        return commentSpan("                        ; skipped %d lines" % skipLineCount, pre=True), True
     elif not listOn:
         return '', False
     else:
-        return listing_line_uncond(i, labeltext, remainder, currentLength, currentAddr), True
+        return listingLineUncond(i, labeltext, remainder, length, addr), True
 
 def listing(text, lengths, addresses, doHexDump = False):
-    result = ''
+    result = ['']
     listOn = True
     skipLineCount = 0
-    for i, (currentLine, currentLength, currentAddr) in enumerate(zip(text, lengths, addresses)):
-        lineResult, listOn = listing_line(i, currentLine, currentLength, currentAddr, 
-            listOn, skipLineCount)
-        result += lineResult
+    for i, (line, length, addr) in enumerate(zip(text, lengths, addresses)):
+        lineResult, listOn = listingLine(i, line, length, addr, listOn, skipLineCount)
+        result += [lineResult]
         skipLineCount = [(skipLineCount + 1), 0][listOn]
 
-    result += labelList(labels)
+    result += [labelList(labels)]
 
-    result += "<div>&nbsp;</div>"
+    result += ["<div>&nbsp;</div>"]
 
     if True or not makeListing:
         if doHexDump:
-            result += dump()
-        result += "<div>&nbsp;</div>"
-        result += intelHex()
-        result += "<div>&nbsp;</div>"
-    return result
+            result += [dump()]
+        result += ["<div>&nbsp;</div>"]
+        result += [intelHex()]
+        result += ["<div>&nbsp;</div>"]
+    return ''.join(result)
 
 def error(line, text):
     errors[line] = text
