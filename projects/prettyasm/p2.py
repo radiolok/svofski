@@ -9,8 +9,6 @@ test6 = "mvi a, ';'"
 test7 = "shcnob"
 test8 = "sex 1,2,(3+a)"
 
-NORMAL, STRING_LITERAL = 0, 1
-
 def tokenize(str, t1 = '', t2 = ''):
 	if len(t1) > 0:
 		yield t1
@@ -28,10 +26,6 @@ def tokenize(str, t1 = '', t2 = ''):
 		elif i == len(str) - 1:
 			yield str
 
-def glue(tokens, state = 0):
-	car, cdr = next(tokens, ''), tokens
-	return (car + ' ' + (glue(cdr, state + 1) if car != '' else ''))
-		
 def isInstruction(str):
 	return str in {"mov","mvi", "sex"}
 
