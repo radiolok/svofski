@@ -37,21 +37,21 @@ def isInstruction(str):
 
 def args(head, tokens, expect = None):
 	return (lambda car, cdr: 
-		args([''.join(head + [car])], tokens, expect if car != expect else None) if expect != None 
-		else args([''.join(head + [car])], tokens, car) if car == "'" 
+		args([''.join(head + [car])], cdr, expect if car != expect else None) if expect != None 
+		else args([''.join(head + [car])], cdr, car) if car == "'" 
 		else head if car == [] or car == ';'
-		else head + args([], tokens, expect) if car == ','
-		else args([''.join(head + [car])], tokens, expect)) (next(tokens, []), tokens)
+		else head + args([], cdr, expect) if car == ','
+		else args([''.join(head + [car])], cdr, expect)) (next(tokens, []), tokens)
 
 def instr(instr, tokens, label = None):
 	return ['L:'+label if label != None else '', instr.upper() if instr != None else None, args([], tokens)]
 
 def parse(tokens, label = None):
 	return (lambda car, cdr:
-		instr(None, tokens, label) if car == ';' or car == ''
-		else parse(tokens, label) if car == ':'
-		else instr(car, tokens, label) if isInstruction(car)
-		else parse(tokens, label = car)) (next(tokens, ''), tokens)
+		instr(None, cdr, label) if car == ';' or car == ''
+		else parse(cdr, label) if car == ':'
+		else instr(car, cdr, label) if isInstruction(car)
+		else parse(cdr, label = car)) (next(tokens, ''), tokens)
 
 #print [x for x in tokenize(test1)]
 #print [x for x in tokenize(test2)]
