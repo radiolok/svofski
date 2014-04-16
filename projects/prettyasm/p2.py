@@ -3,10 +3,10 @@
 test1 = "bob: mov a, b 		; fuuu"
 test2 = "mike:mvi c, 'Q' 	; bob"
 test3 = "rob mvi c, 'Q'+8;ommog zoth"
-test4 = "mov c + 5, d"
+test4 = "mov coq + 5, d"
 test5 = 'mov n, ","+\',\''
-test6 = "mvi a, ';'"
-test7 = "shcnob"
+test6 = "mvi a, ';puu'"
+test7 = "snurfel"
 test8 = "sex 1,2,(3+a)"
 
 def tokenize(str, t1 = '', t2 = ''):
@@ -15,7 +15,7 @@ def tokenize(str, t1 = '', t2 = ''):
 	if len(t2) > 0:
 		yield t2
 	for i, c in enumerate(str):
-		if c in ':,\'";':
+		if c in ':,\'";()+-/*':
 			for x in tokenize(str[i+1:], str[:i], str[i]):
 				yield x
 			break
@@ -29,13 +29,16 @@ def tokenize(str, t1 = '', t2 = ''):
 def isInstruction(str):
 	return str in {"mov","mvi", "sex"}
 
+def joins(a1, a2):
+	return a1[0:-1] + [''.join([a1[-1]] + [a2])]
+
 def args(head, tokens, expect = None):
 	return (lambda car, cdr: 
-		args([''.join(head + [car])], cdr, expect if car != expect else None) if expect != None 
-		else args([''.join(head + [car])], cdr, car) if isinstance(car, basestring) and car in "'\""
-		else head if car == [] or car == ';'
-		else head + args([], cdr, expect) if car == ','
-		else args([''.join(head + [car])], cdr, expect)) (next(tokens, []), tokens)
+		args(joins(head, car), cdr, expect if car != expect else None) if expect != None 
+		else args(head + [car], cdr, car) if isinstance(car, basestring) and car in "'\""
+		else [head] if car == [] or car == ';'
+		else [head] + args([], cdr, expect) if car == ','
+		else args(head + [car], cdr, expect)) (next(tokens, []), tokens)
 
 def instr(instr, tokens, label = None):
 	return [label, instr, args([], tokens)]
