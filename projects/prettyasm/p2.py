@@ -29,11 +29,7 @@ def tokenize(str, t1 = '', t2 = ''):
 def isInstruction(str):
 	return str in {"mov","mvi", "sex"}
 
-def bob(x):
-	print "BOB=", x, bob == []
-	return []
 def args(head, tokens, expect = None):
-
 	return (lambda car, cdr: 
 		args([''.join(head + [car])], cdr, expect if car != expect else None) if expect != None 
 		else args([''.join(head + [car])], cdr, car) if isinstance(car, basestring) and car in "'\""
