@@ -38,13 +38,13 @@ def args(head, tokens, expect = None):
 		else args([''.join(head + [car])], cdr, expect)) (next(tokens, []), tokens)
 
 def instr(instr, tokens, label = None):
-	return ['L:'+label if label != None else '', instr.upper() if instr != None else None, args([], tokens)]
+	return [label, instr, args([], tokens)]
 
 def parse(tokens, label = None):
 	return (lambda car, cdr:
 		instr(None, cdr, label) if car == ';' or car == ''
 		else parse(cdr, label) if car == ':'
-		else instr(car, cdr, label) if isInstruction(car)
+		else instr(car.upper(), cdr, label) if isInstruction(car)
 		else parse(cdr, label = car)) (next(tokens, ''), tokens)
 
 #print [x for x in tokenize(test1)]
