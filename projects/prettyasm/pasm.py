@@ -438,7 +438,7 @@ def parseRegisterPair(s):
 def parseRegister(s):
     if s == None:
         return -1
-    s = s.strip()
+    s = s.strip().lower()
     if len(s) > 1: 
         return -1
     return "bcdehlma".find(s[0])
@@ -634,7 +634,7 @@ def parseInstruction(text, addr, linenumber, regUsage):
             return 1
         
         # single register pair
-        opcs = opsReg.get(mnemonic)
+        opcs = opsRp.get(mnemonic)
         if opcs != None:
             rp = parseRegisterPair(parts[1])
             if rp == -1:
@@ -773,7 +773,7 @@ def listingLineUncond(i, remainder, linedata, regUsage):
     textlabel = linedata[LineData.TEXTLABEL]
 
     if textlabel != None:
-        labeltext = remainder[:remainder.index(textlabel) + len(textlabel)]
+        labeltext = remainder[:remainder.lower().index(textlabel) + len(textlabel)]
         remainder = remainder[len(labeltext):]
     else:
         labeltext = ''
@@ -792,7 +792,8 @@ def listingLineUncond(i, remainder, linedata, regUsage):
     hexlen = min(length, 4) 
     unresolved = len([x for x in mem[addr:addr + length] if x < 0]) > 0
 
-    #print i, 'error=', resolver.getError(i), 'labeltext=', labeltext, 'remainder=', remainder, 'unresolved=', unresolved
+    #if resolver.getError(i) != None:
+    #    print i, 'error=', resolver.getError(i), 'labeltext=', labeltext, 'remainder=', remainder, 'unresolved=', unresolved
 
     result = (['<pre id="%s"%s>' % (id, ' class="errorline" ' if unresolved or resolver.getError(i) != None else '')] +
         [hexorize(mem[addr : addr + hexlen], prefix='<span class="adr">%s</span>\t' % [' ', hex16(addr)][length>0])] +
