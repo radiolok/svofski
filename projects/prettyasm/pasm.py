@@ -126,7 +126,7 @@ def substituteBitwiseOps(x):
     elif x.group(0) == 'xor': return '^'
     elif x.group(0) == 'shl': return '<<'
     elif x.group(0) == 'shr': return '>>'
-    else: return m
+    else: return x.group(0)
 
 class Resolver:
     labels = {}
@@ -215,6 +215,7 @@ class Resolver:
             input = re.sub(r'\b(shl|shr|xor|or|and|[+\-*\/()])\b', substituteBitwiseOps, input)
             q = re.split(r'<<|>>|[+\-*\/()\^\&\|]', input)
         except Exception, e:
+            print '%s: error: evaluateExpression [%s]' % (repr(linenumber), input)
             return -1
         vars = []
         for qident in q:
@@ -695,8 +696,8 @@ def parseInstruction(text, addr, linenumber, regUsage):
         if mnemonic == ".equ" or mnemonic == "equ":
             if labelTag == None: 
                 return -1
-            value = evaluateExpression(' '.join(parts[1:]), addr)
-            markLabel(labelTag, value, linenumber, true)
+            value = resolver.evaluateExpression(' '.join(parts[1:]), addr)
+            resolver.markLabel(labelTag, value, linenumber, True)
             return 0
 
         if mnemonic == ".encoding":
@@ -712,13 +713,14 @@ def parseInstruction(text, addr, linenumber, regUsage):
             return 0;
 
         if mnemonic in {'db', '.db', 'str'}:
+            #print 'text=%s parts=%s' % (repr(text), repr(parts))
             return parseDeclDB(parts, addr, linenumber, 1)
         
         if mnemonic == 'dw' or mnemonic == '.dw':
             return parseDeclDB(parts, addr, linenumber, 2)
 
         if mnemonic == 'ds' or mnemonic == '.ds':
-            size = evaluateExpression(' '.join(parts[1:]), addr)
+            size = resolver.evaluateExpression(' '.join(parts[1:]), addr)
             if size >= 0:
                 for i in xrange(size):
                     mem.set8(addr+i, 0)
