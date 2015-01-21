@@ -33,8 +33,6 @@ class Parser:
 
 	@staticmethod
 	def joins(a1, a2):
-		#if a2 == []:
-		#	raise Exception('unterminated character literal')
 		return a1[0:-1] + [''.join([a1[-1]] + [a2])]
 
 	@staticmethod
@@ -42,10 +40,10 @@ class Parser:
 		#print tokens, next(tokens, []), expect
 		return (lambda car, cdr: 
 			Parser.args(Parser.joins(head, car), cdr, expect if car != expect else None) if expect != None 
-			else Parser.args(head + [car], cdr, car) if isinstance(car, basestring) and car in "'\""
-			else [head] if car == [] or car == ';'
-			else [head] + Parser.args([], cdr, expect) if car == ','
-			else Parser.args(head + [car], cdr, expect)) (next(tokens, []), tokens)
+				else Parser.args(head + [car], cdr, car) if isinstance(car, basestring) and car in "'\""
+				else [head] if car == [] or car == ';'
+				else [head] + Parser.args([], cdr, expect) if car == ','
+				else Parser.args(head + [car], cdr, expect)) (next(tokens, []), tokens)
 
 	def instr(self, instr, tokens, label = None):
 		return [label, instr, Parser.args([], tokens)]
@@ -53,9 +51,9 @@ class Parser:
 	def parse(self, tokens, label = None):
 		return (lambda car, cdr:
 			self.instr(None, cdr, label) if car == ';' or car == ''
-			else self.parse(cdr, label) if car == ':'
-			else self.instr(car.upper(), cdr, label) if self.isInstruction(car)
-			else self.parse(cdr, label = car)) (next(tokens, ''), tokens)
+				else self.parse(cdr, label) if car == ':'
+				else self.instr(car.upper(), cdr, label) if self.isInstruction(car)
+				else self.parse(cdr, label = car)) (next(tokens, ''), tokens)
 
 	def isInstruction(self, str):
 		return str in {"mov", "mvi", "sex", "db"}
