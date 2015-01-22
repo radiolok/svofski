@@ -640,6 +640,8 @@ def parseInstruction(text, addr, linenumber, regUsage):
             rp = parseRegisterPair(parts[1])
             if rp == -1:
                 return -1
+            if mnemonic in {"ldax", "stax"} and not rp in {0, 1}:
+                return -1
             mem[addr] = int(opcs, 16) | (rp << 4)
             regUsage[linenumber] = ['@'+parts[1].strip()]
             if mnemonic == "dad":
