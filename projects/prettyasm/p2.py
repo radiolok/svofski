@@ -37,7 +37,6 @@ class Parser:
 
 	@staticmethod
 	def args(head, tokens, expect = None):
-		#print tokens, next(tokens, []), expect
 		return (lambda car, cdr: 
 			Parser.args(Parser.joins(head, car), cdr, expect if car != expect else None) if expect != None 
 				else Parser.args(head + [car], cdr, car) if isinstance(car, basestring) and car in "'\""
@@ -46,7 +45,7 @@ class Parser:
 				else Parser.args(head + [car], cdr, expect)) (next(tokens, []), tokens)
 
 	def instr(self, instr, tokens, label = None):
-		return [label, instr, Parser.args([], tokens)]
+		return [label, instr, Parser.args([], tokens) if instr != None else []]
 
 	def parse(self, tokens, label = None):
 		return (lambda car, cdr:
