@@ -50,7 +50,7 @@ Tests = [
 		],
 	["snurfel", 
 		['snurfel'], 
-		['snurfel', None, [[]]]
+		['snurfel', None, []]
 		],
 	["sex 1,2,(3+a)", 
 		['sex', '1', ',', '2', ',', '(', '3', '+', 'a', ')'], 
