@@ -1,18 +1,5 @@
 #!/usr/bin/env python
 
-
-# (whatever) -> nest
-# a op b -> (op a b)
-
-# if car is operand, X is token
-# if car is (, X is polish(car, cdr)
-# if car is operator: operator(X, cdr)
-
-def printseq(msg, iterator):
-	l = [x for x in iterator]
-	print msg, l
-	return iter(l)
-
 class Eval:
 	FUNCTIONS = {'('};
 
@@ -33,8 +20,6 @@ class Eval:
 			return l.index([x for x in l if op in x][-1])
 		except:
 			return -1
-
-		#return ['', '+', '-', '/', '*'].index(op)
 
 	def isfunc(self, tok):
 		return tok in FUNCTIONS
