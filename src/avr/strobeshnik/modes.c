@@ -47,7 +47,8 @@ void dotmode_set(uint8_t mode) {
 //// Display mode
 ////
 
-volatile uint8_t display_mode = HHMM;   //!< current display mode. \see _displaymode
+//volatile uint8_t display_mode = HHMM;   //!< current display mode. \see _displaymode
+volatile uint8_t display_mode = MMSS;   //!< current display mode. \see _displaymode
 
 
 void mode_next() {
