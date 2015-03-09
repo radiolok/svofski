@@ -32,9 +32,9 @@ class Eval:
 		elif car == ')':
 			return []
 		elif Eval.isOperator(car):
-			return (lambda operator, x1, x2:
-				x1 + list(car) + x2 if Eval.precedence(x2[-1] if len(x2) > 0 else -1) <= Eval.precedence(operator) 
-				else x1 + x2 + list(car)) (
+			return (lambda oper, x1, x2:
+				x1 + list(oper) + x2 if Eval.precedence(x2[-1] if len(x2) > 0 else -1) <= Eval.precedence(oper) 
+				else x1 + x2 + list(oper)) (
 					car,
 					self.bu(next(cdr, []), cdr, Eval.precedence(car), True),
 					self.bu(next(cdr, []), cdr, 0, False))
@@ -54,10 +54,12 @@ def e(expr):
 	#return E.unwind(next(t, []), t, '+')
 	return E.bu(next(t, []), t)
 
+print e('a*(b)/c')
+
 print e('a+b*c') # a b c * +
 print e('(a+b)*(2-c/7)') 
 
-#print e('(a-b)*(c+d)/5')  	# ['a', 'b', '-', 'c', 'd', '+', '*', '5', '/']
+print e('(a-b)*(c+d)/5')  	# ['a', 'b', '-', 'c', 'd', '+', '*', '5', '/']
 #print e('a+(b+(c+d))')   	# ['a', 'b', 'c', 'd', '+', '+', '+']
 #print e('((a+b)+c)+d')  	# ['a', 'b', '+', 'c', '+', 'd', '+']
 

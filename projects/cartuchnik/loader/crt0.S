@@ -37,7 +37,7 @@ __bss_start:
 		;;;
  	    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		.area	.text
-		.ascii "g GCE FUCK"	; cartrige id and year
+		.ascii "g GCE 2014"	; cartrige id and year
 		.byte 0x80			; string end
 		.word music
 		.byte 0xf8, 0x50, 0x20, -0x40	; height, width, rel y, rel x

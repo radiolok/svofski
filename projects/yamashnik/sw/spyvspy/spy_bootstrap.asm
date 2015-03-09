@@ -1,3 +1,6 @@
+                ; Bootstrap code based on contents of SPY.COM network utility
+
+                ; MSX-BIOS headers are part of z80asm package
 				include 'msx-bios.asm'
 
 TPA_EntryPoint:	equ 100h
@@ -82,7 +85,7 @@ rmtReceiveDataLoop:
                 or      c
                 jr      nz, rmtReceiveDataLoop
                 
-                ld      a, 2Eh ; '.'
+                ld      a, 2Eh          ; print '.'
                 out     (98h), a        ; VRAM data read/write
 
                 jr      rmtInitialCommandLoop
@@ -90,7 +93,7 @@ rmtReceiveDataLoop:
 
 rmtLaunchMSXDOS:                        
 
-                ld      a, 0C3h ; '├'   ; jmp
+                ld      a, 0C3h         ; jmp
                 ld      (BDOS), a
                 ld      ix, (BDOS_VECTOR) ; get the first instruction of BDOS (which is jmp ...)
                 inc     ix              ; skip the instruction code
@@ -98,7 +101,8 @@ rmtLaunchMSXDOS:
                 ld      (ix+1), h       ; subsitute MSX-DOS BDOS vector with our own rbdos_EntryPoint
                 ld      (ix+0), l
                 call    rmtZeroSystemArea
-; Mystery patches
+
+                ; Mystery patches, these don't seem to be helping
                 ld      a, 0E1h ; 'с'   ; pop hl - why?
                 ld      (byte_0_F267), a ; OPEN
                 ld      (byte_0_F270), a ; DISKREAD
@@ -117,11 +121,10 @@ rmtLaunchMSXDOS:
                 ld      de, MSG_Loaded  ; newline
                 call    5
 
-;
-;RemoteOSLoop:                           
-;                call    TPA_EntryPoint
-;                jr      RemoteOSLoop
-                jp TPA_EntryPoint
+                ; normally we should just warmboot at this point
+                ; but it still can make sense to jp $100 if a TPA program had been loaded at bootstrap
+                ;jp TPA_EntryPoint
+                rst 0
 
 ; ****************************************
 ; * rmtZeroSystemArea 

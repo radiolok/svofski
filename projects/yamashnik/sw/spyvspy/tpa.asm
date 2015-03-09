@@ -2,6 +2,11 @@ BDOSVEC_HI:	equ 7
 
     org 100h
 
+    rst 0 
+
+    ld hl, 0d7b0h
+    jp dumploop
+
     ld c, 9
     ld de, msg_5
     call 5
@@ -39,6 +44,8 @@ BDOSVEC_HI:	equ 7
     ld c, a
     call OutHex8
 
+    ; this exits ok rst 0
+    ; this too ret
     rst 0
 
     jp TestMovingToHiMem
@@ -97,6 +104,23 @@ nl:
 	call putchar
 	ret
 
+checkkey2:
+    rst     30h             ; CHSNS Tests the status of the keyboard buffer
+    db      70h
+    dw      9Ch
+    ret z
+    rst 30h
+    db 70h
+    dw 9fh
+    rst 30h
+    db 70h
+    dw 9fh
+    rst 30h
+    db 70h
+    dw 9fh
+    ret    
+
+
 checkkey:
 	push hl
 	jr checkkeyret
@@ -127,7 +151,7 @@ putchar:
 	ld c, 2
 	ld e, a
 	call 5
-	call checkkey
+	call checkkey2
 	pop hl
 	pop de
 	pop bc
@@ -157,6 +181,26 @@ Conv:
    daa
    call putchar
    ret
+
+   ;; a piece of patch for ROGUE.COM GotoXY routine
+    ; h = row, l = column
+    push hl
+    ld c, $1b
+    call $109
+    ld c, 'Y'
+    call $109
+    pop hl
+    ld a, h
+    add 32
+    ld c, a
+    push hl
+    call $109
+    pop hl
+    ld a, l
+    add 32
+    ld c, a
+    jp $109
+    ;;
 
 
 msg:    db $0d,$0a,'TPA program launched SLUTSEL=$'

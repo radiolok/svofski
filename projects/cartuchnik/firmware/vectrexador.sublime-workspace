@@ -3,71 +3,59 @@
 	{
 		"selected_items":
 		[
+			[
+				"IOC",
+				"IOCON_MODE_INACT"
+			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "src/Lib/DataRam.h",
+			"file": "/D/users/svo/src/vector06cc/sdram/src/video/video.v",
 			"settings":
 			{
-				"buffer_size": 4003,
+				"buffer_size": 16390,
 				"line_ending": "Windows"
 			}
 		},
 		{
-			"file": "src/Lib/DataRam.c",
+			"file": "/D/users/svo/projects/videoconditioner/signals/all1.txt",
 			"settings":
 			{
-				"buffer_size": 9685,
-				"line_ending": "Windows"
+				"buffer_size": 29,
+				"line_ending": "Windows",
+				"name": "all1.txt"
 			}
 		},
 		{
-			"file": "src/Lib/fatutil.h",
+			"contents": "# Copyright (c) 1993-2009 Microsoft Corp.\n#\n# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.\n#\n# This file contains the mappings of IP addresses to host names. Each\n# entry should be kept on an individual line. The IP address should\n# be placed in the first column followed by the corresponding host name.\n# The IP address and the host name should be separated by at least one\n# space.\n#\n# Additionally, comments (such as these) may be inserted on individual\n# lines or following the machine name denoted by a '#' symbol.\n#\n# For example:\n#\n#      102.54.94.97     rhino.acme.com          # source server\n#       38.25.63.10     x.acme.com              # x client host\n\n# localhost name resolution is handled within DNS itself.\n#	127.0.0.1       localhost\n#	::1             localhost\n127.0.0.1 geo.yahoo.com ",
+			"file": "/C/Windows/System32/drivers/etc/hosts",
+			"file_size": 824,
+			"file_write_time": 130216515419730871,
 			"settings":
 			{
-				"buffer_size": 5574,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "src/Lib/fatutil.c",
-			"settings":
-			{
-				"buffer_size": 10662,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "src/Lib/SCSI.c",
-			"settings":
-			{
-				"buffer_size": 14864,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "externals/LPCUSBLib/Drivers/USB/Core/DCD/LPC17XX/Endpoint_LPC17xx.c",
-			"settings":
-			{
-				"buffer_size": 15927,
+				"buffer_size": 827,
 				"line_ending": "Windows"
 			}
 		}
 	],
-	"build_system": "",
+	"build_system": "Packages/Makefile/Make.sublime-build",
 	"command_palette":
 	{
-		"height": 0.0,
+		"height": 311.0,
 		"selected_items":
 		[
+			[
+				"Package Control: ",
+				"Package Control: Install Package"
+			]
 		],
-		"width": 0.0
+		"width": 400.0
 	},
 	"console":
 	{
-		"height": 0.0
+		"height": 132.0
 	},
 	"distraction_free":
 	{
@@ -80,7 +68,44 @@
 	},
 	"file_history":
 	[
-		"/D/users/svo/projects/cartuchnik/firmware/externals/LPCUSBLib/Drivers/USB/Core/EndpointStream.c"
+		"/D/users/svo/projects/videoconditioner/signals/coeffs.txt",
+		"/D/users/svo/src/vector06cc/sdram/src/vector06cc.v",
+		"/D/users/svo/src/vector06cc/trunk/firmware/floppysrc/main.c",
+		"/C/Users/svo/AppData/Local/Temp/bin2hex.c",
+		"/D/users/svo/src/vector06cc/trunk/firmware/floppysrc/slave.c",
+		"/D/users/svo/src/vector06cc/trunk/firmware/floppysrc/menu.c",
+		"/D/users/svo/src/vector06cc/wxeda-cycloneiv/src/vector06cc.v",
+		"/D/users/svo/src/vector06cc/wxeda-cycloneiv/src/video/video.v",
+		"/D/users/svo/src/vector06cc/sdram/src/clockster.v",
+		"/D/kicad-build/kicad-winbuilder-3.4/kicad/bin/scripting/plugins/teardrops.py",
+		"/D/kicad-build/kicad-winbuilder-3.4/kicad/bin/scripting/plugins/dump.py",
+		"/D/users/svo/projects/avr-experiments-board/als.c",
+		"/D/users/svo/src/vector06cc/wxeda-cycloneiv/src/clockster.v",
+		"/D/users/svo/projects/avr-experiments-board/lcd.c",
+		"/D/users/svo/projects/avr-experiments-board/lcd.h",
+		"/C/Users/svo/AppData/Local/Temp/Temp1_lcdlibrary.zip/test_lcd.c",
+		"/C/Users/svo/Downloads/Verilog.sublime-package",
+		"/D/users/svo/src/vector06cc/sdram/vector06cc.qsf",
+		"/D/kicad-build/kicad-winbuilder-3.4/kicad/bin/scripting/plugins/dump.pyc",
+		"/D/users/svo/projects/cartuchnik/firmware/externals/LPCUSBLib/Drivers/USB/Core/DCD/LPC17XX/Endpoint_LPC17xx.h",
+		"/D/users/svo/projects/cartuchnik/firmware/externals/LPCUSBLib/Drivers/USB/Core/DCD/LPC17XX/Endpoint_LPC17xx.c",
+		"/D/users/svo/projects/cartuchnik/firmware/src/Lib/fatutil.c",
+		"/D/users/svo/projects/cartuchnik/firmware/src/Lib/fatutil.h",
+		"/D/users/svo/projects/cartuchnik/firmware/src/cartucho.c",
+		"/D/users/svo/projects/cartuchnik/firmware/src/startup_LPC17xx.S",
+		"/D/users/svo/projects/cartuchnik/firmware/ldscript_rom_gnu.ld",
+		"/D/users/svo/projects/cartuchnik/firmware/src/Lib/SCSI.c",
+		"/D/users/svo/projects/cartuchnik/firmware/src/Lib/DataRam.h",
+		"/D/users/svo/projects/cartuchnik/firmware/src/Lib/DataRam.c",
+		"/D/users/svo/projects/cartuchnik/firmware/Makefile",
+		"/D/users/svo/projects/cartuchnik/firmware/externals/LPCUSBLib/Drivers/USB/Core/EndpointStream.c",
+		"/D/users/svo/projects/cartuchnik/firmware/src/MassStorage.c",
+		"/D/users/svo/projects/cartuchnik/firmware/include/vectrexbus.h",
+		"/D/users/svo/projects/cartuchnik/firmware/src/vectrex.S",
+		"/C/Users/svo/AppData/Roaming/Sublime Text 2/Packages/User/Preferences.sublime-settings",
+		"/D/users/svo/src/vector06cc/trunk/src/video/framebuffer.v",
+		"/D/users/svo/projects/cartuchnik/firmware/src/Descriptors.c",
+		"/D/users/svo/projects/cartuchnik/firmware/src/Descriptors.h"
 	],
 	"find":
 	{
@@ -98,6 +123,41 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			" ",
+			"truecolor_R",
+			"lowcolor_b",
+			"menu_busy",
+			"fsel_getselected",
+			"menu_init",
+			"ptrfile",
+			"menu_dis",
+			"MENURESULT_DISK",
+			"joy",
+			"menu_init",
+			"WITH_COMPO",
+			"single",
+			"_ce",
+			"sdram_ba",
+			"sdram_addr",
+			"sdram_dq",
+			"sdram_",
+			".Add",
+			"item",
+			"	\n",
+			"Endpoint_Read_Stream_LE",
+			"xprintf",
+			"disk_cache",
+			"disk_ca",
+			"iap_",
+			"stack",
+			"stack_mem",
+			"__cs3_stack",
+			"stack_size",
+			"stack",
+			"NOLOAD",
+			"MassStorage_GetAddressInImage",
+			"A2A3",
+			"DiskImage",
 			"writebl",
 			"readblock",
 			"MassStorage_GetAddressInImage"
@@ -118,167 +178,86 @@
 	"groups":
 	[
 		{
-			"selected": 4,
+			"selected": 2,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "src/Lib/DataRam.h",
+					"file": "/D/users/svo/src/vector06cc/sdram/src/video/video.v",
 					"settings":
 					{
-						"buffer_size": 4003,
+						"buffer_size": 16390,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3841,
-								3870
+								6806,
+								6806
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/C++/C++.tmLanguage",
-							"translate_tabs_to_spaces": false
+							"syntax": "Packages/Verilog/Verilog.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 765.0,
+						"translation.y": 3661.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "src/Lib/DataRam.c",
+					"file": "/D/users/svo/projects/videoconditioner/signals/all1.txt",
 					"settings":
 					{
-						"buffer_size": 9685,
+						"buffer_size": 29,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								8748,
-								8777
+								29,
+								29
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/C++/C.tmLanguage",
-							"translate_tabs_to_spaces": false
+							"auto_name": "all1.txt",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
 						},
 						"translation.x": 0.0,
-						"translation.y": 1923.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 2,
-					"file": "src/Lib/fatutil.h",
+					"file": "/C/Windows/System32/drivers/etc/hosts",
 					"settings":
 					{
-						"buffer_size": 5574,
+						"buffer_size": 827,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								827,
+								827
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/C++/C++.tmLanguage",
-							"translate_tabs_to_spaces": false
+							"syntax": "Packages/Text/Plain text.tmLanguage"
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "src/Lib/fatutil.c",
-					"settings":
-					{
-						"buffer_size": 10662,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								0,
-								0
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "src/Lib/SCSI.c",
-					"settings":
-					{
-						"buffer_size": 14864,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								1658,
-								1658
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 5,
-					"file": "externals/LPCUSBLib/Drivers/USB/Core/DCD/LPC17XX/Endpoint_LPC17xx.c",
-					"settings":
-					{
-						"buffer_size": 15927,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								9282,
-								9299
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C.tmLanguage",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 3888.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -317,6 +296,10 @@
 		]
 	},
 	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 169.0
+	},
 	"replace":
 	{
 		"height": 0.0

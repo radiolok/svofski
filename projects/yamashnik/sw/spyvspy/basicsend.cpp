@@ -72,7 +72,7 @@ unsigned char binBuf[SIZE32K + sizeof(ROM2BIN_startCode)];  // enough for any bl
 
 void BasicSender::sendBlocks(int start, int end)
 {
-	static const char progressChar[] = "_,-'\".*oO0";
+	static const char progressChar[] = "...--oo*OO0";
     int lastblock = (end - start) / MAXBLKSIZE;
 
     info("%d blocks to send\n", lastblock);
@@ -84,7 +84,7 @@ void BasicSender::sendBlocks(int start, int end)
         verbose("\nSending block %d (", i + 1);
 
         if ((i+1) % 10 == 0) {
-            info("%d%c", i + 1, ((i+1) % 100 == 0) ? '\n' : ' ');
+            info("%3d%c", i + 1, ((i+1) % 100 == 0) ? '\n' : ' ');
         } 
         else {
             info("%c\010", progressChar[i % 10]);  //_,-'"
@@ -113,6 +113,56 @@ void BasicSender::sendBlocks(int start, int end)
 
     info("\n");
 }
+
+void BasicSender::sendSEND(int length)
+{
+    static const char progressChar[] = "...--oo*OO0";
+    int lastblock = length / MAXBLKSIZE;
+
+    if (!pingPong(m_packetSender, m_studentNo)) {
+        info("sendSEND: no PONG from workstation %d\n", m_studentNo);
+        return;
+    }
+
+    info("%d blocks to send\n", lastblock);
+
+    int current = 0;
+    int binBufOffset = 0;
+
+    for (int i = 0; i < lastblock; i++) {
+        verbose("\nSending block %d (", i + 1);
+
+        if ((i+1) % 10 == 0) {
+            info("%3d%c", i + 1, ((i+1) % 100 == 0) ? '\n' : ' ');
+        } 
+        else {
+            info("%c\010", progressChar[i % 10]);  //_,-'"
+        }
+
+        verbose(")");
+
+        {   
+            SENDDataPacket send(0, m_studentNo, &binBuf[binBufOffset], MAXBLKSIZE, 0);
+            m_packetSender.SendPacketVal(send);
+            if (!m_packetSender.ReceivePacket()) {
+                eggog("send: ack timeout on SEND data\n");
+            }
+        }
+        current += MAXBLKSIZE;
+        binBufOffset += MAXBLKSIZE;
+    }
+
+    // Calculate the rest
+    verbose("\nLast block: %d bytes\n", length - current);
+    {
+        SENDDataPacket send(0, m_studentNo, &binBuf[binBufOffset], length - current, 1);
+        m_packetSender.SendPacketVal(send);
+        m_packetSender.ReceivePacket();
+    }
+
+    info("\n");
+}
+
 
 int BasicSender::sendSHEXHeader(uint16_t start, uint16_t end) 
 {
@@ -324,6 +374,46 @@ int BasicSender::sendBASIC(FILE* file)
 	return result;
 }
 
+int BasicSender::sendASCII(FILE* file)
+{
+    long basSize;
+    int result = 0;
+
+    if (fseek(file, 0, SEEK_END) == 0) {
+        basSize = ftell(file);
+    } 
+    else {
+        info("Error: sendASC: cannot get file size\n");
+        return 0;
+    }
+
+    fseek(file, 1, SEEK_SET);
+    fread(&binBuf, basSize - 1, 1, file);
+
+    info("ASCII BASIC file, %ld bytes\n", basSize);
+
+    sendSEND(basSize);
+
+    if (result) info("Sending ASCII BASIC file done\n");
+
+    return result;
+}
+
+int BasicSender::sendPlainText(FILE* file)
+{
+    char buf[4096];
+
+    for(;fgets(buf, 4096, file);) {
+        SendCommand(buf);
+        usleep(100000);
+        //sleep(1);
+    }
+
+    return 1;
+}
+
+
+
 int BasicSender::netSend(int nfiles, char* file[])
 {
     for (int fileIdx = 0; fileIdx < nfiles; fileIdx++) {
@@ -355,7 +445,11 @@ int BasicSender::netSend(int nfiles, char* file[])
                 sendROM(infile);
                 break;
             default:
-                eggog("Error: %s has unsupported file type %02x - cannot send\n", file[fileIdx], magic);
+                info("Fallback to ASCII\n");
+                //sendASCII(infile);
+                sendPlainText(infile);
+                break;
+                //eggog("Error: %s has unsupported file type %02x - cannot send\n", file[fileIdx], magic);
         }
     }
 

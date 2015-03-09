@@ -6,6 +6,7 @@
 #include "serial.h"
 #include "commands.h"
 #include "diags.h"
+#include "util.h"
 
 #include <stdlib.h>
 
@@ -23,21 +24,9 @@ typedef struct _xdata {
 
     _xdata(uint8_t _H, uint8_t _F, uint8_t _A, const char* fileName) : H(_H), F(_F), A(_A)
     {
+    	memset(&FCB[0], 0, sizeof(FCB));
 	    FCB[0] = 8;
-    	memset(&FCB[1], ' ', 11);
-
-    	int i, fi, flen;
-	    // Let's copy the filename
-	    for (i = 0, fi = 1, flen = strlen(fileName); i < 8 && i < flen && fileName[i] != '.'; i++, fi++) {
-	        FCB[fi] = toupper(fileName[i]);
-	    }
-	    if (fileName[i] == '.') i++;
-	    fi = 1 + 8;
-
-	    for(; fi < 12 && i < flen; i++, fi++) {
-	    	FCB[fi] = toupper(fileName[i]);
-	    }
-    	memset(&FCB[12], 0, sizeof(FCB) - 12);
+	    Util::dosname(fileName, (char *) &FCB[1]);
     }
 } NetFCB;
 
@@ -129,7 +118,8 @@ protected:
 	NetFCBPacket(int srcAddr, int dstAddr, PACKETCMD cmd, const char* fileName)
 		: GenericPacket(srcAddr, dstAddr, cmd, sizeof(NetFCB))
 	{
-		AssignData((uint8_t *) &NetFCB(0,0,0, fileName));
+		NetFCB fcb(0,0,0, fileName);
+		AssignData((const uint8_t*) &fcb);
 	}
 public:
 	NetFCBPacket(NetFCBPacket& otro, PACKETCMD cmd)
@@ -187,6 +177,18 @@ public:
 	NetMasterDataPacket(int srcAddr, int dstAddr, const uint8_t* data, int length)
 		: DataPacket(srcAddr, dstAddr, NET_MASTER_DATA, data, length)
 	{}
+};
+
+class SENDDataPacket : public DataPacket
+{
+private:
+	int m_Last;
+public:
+	SENDDataPacket(int srcAddr, int dstAddr, const uint8_t* data, int length, int last)
+		: DataPacket(srcAddr, dstAddr, PCMD_SEND, data, length)
+		{}
+protected:
+	int GetIsLast() const { return m_Last; }
 };
 
 class SHEXHeaderPacket : public GenericPacket

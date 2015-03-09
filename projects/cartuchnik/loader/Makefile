@@ -7,11 +7,12 @@ CC=$(CROSS)/m6809-unknown-none-gcc
 LD=$(CC)
 AS=$(CC)
 
+#OPTIMIZE=-O0
 OPTIMIZE=-Os
 #OPTIMIZE=-freorder-blocks -fmove-loop-invariants
 #include optimizations.s.inc
 
-CFLAGS=-std=c99 -fomit-frame-pointer $(OPTIMIZE) -save-temps
+CFLAGS=-std=c99 -fomit-frame-pointer $(OPTIMIZE) # -save-temps
 LDFLAGS=-L/opt/local/gccvectrex/m6809-unknown-none/lib -lc -Wl,-Tfaketable -Wl,0x7000
 
 CRT0 = crt0

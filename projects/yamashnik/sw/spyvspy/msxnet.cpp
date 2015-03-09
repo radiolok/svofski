@@ -17,6 +17,7 @@
 #include "commands.h"
 #include "serial.h"
 #include "diags.h"
+#include "util.h"
 
 #include "spybdos.h"
 #include "basicsend.h"
@@ -68,6 +69,7 @@ void halp()
     info("      --cpm               issue _CPM command at workstation\n");
     info("      --ncopy             copy files to CP/M ramdisk\n");
     info("      --send              send BIN, ROM or BASIC files\n");
+    info("      --ascii             send plain text to BASIC\n");
     info("      --spy <file>        bootstrap and run network MSX-DOS on the target\n");
     info("      --serve             serve already bootstrapped target\n");
 }
@@ -96,7 +98,8 @@ int main(int argc, char *argv[]) {
            {"send",     no_argument,            0, 7},
            {"spy",      no_argument,            0, 8},
            {"test",     no_argument,            0, 9},
-           {"serve",     no_argument,           0, 10},
+           {"serve",    no_argument,            0, 10},
+           {"ascii",    no_argument,            0, 11},
            {0, 0, 0, 0}
          };
 
@@ -187,11 +190,12 @@ int main(int argc, char *argv[]) {
                     spy.initData() &&
                         spy.Serve();
                 }
-
+                break;
             case 9:
                 {
                     NetBDOS bdos;
-                    bdos.test();
+                    Util::testSuite() &&
+                        bdos.testSuite();
                     workdone = 1;
                 }
                 break;

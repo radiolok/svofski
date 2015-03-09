@@ -16,6 +16,7 @@ private:
 	void runROM(uint16_t defusr);
 	int sendSHEXHeader(uint16_t start, uint16_t end);
 	void sendBlocks(int start, int end);
+	void sendSEND(int length);
 
 public:
 	BasicSender(const char* port, int studentNo, int nfiles, char* file[]) 
@@ -38,11 +39,11 @@ public:
 	{}
 
 	int sendBASIC(FILE* file);
+	int sendASCII(FILE* file);
+	int sendPlainText(FILE* file);
 	int sendPoke(uint16_t addr, uint8_t value);
 	int sendBIN(FILE* file, uint16_t* out_start, uint16_t* out_end, uint16_t* out_run);
 	int sendROM(FILE* file);
 	int SendCommand(const char* cmd);
-
-
 };
 
