@@ -5,8 +5,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/select.h>
-
+#include <errno.h>
 #include <stdio.h>
+
 
 #include "serial.h"
 #include "diags.h"
@@ -21,22 +22,23 @@ int SerialPort::Setup()
 	struct termios oldtio, newtio;
 
 	if (m_fd == -1) return ERR_NOFILE;
-
-    /* Make the file descriptor asynchronous (the manual page says only
-       O_APPEND and O_NONBLOCK, will work with F_SETFL...) */
-    fcntl(m_fd, F_SETFL, FASYNC);
+	
+	// drop O_NONBLOCK, become blocking after having opened
+    //fcntl(m_fd, F_SETFL, 0);
 
     tcgetattr(m_fd, &oldtio);
 
     bzero (&newtio, sizeof(newtio));
-    newtio.c_cflag = BAUDRATE | CS8 | PARENB | CLOCAL | CREAD;
+    cfmakeraw(&newtio);
+
+    newtio.c_cflag = BAUDRATE | CS8 | PARENB | CLOCAL | CREAD;// | CSTOPB;
     newtio.c_iflag = 0;
     newtio.c_oflag = 0;
 
     /* set input mode (non-canonical, no echo,...) */
     newtio.c_lflag = 0;
 
-    newtio.c_cc [VTIME]    = 0;   /* inter-character timer unused */
+    newtio.c_cc [VTIME]    = 0;   /* inter-character timer */
     newtio.c_cc [VMIN]     = 1;   /* blocking read until 1 chars received */
 
   	// the following 2 lines are ESSENTIAL for the code to work on CYGWIN
@@ -49,7 +51,7 @@ int SerialPort::Setup()
     return ERR_NONE;
 }
 
-int SerialPort::waitRx()
+int SerialPort::waitRx(const int intents)
 {
 	int readfdSet, count = 0;
 	fd_set fdSet;
@@ -62,16 +64,16 @@ int SerialPort::waitRx()
 
 		FD_ZERO(&fdSet);
 		FD_SET(m_fd, &fdSet);
+		readfdSet = select(m_fd + 1, &fdSet, (fd_set *) 0, (fd_set *) 0, &timeout);
 
-		readfdSet = select(m_fd + 1,
-						&fdSet,
-						(fd_set *) 0,
-						(fd_set *) 0,
-						&timeout);
-
-		if (readfdSet < 0) {
-			eggog("Error in select()\n");
+		if (readfdSet < 0 || errno == ENXIO) {
+			info("Error in select(): %s\n", strerror(errno));
+			if (errno == ENXIO) {
+				eggog("Device had been unplugged, terminating.\n");
+			}
 		}
+
+		//info("$ %08x ", readfdSet);
 
 		if (readfdSet > 0) {
 			if (m_RxListener == 0) {
@@ -80,16 +82,10 @@ int SerialPort::waitRx()
 			}
 			if (m_RxListener->RxHandler()) break;
 		}
-
-		count++;
-		usleep(10000);
-
-		if (count == 10) {
-			//morbose("\nwaitRx: failed after %d select()s\n", count);
+		if (++count == intents) {
 			return 0;
 		}
 	}
-	//morbose("\nwaitRx: got reply after %d select()s\n", count);
 	return 1;
 }
 

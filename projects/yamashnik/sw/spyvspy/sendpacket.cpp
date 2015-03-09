@@ -125,6 +125,14 @@ void PacketSender::SendPacket(int srcAddr, int dstAddr, int cmdType, const uint8
         SendByte(last ? LAST : INTERMEDIATE);
         break;
 
+    case PCMD_SEND:
+        SendHeader(Header);
+        SendEscapedByte(PCMD_SEND);
+        SendEscapedWord(len);
+        SendEscapedBlockWithChecksum(buf, len);
+        SendByte(last ? LAST : INTERMEDIATE);
+        break;
+
     case PCMD_POKE:
         SendHeader(Header);
         SendEscapedByte(PCMD_POKE);
@@ -150,7 +158,7 @@ void PacketSender::SendPacketVal(GenericPacket& packet)
 
 int PacketSender::ReceivePacket() {
     pos = 0;
-    return serial->waitRx();
+    return serial->waitRx(50);
 }
 
 void PacketSender::CheckPacket() {

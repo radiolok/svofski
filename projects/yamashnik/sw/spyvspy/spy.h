@@ -7,7 +7,7 @@
 #include "spydata.h"
 
 #define DEBUGBLOCKSIZE 6
-
+#define EMIT_PACE 4000
 
 class Spy 
 {
@@ -100,7 +100,17 @@ public:
         return cursor[1] | ((uint16_t)cursor[0] << 8);
     }
 
+
+    int NeedsData() const { return m_rxpattern[0] != 0; }
+
+    int consume(uint8_t* buf, int len) {
+        int result = 0;
+        for(; (result = eat(buf, len)) == 0;);
+        return result == 1 ? 1 : 0;
+    }
+private:
     int eat(uint8_t* buf, int len) {
+        int moar = 0;
         int avail = len - m_bufoffset;
 
         uint8_t* cursor = buf + m_bufoffset;
@@ -109,7 +119,7 @@ public:
         if (m_rxpattern[m_rxcursor] == 0) return 1;
 
         // something is expected but nothing is given yet
-        if (avail == 0) return 0;
+        if (avail == 0) return -1;
 
         // check what have we got here
         switch(m_rxpattern[m_rxcursor]) {
@@ -125,9 +135,12 @@ public:
             if (avail >= 2) {   
                 // get word: big endian
                 m_data[m_datacursor] = getWordBigEndian(cursor);
+                morbose("REQ_WORD: %x\n", m_data[m_datacursor]);
                 m_bufoffset += 2;               // advance by 2
                 m_datacursor++;
                 m_rxcursor++;                   // next token
+            } else {
+                moar = -1;
             }
             break;
 
@@ -151,6 +164,8 @@ public:
 
                 morbose("Received NetFCB, next state=%d\n", m_rxpattern[m_rxcursor]);
                 dump(morbose, (uint8_t*) &m_FCB, sizeof(FCB));
+            } else {
+                moar = -1;
             }
             break;
 
@@ -165,7 +180,11 @@ public:
 
                     m_bufoffset += 2 + m_dmasize;
                     m_rxcursor++;
+                } else {
+                    moar = -1;
                 }
+            } else {
+                moar = -1;
             }
             break;
 
@@ -174,11 +193,11 @@ public:
             break;
         }
 
-        // return 1 when reached end of expected pattern
-        return (m_rxpattern[m_rxcursor] == 0) ? 1 : 0;
+        // return 1 when reached end of expected pattern, no more data expected
+        //        -1 when more data needed in buffer
+        //        0 when should be called once again
+        return (m_rxpattern[m_rxcursor] == 0) ? 1 : moar;
     }
-
-    int NeedsData() const { return m_rxpattern[0] != 0; }
 };
 
 
@@ -223,17 +242,22 @@ private:
     FCB*        m_FCB;
     uint8_t*    m_DMA;
     int         m_dmasize;
+
+    uint8_t*    m_DMA2;
+    int         m_dma2size;
+
     int         m_data[8];
     uint8_t     m_result;
 
     uint8_t* m_txpattern;
 
 public:
-    SpyResponse() : m_FCB(0), m_DMA(0) {}
+    SpyResponse() : m_FCB(0), m_DMA(0), m_DMA2(0) {}
 
     ~SpyResponse() {
         if (m_FCB) delete m_FCB;
         if (m_DMA) delete[] m_DMA;
+        if (m_DMA2) delete[] m_DMA2;
         if (m_txpattern) delete[] m_txpattern;
     }
 
@@ -260,11 +284,26 @@ public:
         m_dmasize = n;
     }
 
+    int GetDMASize() const {
+        return m_dmasize;
+    }
+
+    int GetDMA2Size() const {
+        return m_dma2size;
+    }
+
     void AssignDMA(const uint8_t *data, int length) {
         if (m_DMA) delete[] m_DMA;
         m_dmasize = length;
         m_DMA = new uint8_t[m_dmasize];
         memcpy(m_DMA, data, m_dmasize);
+    }
+
+    void AssignDMA2(const uint8_t *data, int length) {
+        if (m_DMA2) delete[] m_DMA2;
+        m_dma2size = length;
+        m_DMA2 = new uint8_t[m_dma2size];
+        memcpy(m_DMA2, data, m_dma2size);
     }
 
     void SetAuxData(uint8_t idx, int value)  {
@@ -285,26 +324,33 @@ public:
                 transport->SendByte(m_data[datacursor], morbose);
                 datacursor++;
                 txcursor++;
-                usleep(4000);
+                usleep(EMIT_PACE);
                 break;
             case REQ_WORD:
                 transport->SendWord(m_data[datacursor], morbose);
                 datacursor++;
                 txcursor++;
-                usleep(4000);
+                usleep(EMIT_PACE);
                 break;
             case REQ_FCB:
                 transport->SendWord(sizeof(FCB) - 8, morbose);
-                usleep(4000);
+                usleep(EMIT_PACE);
                 transport->SendChunk((uint8_t*)m_FCB, sizeof(FCB) - 8, morbose);
                 txcursor++;
-                usleep(4000);
+                usleep(EMIT_PACE);
                 break;
             case REQ_DMA:
                 transport->SendWord(m_dmasize, morbose);
-                usleep(4000);
+                usleep(EMIT_PACE);
                 transport->SendChunk(m_DMA, m_dmasize, morbose);
-                usleep(4000);
+                usleep(EMIT_PACE);
+                txcursor++;
+                break;
+            case REQ_DMA2:
+                transport->SendWord(m_dma2size, morbose);
+                usleep(EMIT_PACE);
+                transport->SendChunk(m_DMA2, m_dma2size, morbose);
+                usleep(EMIT_PACE);
                 txcursor++;
                 break;
             }

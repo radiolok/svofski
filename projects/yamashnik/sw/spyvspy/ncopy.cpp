@@ -13,13 +13,14 @@ int pingPong(PacketSender& ps, int adr)
     do {
         ps.SendPacketVal(ping);
     } while (!ps.ReceivePacket());
-
+    info("PONG from %d\n", adr);
     return 1;
 }
 
 void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
 {
-    static const char progressChar[] = "_,-'\".*oO0";
+    static const char progressChar[] = "...--oo*OO0";
+
     uint8_t Sector[SECTORSIZE];
     FILE* infile;
     struct stat stat_p;
@@ -50,7 +51,8 @@ void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
 
     // Reading the file sector-by-sector and writing them onto the net disk
 
-    info("\nNumber of sectors to send: %zd\n", (size_t) ((stat_p.st_size / sizeof (Sector)) + (stat_p.st_size % sizeof (Sector))));
+    info("\nNumber of sectors to send: %zd\n", 
+        (size_t) ((stat_p.st_size / sizeof (Sector)) + (stat_p.st_size % sizeof (Sector))));
 
     while (!feof(infile))
     {
@@ -69,7 +71,7 @@ void sendFile(const char* fileName, PacketSender& packetSender, int studentNo)
         verbose("\nSent sector No.%d", sectNo);
 
         if ((sectNo+1) % 10 == 0) {
-            info("%d%c", sectNo+1, ((sectNo+1) % 100 == 0) ? '\n' : ' ');
+            info("%3d%c", sectNo+1, ((sectNo+1) % 100 == 0) ? '\n' : ' ');
         }
         else {
             info("%c\010", progressChar[sectNo % 10]);

@@ -4,29 +4,48 @@ CC=g++
 CPP=g++
 LINK=g++
 
-#all:	ncopy send
-all:	msxnet spy_bootstrap.bin tpa.com spy_bdos_e900.ram
+BUILDDIR=build
+MSXNET_CFILES=msxnet.cpp serial.cpp ncopy.cpp sendpacket.cpp diags.c basicsend.cpp spy.cpp util.cpp
+
+MSXNET_OFILES = $(foreach CFILE, $(MSXNET_CFILES), $(BUILDDIR)/$(basename $(notdir $(CFILE))).o)
+
+all:	$(BUILDDIR) $(BUILDDIR)/msxnet $(BUILDDIR)/spy_bootstrap.bin $(BUILDDIR)/tpa.com $(BUILDDIR)/spy_bdos_e900.ram $(BUILDDIR)/chput.com
 
 clean:	
-	rm -f msxnet *.o spy_bootstrap.bin tpa.com spy_bdos_e900.ram
+	rm -rf $(BUILDDIR)
 
-msxnet: msxnet.o serial.o ncopy.o sendpacket.o commands.h diags.o basicsend.o spy.o
+$(BUILDDIR)/msxnet: $(MSXNET_OFILES)
 
-serial.o:	serial.h
+$(BUILDDIR)/msxnet.o:	*.h
 
-sendpacket.o:	sendpacket.h
+$(BUILDDIR)/serial.o:	serial.h
 
-spy.o:	spy*.h spybdos.h dosglob.h
+$(BUILDDIR)/sendpacket.o:	sendpacket.h commands.h
 
-tpa.com:	tpa.asm
-	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/ tpa.asm -o tpa.com
+$(BUILDDIR)/basicsend.o:	sendpacket.h commands.h basicsend.h
 
-spy_bootstrap.bin:	spy_bootstrap.asm
-	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/ spy_bootstrap.asm -o spy_bootstrap.bin
+$(BUILDDIR)/spy.o:	spy*.h spybdos.h dosglob.h spydata.h
 
-spy_bdos_e900.ram:	spy_bdos_e900.asm inputline.inc
-	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/  spy_bdos_e900.asm -o spy_bdos_e900.ram 
+$(BUILDDIR)/chput.com:	chput.asm
+	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/ chput.asm -o $@
 
-spy_bdos_e900.lst:	spy_bdos_e900.asm
-	../z80asm-1.8/z80asm -l  -I../z80asm-1.8/headers/  spy_bdos_e900.asm 2>spybdos.lst
+$(BUILDDIR)/tpa.com:	tpa.asm
+	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/ tpa.asm -o $@
 
+$(BUILDDIR)/spy_bootstrap.bin:	spy_bootstrap.asm
+	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/ spy_bootstrap.asm -o $@
+
+$(BUILDDIR)/spy_bdos_e900.ram:	spy_bdos_e900.asm inputline.inc
+	../z80asm-1.8/z80asm -I../z80asm-1.8/headers/  spy_bdos_e900.asm -o $@
+
+$(BUILDDIR)/spy_bdos_e900.lst:	spy_bdos_e900.asm
+	../z80asm-1.8/z80asm -l  -I../z80asm-1.8/headers/  spy_bdos_e900.asm 2>$@
+
+$(BUILDDIR)/%.o:	%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/%.o:	%.cpp
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)

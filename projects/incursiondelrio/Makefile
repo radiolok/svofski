@@ -1,5 +1,5 @@
 TARGET=incursion.rom
-JS=jsshell-mac/js
+JS=js
 OBJCOPY=/opt/local/bin/gobjcopy
 PASMDIR=../prettyasm
 PASM=pasm.js
