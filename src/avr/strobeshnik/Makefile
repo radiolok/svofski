@@ -1,7 +1,7 @@
 VERSION		   = 0.1
 PRG            = strobeshnik
 OBJ            = main.o modes.o usrat.o util.o buttonry.o timekeep.o
-MCU_TARGET     = atmega88
+MCU_TARGET     = atmega88p
 OPTIMIZE       = -Os
 BUILDNUM       = $(shell cat buildnum)
 
@@ -26,7 +26,7 @@ all: buildnum $(PRG).elf lst text eeprom
 doc:	doxygen
 
 buildnum:	./buildcount.sh
-	rem ./buildcount.sh
+	./buildcount.sh
 
 $(PRG).elf: $(OBJ)
 	BUILDNUM=$(shell ./buildcount.sh)
